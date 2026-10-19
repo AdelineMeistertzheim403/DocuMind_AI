@@ -2,6 +2,7 @@ import asyncio
 import logging
 import tempfile
 import threading
+import queue
 from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
@@ -65,6 +66,27 @@ def create_app(settings=None):
         recover(app)
         app.state.summary_worker.thread.start()
 
+        def deliver_mail():
+            from .account_api import send_reset
+            while not app.state.mail_stopping.is_set():
+                try:
+                    email, token = app.state.mail_queue.get(timeout=.2)
+                except queue.Empty:
+                    continue
+                try:
+                    sender = getattr(app.state,'mail_sender',None)
+                    if sender:
+                        sender(email,token)
+                    else:
+                        send_reset(settings,email,token)
+                except Exception:
+                    logging.getLogger(__name__).warning('mail_delivery_failed')
+                finally:
+                    app.state.mail_queue.task_done()
+
+        mail_thread = threading.Thread(target=deliver_mail,daemon=True)
+        mail_thread.start()
+
         async def expire_sessions():
             while True:
                 await asyncio.sleep(15)
@@ -79,6 +101,8 @@ def create_app(settings=None):
             with suppress(asyncio.CancelledError):
                 await cleanup
             await asyncio.to_thread(app.state.summary_worker.stop)
+            app.state.mail_stopping.set()
+            await asyncio.to_thread(mail_thread.join,12)
             app.state.session_vault.clear()
             app.state.engine.dispose()
 
@@ -91,6 +115,8 @@ def create_app(settings=None):
     app.state.embedding_provider = None
     app.state.session_vault = SessionVault(settings.ai_session_ttl_seconds)
     app.state.rate_limiter = RateLimiter()
+    app.state.mail_queue = queue.Queue(maxsize=100)
+    app.state.mail_stopping = threading.Event()
     from .ai.long_summary import SummaryWorker
     app.state.summary_worker = SummaryWorker(app)
     app.add_middleware(RequestSizeLimit, maximum=settings.max_upload_bytes + 64 * 1024)

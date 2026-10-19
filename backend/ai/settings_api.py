@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, Field, SecretStr
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, SecretStr
 from sqlalchemy import select
 
 from ..api import Owner, Session
@@ -16,7 +16,7 @@ router = APIRouter(prefix='/api/v1', tags=['comptes et BYOK'])
 
 class Login(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    username: str = Field(min_length=1, max_length=254, validation_alias=__import__('pydantic').AliasChoices('username', 'email'))
+    username: str = Field(min_length=1, max_length=254, validation_alias=AliasChoices('username', 'email'))
     password: SecretStr = Field(min_length=1, max_length=256)
 
 
@@ -144,9 +144,13 @@ def validate_key(request: Request, owner_id: Owner, session: Session):
 def settings_for_request(request, session):
     settings = request.app.state.settings
     context = getattr(request.state, 'user_session', None)
-    if context is None or context.mode == 'OWNER_DEMO':
+    if context is None:
         return settings
     user = session.get(User, context.user_id)
+    if user is None or user.disabled_at is not None:
+        raise HTTPException(401, 'Compte désactivé')
+    if context.mode == 'OWNER_DEMO':
+        return settings
     with request.app.state.session_vault.lock:
         request.app.state.session_vault.purge()
         if context.expires_at <= time.time():

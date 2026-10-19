@@ -1,6 +1,6 @@
 import secrets
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 
 
 def trusted_gateway(request):
@@ -11,7 +11,7 @@ def trusted_gateway(request):
     return bool(key and any(secrets.compare_digest(key.encode(), candidate.encode()) for candidate in candidates))
 
 
-def secure_gateway(request):
+def secure_gateway(request: Request):
     if request.headers.get('x-documind-secure') != '1' or not trusted_gateway(request):
         raise HTTPException(403, 'HTTPS via le BFF est obligatoire')
 

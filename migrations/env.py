@@ -2,6 +2,7 @@ from alembic import context
 from backend.config import Settings
 from backend.db import Base, make_engine
 from backend import models  # noqa: F401
+from backend import account_models  # noqa: F401
 
 target_metadata = Base.metadata
 url = Settings().database_url
