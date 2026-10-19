@@ -232,12 +232,16 @@ def verify_recovery_containers(stack):
         if container['Image']!=image:raise DeploymentError('Recovery container image differs from source manifest')
         if service=='db' and (not container['State']['Running'] or container['State'].get('Health',{}).get('Status')!='healthy'):
             raise DeploymentError('Recovery requires the existing healthy database')
+        # Match the Compose volume root, not STORAGE_DIR (a subdirectory of /app/var).
+        # tmpfs mounts are ephemeral; all other mounts must be explicitly expected.
+        mounts=[mount for mount in container['Mounts'] if mount.get('Type')!='tmpfs']
         if service in ('db','api'):
-            destination='/var/lib/postgresql/data' if service=='db' else '/app/var/documents'
+            destination='/var/lib/postgresql/data' if service=='db' else '/app/var'
             volume=f'{PROJECT}_production_'+('database' if service=='db' else 'documents')
-            mounts=[mount for mount in container['Mounts'] if mount['Destination']==destination]
-            if len(mounts)!=1 or mounts[0].get('Type')!='volume' or mounts[0].get('Name')!=volume:
+            if (len(mounts)!=1 or mounts[0].get('Type')!='volume' or mounts[0].get('Name')!=volume
+                    or mounts[0].get('Destination')!=destination):
                 raise DeploymentError('Recovery refuses unexpected persistent mounts')
+        elif mounts:raise DeploymentError('Recovery refuses unexpected persistent mounts')
 
 
 def execute(args,report):

@@ -50,6 +50,10 @@ def test_production_reuses_confirmed_proxy_and_preserves_volumes():
     data=yaml.safe_load(Path('compose.production.yaml').read_text(encoding='utf-8'))
     assert data['name']=='documind-prod' and set(data['services'])=={'api','web','db'}
     assert set(data['volumes'])=={'production_database','production_documents'}
+    assert data['services']['db']['volumes']==['production_database:/var/lib/postgresql/data']
+    assert data['services']['api']['volumes']==['production_documents:/app/var']
+    assert data['services']['api']['environment']['STORAGE_DIR']=='/app/var/documents'
+    assert not data['services']['web'].get('volumes')
     assert data['networks']['web']=={'external':True,'name':'web'}
     for name,service in data['services'].items():
         assert not service.get('ports') and not service.get('build')
@@ -228,17 +232,22 @@ def test_recovery_failure_never_activates_or_reopens_failed_source(recovery,monk
     if failure in ('backup','schema_drift'):assert not any(command and command[0]=='up' for _,command in events)
 
 
-@pytest.mark.parametrize('invalid',[None,'owner','duplicate','image','mount','unhealthy','source','oneoff'])
+@pytest.mark.parametrize('invalid',[pytest.param(None,id='vps-observed-mounts'),
+    'owner','duplicate','image','mount','unhealthy','source','oneoff',
+    'documents_subdirectory','unauthorized_path','bind','extra_volume','duplicate_mount','web_volume',
+    'database_volume','database_path','missing_mount'])
 def test_recovery_inspects_actual_project_images_mounts_and_database(monkeypatch,tmp_path,invalid):
     stack=deploy.Stack(tmp_path,tmp_path,release())
     containers=[]
     for name in ('db','api','web'):
-        destination='/var/lib/postgresql/data' if name=='db' else '/app/var/documents'
+        destination='/var/lib/postgresql/data' if name=='db' else '/app/var'
         volume='database' if name=='db' else 'documents'
         containers.append({'Config':{'Labels':{'com.docker.compose.project':deploy.PROJECT,
             'com.docker.compose.service':name,'com.docker.compose.project.config_files':str(tmp_path/'compose.production.yaml')}},
             'Image':'sha256:verified','State':{'Running':True,'Health':{'Status':'healthy'}},
-            'Mounts':[{'Type':'volume','Destination':destination,'Name':f'{deploy.PROJECT}_production_{volume}'}]})
+            'Mounts':([{'Type':'volume','Destination':destination,'Name':f'{deploy.PROJECT}_production_{volume}'}]
+                      if name!='web' else [])})
+        if name in ('api','web'):containers[-1]['Mounts'].append({'Type':'tmpfs','Destination':'/tmp'})
     if invalid=='owner':containers[0]['Config']['Labels']['com.docker.compose.project']='other-app'
     elif invalid=='duplicate':containers[1]['Config']['Labels']['com.docker.compose.service']='db'
     elif invalid=='image':containers[1]['Image']='sha256:unreviewed'
@@ -246,6 +255,15 @@ def test_recovery_inspects_actual_project_images_mounts_and_database(monkeypatch
     elif invalid=='unhealthy':containers[0]['State']['Health']['Status']='unhealthy'
     elif invalid=='source':containers[0]['Config']['Labels']['com.docker.compose.project.config_files']='other-bundle'
     elif invalid=='oneoff':containers[1]['Config']['Labels']['com.docker.compose.oneoff']='True'
+    elif invalid=='documents_subdirectory':containers[1]['Mounts'][0]['Destination']='/app/var/documents'
+    elif invalid=='unauthorized_path':containers[1]['Mounts'][0]['Destination']='/unauthorized'
+    elif invalid=='bind':containers[1]['Mounts'][0]['Type']='bind'
+    elif invalid=='extra_volume':containers[1]['Mounts'].append({'Type':'volume','Name':'unexpected','Destination':'/extra'})
+    elif invalid=='duplicate_mount':containers[1]['Mounts'].append(copy.deepcopy(containers[1]['Mounts'][0]))
+    elif invalid=='web_volume':containers[2]['Mounts'].append({'Type':'volume','Name':'unexpected','Destination':'/extra'})
+    elif invalid=='database_volume':containers[0]['Mounts'][0]['Name']='other-database'
+    elif invalid=='database_path':containers[0]['Mounts'][0]['Destination']='/other-database'
+    elif invalid=='missing_mount':containers[1]['Mounts']=[]
     def run(command):
         if command[:3]==['docker','ps','-aq']:return '1\n2\n3'
         if command[:2]==['docker','inspect']:return json.dumps(containers)
@@ -253,7 +271,10 @@ def test_recovery_inspects_actual_project_images_mounts_and_database(monkeypatch
         pytest.fail('Unexpected Docker command')
     monkeypatch.setattr(deploy,'run',run)
     if invalid:
-        with pytest.raises(deploy.DeploymentError):deploy.verify_recovery_containers(stack)
+        mount_errors={'mount','documents_subdirectory','unauthorized_path','bind','extra_volume',
+                      'duplicate_mount','web_volume','database_volume','database_path','missing_mount'}
+        with pytest.raises(deploy.DeploymentError,match='unexpected persistent mounts' if invalid in mount_errors else None):
+            deploy.verify_recovery_containers(stack)
     else:deploy.verify_recovery_containers(stack)
 
 
