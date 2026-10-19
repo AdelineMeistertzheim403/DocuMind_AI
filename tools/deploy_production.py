@@ -12,6 +12,11 @@ import ipaddress
 import socket
 import urllib.error
 import urllib.request
+import ssl
+import time
+import errno
+import hashlib
+from http.cookies import SimpleCookie
 
 try:
     from .backup_local import create_backup
@@ -154,20 +159,82 @@ def verify_images(stack):
             raise DeploymentError('Image revision does not match the reviewed release')
 
 
-def https_check():
-    # Default SSL context verifies chain and hostname. Never use -k or insecure registries.
-    for path in ('/login','/bff/health','/bff/auth/csrf'):
-        with urllib.request.urlopen(f'https://{HOST}{path}',timeout=20) as response:
-            if response.status!=200:raise DeploymentError('HTTPS probe failed')
-            if path.endswith('/csrf'):
-                cookie=response.headers.get('Set-Cookie','')
-                if not all(value in cookie for value in ('HttpOnly','Secure','SameSite=Strict')):
-                    raise DeploymentError('Secure CSRF cookie is missing')
-    try:
-        urllib.request.urlopen(f'https://{HOST}/bff/documents',timeout=20)
-    except urllib.error.HTTPError as error:
-        if error.code==401:return
-    raise DeploymentError('Anonymous document access was not rejected')
+class HTTPSProbeError(DeploymentError):pass
+
+
+class NoProbeRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self,*args,**kwargs):return None
+
+
+def https_network_failure(error):
+    """Only allowlisted classifications and numeric codes; never serialize exception messages."""
+    reason=error.reason if isinstance(error,urllib.error.URLError) else error
+    details={}
+    if isinstance(reason,ssl.SSLCertVerificationError):
+        if isinstance(getattr(reason,'verify_code',None),int):details['tls_verify_code']=reason.verify_code
+        return 'certificate_verification_failed',False,details
+    if isinstance(reason,ssl.SSLError):return 'tls_error',False,details
+    if isinstance(reason,socket.gaierror):
+        details['network_errno']=reason.errno
+        return 'dns_error',reason.errno==socket.EAI_AGAIN,details
+    if isinstance(reason,TimeoutError):return 'network_timeout',True,details
+    if isinstance(reason,OSError):
+        if isinstance(reason.errno,int):details['network_errno']=reason.errno
+        retry=reason.errno in {errno.ECONNREFUSED,errno.ECONNRESET,errno.ETIMEDOUT,errno.EHOSTUNREACH,errno.ENETUNREACH}
+        return 'connection_error',retry,details
+    return 'network_error',False,details
+
+
+def secure_csrf_cookie(headers):
+    for value in headers.get_all('Set-Cookie',[]):
+        cookies=SimpleCookie()
+        try:cookies.load(value)
+        except Exception:continue
+        cookie=cookies.get('__Host-documind-csrf')
+        if (cookie and cookie.value and cookie['secure'] and cookie['httponly']
+                and cookie['samesite'].lower()=='strict' and cookie['path']=='/' and not cookie['domain']):return True
+    return False
+
+
+def https_check(report=None,timeout_seconds=60,interval_seconds=2):
+    if not 0<timeout_seconds<=120 or interval_seconds<=0:raise DeploymentError('Invalid HTTPS probe deadline')
+    # Verify chain/hostname, refuse redirects, and retain no cookies between anonymous probes.
+    opener=urllib.request.build_opener(urllib.request.HTTPSHandler(context=ssl.create_default_context()),NoProbeRedirect())
+    probes=[]
+    if report is not None:report['https_probes']=probes
+    deadline=time.monotonic()+timeout_seconds;attempt=0
+    checks=(('/login',200),('/bff/health',200),('/bff/auth/csrf',200),('/bff/documents',401))
+    while True:
+        attempt+=1
+        for path,expected in checks:
+            event={'url':f'https://{HOST}{path}','attempt':attempt,'expected_status':expected}
+            retry=False;remaining=deadline-time.monotonic()
+            if remaining<=0:
+                event['cause']='deadline_exceeded';probes.append(event)
+                raise HTTPSProbeError(f'HTTPS deadline exceeded: {event["url"]}')
+            try:
+                try:
+                    with opener.open(event['url'],timeout=min(5,remaining)) as response:
+                        status,headers=response.status,response.headers
+                except urllib.error.HTTPError as error:
+                    status,headers=error.code,error.headers
+                    error.close()
+                event['http_status']=status
+                if status!=expected:
+                    event['cause']='unexpected_http_status'
+                    retry=status in {404,408,425,429,502,503,504}
+                elif path.endswith('/csrf') and not secure_csrf_cookie(headers):event['cause']='invalid_csrf_cookie'
+                else:
+                    event['result']='ok';probes.append(event);continue
+            except (urllib.error.URLError,OSError) as error:
+                event['cause'],retry,details=https_network_failure(error)
+                event.update(details)
+            event['retryable']=retry;probes.append(event)
+            if not retry or time.monotonic()>=deadline:
+                raise HTTPSProbeError(f'HTTPS probe failed: {event["url"]}; {event["cause"]}; HTTP {event.get("http_status","none")}') from None
+            time.sleep(min(interval_seconds,max(0,deadline-time.monotonic())))
+            break
+        else:return
 
 
 def point_to(root,name,bundle):
@@ -214,6 +281,71 @@ def recovery_source(root,bundle,path,release,proxy):
     return source_stack,revision
 
 
+def verify_recovery_backup(root,evidence,revision):
+    relative=Path(evidence.get('backup',''))
+    destination=(root/relative).resolve()
+    if relative.is_absolute() or '..' in relative.parts or destination.parent!=root/'var/backups':
+        raise DeploymentError('Recovery requires an existing private backup under var/backups')
+    try:
+        manifest=json.loads((destination/'manifest.json').read_text())
+        names={'database.dump','documents.tar.gz'}
+        if (manifest['migration']!=revision or manifest['database_major']!=17
+                or set(manifest['files'])!=names or set(manifest['sha256'])!=names):
+            raise ValueError()
+        for name in names:
+            path=destination/name
+            if path.is_symlink() or path.resolve().parent!=destination:raise ValueError()
+            with path.open('rb') as source:
+                if hashlib.file_digest(source,'sha256').hexdigest()!=manifest['sha256'][name]:raise ValueError()
+    except (OSError,ValueError,KeyError,TypeError):
+        raise DeploymentError('Recovery backup is missing, incompatible or has invalid checksums') from None
+
+
+def recovery_after_https(root,bundle,path,release,proxy):
+    """Follow an immutable failure chain: replaced apps from latest source, DB from first start."""
+    if os.path.lexists(root/'current') or os.path.lexists(root/'previous'):
+        raise DeploymentError('Recovery requires no current or previous release pointer')
+    latest=path.resolve();source=latest;visited=set();chain=[]
+    while True:
+        if source.parent!=root/'releases' or source==bundle or source in visited or len(visited)>=8:
+            raise DeploymentError('Recovery source chain is ambiguous, cyclic or outside releases')
+        visited.add(source)
+        try:
+            original=validate_release(json.loads((source/'release.json').read_text()))
+            evidence=json.loads((source/'deployment-report.json').read_text())
+        except (OSError,ValueError):
+            raise DeploymentError('Recovery requires every source manifest and failure report') from None
+        if (evidence.get('status')!='failed' or evidence.get('git_sha')!=original['git_sha']
+                or evidence.get('images')!=original['images'] or evidence.get('previous_sha')
+                or evidence.get('schema_after')!=original['schema_revision']
+                or original['schema_revision']!=release['schema_revision']):
+            raise DeploymentError('Recovery source chain identity or schema does not match')
+        chain.append((source,original,evidence))
+        if evidence.get('phase')=='start' and 'schema_before' in evidence and evidence['schema_before'] is None:
+            if len(chain)==1:raise DeploymentError('Post-HTTPS recovery requires a failed HTTPS source')
+            break
+        if evidence.get('phase')!='https' or evidence.get('schema_before')!=original['schema_revision']:
+            raise DeploymentError('Recovery source must prove a failed HTTPS recovery without migration')
+        verify_recovery_backup(root,evidence,original['schema_revision'])
+        relative=Path(evidence.get('recovered_from',''))
+        if relative.is_absolute() or '..' in relative.parts:
+            raise DeploymentError('Invalid recovery parent path')
+        source=(root/relative).resolve()
+    origin_path,origin_release,_=chain[-1]
+    for index,(_,_,evidence) in enumerate(chain[:-1]):
+        if (evidence.get('source_sha')!=chain[index+1][1]['git_sha']
+                or evidence.get('retained_database_image')!=origin_release['images']['postgres']):
+            raise DeploymentError('Recovery chain does not prove the retained database image')
+    stack=Stack(root,latest,chain[0][1],proxy)
+    stack.database_source=Stack(root,origin_path,origin_release,proxy)
+    check_config(stack);check_config(stack.database_source)
+    verify_recovery_containers(stack)
+    revision=stack.revision()
+    if revision!=release['schema_revision'] or not can_rollback(release,revision):
+        raise DeploymentError('Recovery requires the exact compatible live schema revision')
+    return stack,revision
+
+
 def verify_recovery_containers(stack):
     identifiers=run(['docker','ps','-aq','--filter',f'label=com.docker.compose.project={PROJECT}']).splitlines()
     if len(identifiers)!=3:raise DeploymentError('Recovery requires exactly the three original service containers')
@@ -222,13 +354,14 @@ def verify_recovery_containers(stack):
     for container in containers:
         labels=container['Config'].get('Labels',{})
         service=labels.get('com.docker.compose.service')
+        owner=getattr(stack,'database_source',stack) if service=='db' else stack
         if (labels.get('com.docker.compose.project')!=PROJECT or service not in ('db','api','web')
                 or service in seen or labels.get('com.docker.compose.oneoff','false').lower()!='false'
-                or labels.get('com.docker.compose.project.config_files')!=str(stack.bundle/'compose.production.yaml')):
+                or labels.get('com.docker.compose.project.config_files')!=str(owner.bundle/'compose.production.yaml')):
             raise DeploymentError('Ambiguous recovery container ownership or source bundle')
         seen.add(service)
         component={'db':'postgres','api':'backend','web':'frontend'}[service]
-        image=run(['docker','image','inspect',stack.release['images'][component],'--format','{{.Id}}'])
+        image=run(['docker','image','inspect',owner.release['images'][component],'--format','{{.Id}}'])
         if container['Image']!=image:raise DeploymentError('Recovery container image differs from source manifest')
         if service=='db' and (not container['State']['Running'] or container['State'].get('Health',{}).get('Status')!='healthy'):
             raise DeploymentError('Recovery requires the existing healthy database')
@@ -258,6 +391,9 @@ def execute(args,report):
     stack=Stack(root,bundle,release)
     report['phase']='preflight'
     recovery=getattr(args,'recover_from',None)
+    after_https=getattr(args,'recover_after_https',None)
+    if recovery and after_https:raise DeploymentError('Choose exactly one recovery procedure')
+    recovery=recovery or after_https
     if recovery and (args.initialize or args.rollback or args.allow_migration):
         raise DeploymentError('Recovery cannot be combined with initialization, rollback or migration approval')
     values=resolve_proxy(stack)
@@ -269,10 +405,11 @@ def execute(args,report):
     previous=current_stack(root,stack.env['BFF_TRUSTED_PROXY_IPS'])
     source=None
     if recovery:
-        source,before=recovery_source(root,bundle,recovery,release,stack.env['BFF_TRUSTED_PROXY_IPS'])
+        recover=recovery_after_https if after_https else recovery_source
+        source,before=recover(root,bundle,recovery,release,stack.env['BFF_TRUSTED_PROXY_IPS'])
         report['recovered_from']=str(source.bundle.relative_to(root))
         report['source_sha']=source.release['git_sha']
-        report['retained_database_image']=source.release['images']['postgres']
+        report['retained_database_image']=getattr(source,'database_source',source).release['images']['postgres']
     if previous:
         report['previous_sha']=previous.release['git_sha']
     if not args.initialize and previous is None and not recovery:
@@ -318,7 +455,7 @@ def execute(args,report):
         stack.call('up','-d','--no-deps','--wait','--wait-timeout','180','--scale','api=1','--scale','web=1','api','web')
         stack.check_health('db','api','web')
         report['phase']='https'
-        https_check()
+        https_check(report)
         if previous:point_to(root,'previous',previous.bundle)
         point_to(root,'current',bundle)
         report['phase']='complete';report['status']='success'
@@ -344,9 +481,14 @@ def main():
     parser.add_argument('--allow-migration',action='store_true')
     parser.add_argument('--rollback',action='store_true')
     parser.add_argument('--recover-from',type=Path,help='Explicit source bundle of a failed first installation at start; no migrations')
+    parser.add_argument('--recover-after-https',type=Path,help='Explicit failed HTTPS recovery source; verify original DB and replaced apps; no migrations')
     parser.add_argument('--registry-login',action='store_true',help='Read ephemeral registry credentials from SSH stdin')
     args=parser.parse_args()
     os.umask(0o077)
+    report_path=Path(__file__).resolve().parent/'deployment-report.json'
+    if os.path.lexists(report_path):
+        print('Existing deployment report preserved; stage a new reviewed bundle for this attempt')
+        return 1
     report={'status':'failed','phase':'validation','started_at':datetime.now(timezone.utc).isoformat()}
     try:
         if os.name!='posix' or sys.version_info<(3,11):raise DeploymentError('Linux VPS with Python 3.11+ required')
@@ -371,7 +513,11 @@ def main():
         # Only explicit, fixed deployment messages may appear; no subprocess output or traceback.
         if isinstance(error,DeploymentError):report['error']=str(error)
     report['finished_at']=datetime.now(timezone.utc).isoformat()
-    (Path(__file__).resolve().parent/'deployment-report.json').write_text(json.dumps(report,indent=2)+'\n')
+    try:
+        with report_path.open('x',encoding='utf-8') as output:output.write(json.dumps(report,indent=2)+'\n')
+    except FileExistsError:
+        print('Deployment report already exists; refusing to overwrite evidence')
+        return 1
     print(f'Deployment {report["status"]}; phase={report["phase"]}')
     return 0 if report['status']=='success' else 1
 

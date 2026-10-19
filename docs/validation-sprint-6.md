@@ -1,5 +1,57 @@
 # Validation Sprint 6 — CI/CD et VPS
 
+## Correctif HTTPS et reprise après remplacement applicatif
+
+État fourni par l’administratrice : release `334a40ec76c69c582a4f25c8a6237351f3c2357d`
+échouée à HTTPS après sauvegarde et remplacement API/BFF ; PostgreSQL initial conservé au
+schéma `0006`, aucun pointeur actif. La cause réelle de l’ancien `URLError` reste inconnue :
+aucune connexion au VPS ni nouvelle sonde réelle vers ce domaine n’a été effectuée ici.
+
+`tools/deploy_production.py` conserve maintenant des diagnostics `https_probes` limités aux
+URLs fixes, statuts, catégories d’erreur et codes numériques. TLS reste vérifié, les redirections
+sont refusées et aucune donnée de cookie, réponse ou exception brute n’est journalisée.
+Les erreurs transitoires ont un budget de nouvelles tentatives de 60 s ; les erreurs permanentes
+et les échecs des contrôles de sécurité ne sont pas réessayés. Les quatre sondes restent requises.
+
+L’option distincte `--recover-after-https` vérifie les anciens rapports et manifests, la chaîne
+de reprises et leurs sauvegardes SHA-256, puis distingue PostgreSQL initial des applications
+remplacées pour vérifier les images et les labels réels. Elle crée une nouvelle sauvegarde,
+sans migration ni `up db`, et n’active `current` qu’après santé et HTTPS. Les anciennes preuves
+restent conservées. Le guide contient les commandes pour la source `334a40ec…`.
+
+Validation locale finale : **111 tests ciblés passent** (`tests/test_deployment.py` et le nouveau
+`tests/test_https_probes.py`). Couverture : 404/502/503/504 transitoires, découverte tardive,
+expiration de délai, erreurs DNS/connexion/TLS, refus immédiat des erreurs permanentes,
+redirections, cookie non sécurisé, documents anonymes accessibles, absence de fuite dans
+les diagnostics, chaîne de reprises successives, backup absent/corrompu, schéma/identités
+incompatibles, séparation des images DB/API/BFF, refus d’écraser un ancien rapport et échec après remplacement. Les horloges,
+sondes et commandes Docker sont simulées ; aucun appel fournisseur ou déploiement n’est exécuté.
+
+Compilation Python, aide CLI, YAML Compose et actionlint des workflows : valides. Diff Git
+sans erreur d’espaces. L’avertissement Starlette/httpx préexistant reste présent. Les suites
+backend métier, PostgreSQL et BFF n’ont pas été rejouées pour ce correctif du déployeur.
+Aucune modification du Compose, des images publiées, des secrets ou des données de production.
+
+## Correctif de vérification des volumes de reprise
+
+Le Compose déclare le volume documentaire sur `/app/var`, avec `STORAGE_DIR` dans le
+sous-répertoire `/app/var/documents`. Le contrôle précédent confondait ces deux chemins.
+`verify_recovery_containers()` vérifie désormais le nom exact du volume documentaire et
+sa destination `/app/var`, conserve les contrôles projet/service/images/source/état PostgreSQL,
+et refuse également tout montage persistant supplémentaire dans l’API, PostgreSQL ou le BFF.
+Les tmpfs éphémères restent autorisés. Aucun changement du Compose ou des volumes réels.
+
+Les **54 tests de déploiement passent**, dont un cas reproduisant les montages constatés :
+PostgreSQL sur `/var/lib/postgresql/data`, API sur `/app/var`, aucun volume persistant BFF.
+Les cas négatifs couvrent notamment `/app/var/documents`, un chemin arbitraire, un nom de
+volume incorrect, un bind mount, un doublon, un volume supplémentaire ou manquant et un
+montage persistant BFF. La syntaxe Python, les workflows via actionlint, le YAML Compose
+et les espaces du diff Git sont vérifiés. L’avertissement Starlette/httpx préexistant subsiste.
+
+Fichiers concernés : `tools/deploy_production.py`, `tests/test_deployment.py`,
+`docs/sprint-6-cicd.md` et ce bilan. Tests Docker simulés : aucune commande Docker, connexion
+VPS, modification de données, réinitialisation, publication, push ou déploiement exécuté.
+
 ## Correctif healthcheck et reprise — 19 octobre 2026
 
 État du VPS fourni par l’administratrice : première release

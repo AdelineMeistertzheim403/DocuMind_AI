@@ -269,6 +269,17 @@ Le déployeur, sous verrou exclusif, exige :
   espace disque et adresse réelle de Traefik sur `web`.
 
 Toute différence impose un diagnostic manuel ; le déployeur n’adopte pas une installation ambiguë.
+
+Les destinations de montage sont celles du Compose :
+`documind-prod_production_database` sur `/var/lib/postgresql/data` dans PostgreSQL et
+`documind-prod_production_documents` sur **`/app/var`** dans l’API. Le chemin
+`STORAGE_DIR=/app/var/documents` désigne un sous-répertoire du volume, pas sa destination Docker.
+Le BFF n’a aucun montage persistant. Les contrôles refusent les mauvais noms, chemins,
+bind mounts et montages persistants supplémentaires ; les tmpfs éphémères restent autorisés.
+L’ancien contrôle de reprise attendait à tort `/app/var/documents` : utiliser un bundle
+contenant ce correctif du déployeur, sans déplacer ni remonter les volumes pour satisfaire
+l’ancienne attente. Le rapport source et son manifeste doivent rester intacts.
+
 `--recover-from` ne se combine pas avec `--initialize`, `--rollback` ou `--allow-migration`.
 Une reprise avec changement de schéma est refusée : rétablir d’abord l’application au schéma
 actuel, puis réaliser une mise à niveau séparée avec sauvegarde et approbation.
@@ -336,7 +347,9 @@ En cas d’échec, API/BFF restent arrêtés, PostgreSQL et les données sont co
 source n’est pas écrasé. Examiner le nouveau rapport avant une nouvelle tentative, sans créer
 de lien à la main. Une panne survenue après remplacement des conteneurs peut rendre leurs
 images différentes de celles du bundle source : une nouvelle reprise automatique sera alors
-refusée et nécessitera un diagnostic explicite, pas un changement artificiel du rapport source.
+refusée par `--recover-from`. Utiliser alors uniquement la procédure distincte
+`--recover-after-https` ci-dessous si toutes ses preuves sont disponibles ; ne pas changer
+artificiellement le rapport source.
 
 4. Après succès, contrôler :
 
@@ -351,6 +364,150 @@ correcte, digest PostgreSQL conservé et chemin de sauvegarde. Vérifier ensuite
 import/analyse classique et isolation. Reconnecter les sessions et clés BYOK perdues au redémarrage.
 Ne pas déclencher d’appel IA payant pour cette vérification. Archiver la sauvegarde hors VPS
 selon la procédure habituelle ; aucun `down -v`, suppression de volume ou reset PostgreSQL.
+
+## Diagnostic HTTPS et reprise après remplacement des conteneurs
+
+Cas fourni par l’administratrice : release `334a40ec76c69c582a4f25c8a6237351f3c2357d`,
+échec `phase=https`, API/BFF remplacés puis arrêtés, PostgreSQL d’origine healthy au schéma
+`0006`, aucun `current` ni `previous`, sauvegarde `var/backups/deploy-20261019-181649`.
+La validité du certificat et le 404 observé après arrêt ne prouvent pas la cause de l’échec
+initial : une route Traefik absente après arrêt ne décrit pas son état pendant les sondes.
+L’ancien `URLError` ne conservait pas de cause ; aucun accès au VPS n’a été effectué ici.
+
+### Sondes HTTPS et diagnostics conservés
+
+Le déployeur vérifie toujours, sans session ni cookies réutilisés :
+
+| URL | Résultat exigé |
+|---|---|
+| `https://documind.adelinemeistertzheim.fr/login` | 200 |
+| `https://documind.adelinemeistertzheim.fr/bff/health` | 200 |
+| `https://documind.adelinemeistertzheim.fr/bff/auth/csrf` | 200 et cookie `__Host-documind-csrf` valide |
+| `https://documind.adelinemeistertzheim.fr/bff/documents` | 401 anonyme |
+
+Le cookie doit avoir `Secure`, `HttpOnly`, `SameSite=Strict`, `Path=/` et aucun Domain.
+La validation TLS chaîne/nom reste active. Les redirections sont refusées, même vers un autre
+chemin du domaine. Aucun corps de réponse, cookie, identifiant, URL de redirection, texte
+d’exception ou en-tête fournisseur n’est enregistré.
+
+`deployment-report.json` contient `https_probes` : URL fixe, numéro de tentative, statut attendu,
+statut HTTP observé ou catégorie réseau/TLS, éventuel errno/code numérique de validation TLS,
+et caractère réessayable. Les diagnostics sont enregistrés **avant** l’arrêt des services
+en cas d’échec et restent dans le nouveau rapport. `error_category=HTTPSProbeError` accompagne
+une erreur finale explicite avec URL et cause, sans détails bruts potentiellement sensibles.
+
+L’attente dispose d’un budget de **60 secondes**, d’un timeout de socket d’au plus **5 secondes**
+par sonde et d’une pause d’au plus **2 secondes** entre tentatives. Le délai de résolution DNS
+reste soumis au résolveur système. Les statuts 404/408/425/429/502/503/504, les timeouts,
+les connexions refusées/réinitialisées et le DNS temporaire peuvent être réessayés jusqu’à
+épuisement du budget ; toute la séquence doit ensuite réussir. Un 404 persistant finit en échec.
+Les erreurs de certificat/TLS, le DNS permanent, les redirections, 400/401/403 inattendus,
+un 500, un cookie non sécurisé ou l’accès anonyme autorisé échouent immédiatement.
+Le 401 des documents est naturellement un succès. Cette attente ne modifie pas Traefik.
+
+### Preuves exigées pour `--recover-after-https`
+
+Cette option est distincte de `--recover-from`, qui conserve son contrôle strict de la première
+installation échouée à `start`. Elle nécessite une **nouvelle release CI corrigée**, placée
+dans un nouveau bundle, sans écraser les bundles, manifests ou rapports précédents.
+Le workflow GitHub de déploiement ordinaire ne possède pas cette entrée de reprise.
+Un bundle qui possède déjà `deployment-report.json` est refusé avant toute opération :
+chaque tentative utilise un nouveau répertoire et le déployeur n’écrase aucun ancien rapport.
+
+Sous le verrou de déploiement, la nouvelle procédure exige :
+
+- aucun pointeur `current` ou `previous`, exactement les deux volumes attendus et les trois
+  conteneurs du projet `documind-prod`, sans montage persistant supplémentaire ;
+- un rapport source `failed/https` de la release `334a40ec…`, dont SHA et images correspondent
+  au manifeste et dont schémas avant/après sont identiques au schéma cible `0006` ;
+- sa chaîne `recovered_from`/`source_sha` complète jusqu’au rapport de première installation
+  `failed/start`, `schema_before=null`, sans release précédente ; aucune sortie de `releases/`,
+  aucun cycle, au maximum huit bundles ;
+- pour chaque reprise HTTPS échouée : la sauvegarde indiquée, son manifeste PostgreSQL 17 au
+  bon schéma, les deux archives et leurs empreintes SHA-256 correctes sous `var/backups/` ;
+- API/BFF avec les images exactes et les labels de fichier Compose du bundle échoué à HTTPS ;
+  PostgreSQL avec l’image exacte et les labels du **bundle initial**, conservés pendant les reprises ;
+- la concordance de `retained_database_image` avec ce bundle initial sur toute la chaîne,
+  PostgreSQL healthy et une seule révision réelle `0006`, compatible avec la nouvelle cible.
+
+Les paramètres d’identité, montages, TLS/Registry, espace disque et proxy restent vérifiés.
+Un ancien rapport perdu, une archive manquante, un checksum erroné, un schéma différent ou une
+image inattendue entraîne un refus. Ne pas reconstruire une preuve en modifiant les rapports.
+Ne pas combiner cette option avec `--recover-from`, `--initialize`, `--rollback` ou `--allow-migration`.
+
+### Commandes manuelles pour le cas `334a40ec…`
+
+1. Faire publier par la CI une nouvelle release contenant ce correctif, vérifier son run réussi,
+   son SHA, ses digests et son schéma `0006`. Transférer ses cinq fichiers d’artefact à plat dans
+   un **nouveau** répertoire privé `/srv/documind-ai/releases/<nouvelle-release>` avec votre accès
+   SSH vérifié. Ne pas lancer le workflow de déploiement ordinaire pour contourner l’absence de
+   `current`. Ne pas écraser le répertoire `334a40ec…` ni celui de la première installation.
+2. Sur le VPS, choisir les chemins réels, sans supposer les suffixes des bundles :
+
+```bash
+cd /srv/documind-ai
+umask 077
+find /srv/documind-ai/releases -mindepth 1 -maxdepth 1 -type d -print
+read -r -p 'Bundle échoué à HTTPS (334a40ec...) : ' HTTPS_SOURCE
+read -r -p 'Nouveau bundle corrigé : ' CANDIDATE
+export HTTPS_SOURCE CANDIDATE
+python3 - <<'PY'
+import json, os
+from pathlib import Path
+root = Path('/srv/documind-ai')
+source, target = (Path(os.environ[key]).resolve() for key in ('HTTPS_SOURCE', 'CANDIDATE'))
+assert source.parent == target.parent == root / 'releases' and source != target
+assert not os.path.lexists(root / 'current') and not os.path.lexists(root / 'previous')
+original = json.loads((source / 'release.json').read_text())
+report = json.loads((source / 'deployment-report.json').read_text())
+candidate = json.loads((target / 'release.json').read_text())
+assert original['git_sha'] == '334a40ec76c69c582a4f25c8a6237351f3c2357d'
+assert report['status'] == 'failed' and report['phase'] == 'https'
+assert report['git_sha'] == original['git_sha'] and report['images'] == original['images']
+assert report['schema_before'] == report['schema_after'] == candidate['schema_revision'] == '0006'
+assert report['backup'] == 'var/backups/deploy-20261019-181649'
+assert candidate['git_sha'] != original['git_sha']
+assert (root / report['backup'] / 'manifest.json').is_file()
+print('Source :', original['git_sha'], '\nCible :', candidate['git_sha'], '\nSchéma : 0006')
+PY
+```
+
+3. Arrêter si une assertion échoue ; comparer la cible au run CI approuvé. Vérifier la présence
+   de la chaîne de bundles source et de la sauvegarde originale. Le déployeur vérifiera leurs
+   identités et empreintes sans modifier les anciens rapports. Conserver `.env.production`
+   en mode 0600, `TRAEFIK_CONTAINER=traefik`, inscriptions fermées/sur invitation et votre
+   authentification Docker Registry en lecture (login interactif, TLS actif).
+   Après revue, lancer explicitement :
+
+```bash
+python3 "$CANDIDATE/deploy_production.py" \
+  --root /srv/documind-ai \
+  --recover-after-https "$HTTPS_SOURCE"
+```
+
+Le déployeur revérifie l’état puis produit **une nouvelle sauvegarde cohérente**, après arrêt
+gracieux API/BFF. Il ne lance ni migration, ni `up db`, ni restauration ou suppression de volume.
+L’image PostgreSQL initiale reste en place. Seuls API/BFF sont démarrés avec la nouvelle release.
+Les sondes attendent la disponibilité HTTPS dans la limite prévue. `current` n’est créé qu’après
+réussite des healthchecks et de toute la séquence HTTPS. En cas d’échec, API/BFF sont arrêtés,
+les données et les anciennes preuves restent conservées ; lire le **nouveau** rapport :
+
+```bash
+python3 -m json.tool "$CANDIDATE/deployment-report.json"
+```
+
+Si une nouvelle tentative a échoué à HTTPS après remplacement, son bundle devient la source
+explicite de la tentative suivante, dans un nouveau répertoire. Sa chaîne conserve les rapports
+précédents. Ne pas reprendre depuis le premier bundle si les conteneurs ne lui correspondent plus.
+Après succès seulement :
+
+```bash
+readlink -f /srv/documind-ai/current
+curl --fail --show-error https://documind.adelinemeistertzheim.fr/bff/health
+```
+
+Contrôler ensuite les comptes et l’analyse classique, sans appel IA payant. Ne pas créer un
+pointeur manuellement et ne pas réinitialiser PostgreSQL pour débloquer la reprise.
 
 ## Sauvegarde et retour arrière
 

@@ -1,5 +1,6 @@
 import copy
 import json
+import hashlib
 from pathlib import Path
 import sys
 from types import SimpleNamespace
@@ -121,7 +122,7 @@ def simulation(tmp_path,monkeypatch):
         monkeypatch.setattr(deploy,function,lambda *args:None)
     monkeypatch.setattr(deploy,'resolve_proxy',lambda *args:{'DEPLOY_MIN_FREE_GIB':'8'})
     monkeypatch.setattr(deploy,'create_backup',lambda *args,**kwargs:events.append(('backup',())))
-    monkeypatch.setattr(deploy,'https_check',lambda:events.append(('https',())))
+    monkeypatch.setattr(deploy,'https_check',lambda *args:events.append(('https',())))
     monkeypatch.setattr(deploy,'point_to',lambda *args:events.append(('activate',())))
     args=SimpleNamespace(root=root,initialize=False,allow_migration=False,rollback=False)
     return args,events,state,bundle
@@ -219,7 +220,7 @@ def test_recovery_failure_never_activates_or_reopens_failed_source(recovery,monk
         monkeypatch.setattr(deploy,'create_backup',lambda *args,**kwargs:(_ for _ in ()).throw(OSError('backup failed')))
     elif failure=='start':state['fail_start']=True
     elif failure=='https':
-        monkeypatch.setattr(deploy,'https_check',lambda:(_ for _ in ()).throw(deploy.DeploymentError('HTTPS probe failed')))
+        monkeypatch.setattr(deploy,'https_check',lambda *args:(_ for _ in ()).throw(deploy.DeploymentError('HTTPS probe failed')))
     else:
         calls=[]
         def drift(*args):
@@ -284,3 +285,163 @@ def test_partial_volumes_never_enable_implicit_initialization(monkeypatch,initia
     monkeypatch.setattr(deploy.subprocess,'run',lambda *args,**kwargs:SimpleNamespace(
         returncode=0 if next(results) else 1,stderr='no such volume'))
     with pytest.raises(deploy.DeploymentError):deploy.check_volume_state(initialize)
+
+
+@pytest.fixture
+def post_https(recovery):
+    args,events,state,bundle,initial_report=recovery
+    origin=args.recover_from
+    original=json.loads((origin/'release.json').read_text())
+    failed=bundle.parent/'failed-https';failed.mkdir()
+    replaced=release(sha='334a40ec76c69c582a4f25c8a6237351f3c2357d')
+    replaced['images']={name:value.split('@')[0]+'@sha256:'+str(index)*64
+                        for index,(name,value) in enumerate(replaced['images'].items(),4)}
+    (failed/'release.json').write_text(json.dumps(replaced))
+    backup=args.root/'var/backups/deploy-20261019-181649';backup.mkdir(parents=True)
+    hashes={}
+    for name in ('database.dump','documents.tar.gz'):
+        content=b'local unit-test snapshot, never restored';(backup/name).write_bytes(content)
+        hashes[name]=hashlib.sha256(content).hexdigest()
+    (backup/'manifest.json').write_text(json.dumps({'migration':'0006','database_major':17,
+                                                  'files':list(hashes),'sha256':hashes}))
+    evidence={'status':'failed','phase':'https','git_sha':replaced['git_sha'],'images':replaced['images'],
+        'schema_before':'0006','schema_after':'0006','recovered_from':str(origin.relative_to(args.root)),
+        'source_sha':original['git_sha'],'retained_database_image':original['images']['postgres'],
+        'backup':str(backup.relative_to(args.root))}
+    (failed/'deployment-report.json').write_text(json.dumps(evidence))
+    args.recover_from=None;args.recover_after_https=failed
+    return args,events,state,bundle,evidence,origin
+
+
+def test_post_https_recovery_validates_chain_and_retains_original_database(post_https,monkeypatch):
+    args,events,state,bundle,evidence,origin=post_https;checks=[];report={}
+    def verify(stack):
+        checks.append((stack.bundle,stack.database_source.bundle,stack.release['git_sha']))
+    monkeypatch.setattr(deploy,'verify_recovery_containers',verify)
+    deploy.execute(args,report)
+    assert len(checks)==2 and all(value==(args.recover_after_https,origin,evidence['git_sha']) for value in checks)
+    assert report['status']=='success' and report['source_sha']==evidence['git_sha']
+    assert report['retained_database_image']==evidence['retained_database_image']
+    assert not any('alembic' in command or (command[0]=='up' and 'db' in command) for _,command in events if command)
+    backup=next(i for i,event in enumerate(events) if event[0]=='backup')
+    assert backup<next(i for i,(_,command) in enumerate(events) if command and command[0]=='up')
+    assert json.loads((args.recover_after_https/'deployment-report.json').read_text())==evidence
+
+
+@pytest.mark.parametrize('invalid',['source_sha','images','database','phase','schema','live_schema',
+    'backup_missing','backup_corrupt','backup_schema','backup_outside','backup_hash',
+    'parent_missing','cycle','current','previous','same_target','both_modes','initialize','allow_migration','rollback','target_schema'])
+def test_post_https_recovery_refuses_ambiguous_state(post_https,invalid):
+    args,events,state,bundle,evidence,origin=post_https
+    backup=args.root/evidence['backup']
+    if invalid=='source_sha':evidence['source_sha']='c'*40
+    elif invalid=='images':evidence['images']={}
+    elif invalid=='database':evidence['retained_database_image']=evidence['images']['postgres']
+    elif invalid=='phase':evidence['phase']='start'
+    elif invalid=='schema':evidence['schema_before']='0005'
+    elif invalid=='live_schema':state['revision']='0007'
+    elif invalid=='backup_missing':(backup/'manifest.json').unlink()
+    elif invalid=='backup_corrupt':(backup/'database.dump').write_bytes(b'corrupt')
+    elif invalid in ('backup_schema','backup_hash'):
+        manifest=json.loads((backup/'manifest.json').read_text())
+        if invalid=='backup_schema':manifest['migration']='0005'
+        else:manifest['sha256'].pop('documents.tar.gz')
+        (backup/'manifest.json').write_text(json.dumps(manifest))
+    elif invalid=='backup_outside':evidence['backup']='../outside'
+    elif invalid=='parent_missing':(origin/'deployment-report.json').unlink()
+    elif invalid=='cycle':evidence['recovered_from']=str(args.recover_after_https.relative_to(args.root))
+    elif invalid in ('current','previous'):(args.root/invalid).write_text('invalid pointer')
+    elif invalid=='both_modes':args.recover_from=origin
+    elif invalid in ('initialize','allow_migration','rollback'):setattr(args,invalid,True)
+    elif invalid=='target_schema':(bundle/'release.json').write_text(json.dumps(release('0007')))
+    failed=args.recover_after_https
+    (failed/'deployment-report.json').write_text(json.dumps(evidence))
+    if invalid=='same_target':args.recover_after_https=bundle
+    with pytest.raises(deploy.DeploymentError):deploy.execute(args,{})
+    assert not events
+
+
+def test_post_https_failure_preserves_diagnostics_and_never_activates(post_https,monkeypatch):
+    args,events,state,bundle,evidence,origin=post_https;report={}
+    def failed_https(report):
+        report['https_probes']=[{'url':f'https://{deploy.HOST}/login','cause':'dns_error'}]
+        raise deploy.HTTPSProbeError('HTTPS probe failed')
+    monkeypatch.setattr(deploy,'https_check',failed_https)
+    with pytest.raises(deploy.HTTPSProbeError):deploy.execute(args,report)
+    assert report['phase']=='https' and report['backup']
+    assert report['https_probes'][0]['cause']=='dns_error'
+    assert any(name=='candidate' and command[0]=='stop' for name,command in events if command)
+    assert not any(name=='activate' for name,_ in events)
+    assert not any(name=='failed-https' and command[0]=='up' for name,command in events if command)
+
+
+def test_post_https_new_backup_failure_blocks_application_start(post_https,monkeypatch):
+    args,events,state,bundle,evidence,origin=post_https
+    def fail(*args,**kwargs):raise OSError('simulated backup failure')
+    monkeypatch.setattr(deploy,'create_backup',fail)
+    with pytest.raises(OSError):deploy.execute(args,{})
+    assert not any(command and command[0]=='up' for _,command in events)
+    assert not any(name=='activate' for name,_ in events)
+
+
+def test_post_https_recovery_can_follow_a_second_failed_https_attempt(post_https,monkeypatch):
+    args,events,state,bundle,evidence,origin=post_https
+    prior=args.recover_after_https
+    later=bundle.parent/'failed-again';later.mkdir()
+    metadata=release(sha='c'*40)
+    (later/'release.json').write_text(json.dumps(metadata))
+    report={**evidence,'git_sha':metadata['git_sha'],'images':metadata['images'],
+            'source_sha':evidence['git_sha'],'recovered_from':str(prior.relative_to(args.root))}
+    # An independently named snapshot with the same unit-test contents and valid hashes.
+    old=args.root/evidence['backup'];new=args.root/'var/backups/retry-snapshot';new.mkdir()
+    for file in old.iterdir():(new/file.name).write_bytes(file.read_bytes())
+    report['backup']=str(new.relative_to(args.root))
+    (later/'deployment-report.json').write_text(json.dumps(report))
+    args.recover_after_https=later
+    checks=[]
+    monkeypatch.setattr(deploy,'verify_recovery_containers',lambda stack:checks.append((stack.bundle,stack.database_source.bundle)))
+    result={};deploy.execute(args,result)
+    assert checks==[(later,origin)]*2
+    assert result['status']=='success' and result['source_sha']=='c'*40
+    assert json.loads((prior/'deployment-report.json').read_text())==evidence
+
+
+@pytest.mark.parametrize('wrong',[None,'db_image','db_bundle','app_bundle'])
+def test_recovery_matches_split_database_and_application_owners(tmp_path,monkeypatch,wrong):
+    origin=tmp_path/'initial';candidate=tmp_path/'apps';origin.mkdir();candidate.mkdir()
+    original=release(sha='b'*40);replaced=release()
+    replaced['images']['postgres']=replaced['images']['postgres'].split('@')[0]+'@sha256:'+'9'*64
+    stack=deploy.Stack(tmp_path,candidate,replaced)
+    stack.database_source=deploy.Stack(tmp_path,origin,original)
+    containers=[]
+    for service in ('db','api','web'):
+        owner=origin if service=='db' else candidate
+        mounts=[]
+        if service!='web':mounts=[{'Type':'volume','Destination':'/app/var' if service=='api' else '/var/lib/postgresql/data',
+            'Name':f'{deploy.PROJECT}_production_'+('documents' if service=='api' else 'database')}]
+        containers.append({'Config':{'Labels':{'com.docker.compose.project':deploy.PROJECT,'com.docker.compose.service':service,
+            'com.docker.compose.project.config_files':str(owner/'compose.production.yaml')}},
+            'Image':'original-db' if service=='db' else 'replaced-app','State':{'Running':True,'Health':{'Status':'healthy'}},'Mounts':mounts})
+    if wrong=='db_image':containers[0]['Image']='replaced-app'
+    elif wrong=='db_bundle':containers[0]['Config']['Labels']['com.docker.compose.project.config_files']=str(candidate/'compose.production.yaml')
+    elif wrong=='app_bundle':containers[1]['Config']['Labels']['com.docker.compose.project.config_files']=str(origin/'compose.production.yaml')
+    def run(command):
+        if command[:3]==['docker','ps','-aq']:return '1\n2\n3'
+        if command[:2]==['docker','inspect']:return json.dumps(containers)
+        if command[:3]==['docker','image','inspect']:
+            assert command[3]!=replaced['images']['postgres']
+            return 'original-db' if command[3]==original['images']['postgres'] else 'replaced-app'
+        pytest.fail('Unexpected Docker command')
+    monkeypatch.setattr(deploy,'run',run)
+    if wrong:
+        with pytest.raises(deploy.DeploymentError):deploy.verify_recovery_containers(stack)
+    else:deploy.verify_recovery_containers(stack)
+
+
+def test_existing_report_is_never_overwritten_or_reused_as_candidate(tmp_path,monkeypatch):
+    report=tmp_path/'deployment-report.json';report.write_text('immutable prior failure')
+    monkeypatch.setattr(deploy,'__file__',str(tmp_path/'deploy_production.py'))
+    monkeypatch.setattr(sys,'argv',['deploy_production.py','--root',str(tmp_path),'--recover-after-https',str(tmp_path)])
+    monkeypatch.setattr(deploy,'verify_registry_tls',lambda:pytest.fail('No network preflight before preserving old evidence'))
+    assert deploy.main()==1
+    assert report.read_text()=='immutable prior failure'
