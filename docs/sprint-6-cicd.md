@@ -213,9 +213,10 @@ anonymes ; activation du pointeur `current`. Les sessions et clés BYOK RAM sont
 redémarrage et doivent être reconnectées. Les étapes persistées restent conservées ; aucun
 appel IA n’est lancé par ce processus.
 
-L’installation existante sans pointeur `current` est volontairement refusée : elle doit être
-inventoriée et adoptée administrativement après sauvegarde, sans utiliser `initialize` pour
-contourner les contrôles. Aucun transfert automatique des documents de votre ordinateur vers
+L’installation existante sans pointeur `current` est refusée par le déploiement ordinaire.
+Une première installation échouée en phase `start` peut être reprise uniquement par la
+procédure explicite `--recover-from` ci-dessous, sans utiliser `initialize` pour contourner
+les contrôles. Aucun transfert automatique des documents de votre ordinateur vers
 le VPS n’est prévu. Une migration de données locales exige une restauration indépendante
 testée et une opération distincte approuvée.
 
@@ -223,6 +224,133 @@ Le rapport `deployment-report.json` contient SHA, digests, révisions, chemin de
 phase finale et résultat de reprise éventuelle. Pas de secrets, prompts ou documents. Il reste
 dans le bundle VPS et est récupéré comme artefact GitHub, même après un échec du déploiement.
 Les sondes HTTPS n’effectuent ni connexion à un vrai compte ni appel IA : compléter la checklist.
+
+## Correctif du healthcheck BFF et reprise d’une première installation partielle
+
+Cas constaté : release `2de68362d2fe0f4dece2d01da34dc5a06f00d4c8`, schéma `0006`,
+projet `documind-prod`, deux volumes présents, PostgreSQL sain, échec `start`, aucun `current`.
+Ce constat fourni par l’administratrice n’est pas une inspection distante effectuée par l’agent.
+
+L’ancien healthcheck utilisait `fetch` sur `127.0.0.1:3000` avec une surcharge `headers.host`.
+La reproduction locale avec Node **22.12.0** et dans l’image **22.23.3 Alpine** montre que le
+serveur reçoit néanmoins `Host: 127.0.0.1:<port>`. L’allowlist de production contient uniquement
+`documind.adelinemeistertzheim.fr` : le middleware rejette donc correctement cette requête.
+Il ne s’agit pas d’une erreur de parsing du domaine ni d’un besoin d’autoriser tous les hôtes.
+Le Host reçu sur le VPS n’a pas été observé directement depuis cette session.
+
+Le Dockerfile et le Compose exécutent désormais **la même commande** :
+`node server/healthcheck.mjs`. Elle utilise `node:http.request`, l’adresse TCP de boucle locale,
+le port `BFF_PORT` (3000 en production) et un Host explicite provenant du premier hôte autorisé.
+Le timeout est de trois secondes. Seul HTTP 200 donne un code de sortie 0.
+`GET /bff/health` possède un handler dédié, après validation Host/Origin : il vérifie la santé
+de FastAPI, renvoie seulement `{"status":"ok"}` ou HTTP 503, sans session ni données privées.
+Les documents, cookies Secure, CSRF, allowlist d’hôtes et confiance dans Traefik restent protégés.
+
+### Conditions impératives de reprise
+
+La reprise manuelle exige un **nouveau bundle issu d’une CI réussie contenant ce correctif**,
+avec ses images publiées et figées par digest. Ne pas réutiliser le SHA de la release défectueuse,
+retaguer ses images ou modifier son manifeste/rapport pour lui attribuer du nouveau code.
+Le workflow GitHub existant ne possède pas d’entrée de reprise : cette procédure s’exécute
+manuellement par l’administratrice, après approbation de la nouvelle version. Ne pas lancer
+un déploiement ordinaire avec `initialize=true` tant que les volumes existent.
+
+Le déployeur, sous verrou exclusif, exige :
+
+- deux volumes existants, aucun pointeur `current` **ni** `previous`, même invalide ;
+- un bundle source distinct, directement dans `/srv/documind-ai/releases/`, avec manifeste valide
+  et rapport `status=failed`, `phase=start`, SHA/images concordants, `schema_before=null`,
+  `schema_after=0006`, sans release précédente ;
+- exactement trois conteneurs du projet, services `db`, `api`, `web`, associés au fichier Compose
+  du bundle source par leurs labels Docker, avec les images exactes de son manifeste ;
+- PostgreSQL déjà démarré et healthy, les deux montages nommés attendus, une seule révision
+  Alembic réelle, identique à la source et au schéma pris en charge par la nouvelle release ;
+- les contrôles habituels : TLS Registry, digests/labels des nouvelles images, configuration,
+  espace disque et adresse réelle de Traefik sur `web`.
+
+Toute différence impose un diagnostic manuel ; le déployeur n’adopte pas une installation ambiguë.
+`--recover-from` ne se combine pas avec `--initialize`, `--rollback` ou `--allow-migration`.
+Une reprise avec changement de schéma est refusée : rétablir d’abord l’application au schéma
+actuel, puis réaliser une mise à niveau séparée avec sauvegarde et approbation.
+
+### Commandes à exécuter manuellement, après revue
+
+1. Faire publier **par votre CI** une nouvelle release contenant le correctif ; relever son SHA
+   complet et son run réussi. Télécharger l’artefact `documind-release-<nouveau-SHA>` depuis ce run.
+   Examiner ses cinq fichiers, les trois digests et `schema_revision=0006` ; transférer les fichiers
+   à plat dans un **nouveau répertoire privé** sous `/srv/documind-ai/releases/` par votre accès SSH
+   habituel, avec vérification de clé hôte. Préserver intégralement le bundle source et son rapport.
+   Ne pas créer `current` à cette étape. Aucun build ne doit être lancé sur le VPS.
+2. Sur le VPS, saisir les **deux chemins complets réellement présents** (les suffixes des
+   répertoires dépendent des runs et ne sont pas supposés) :
+
+```bash
+cd /srv/documind-ai
+umask 077
+find /srv/documind-ai/releases -mindepth 1 -maxdepth 1 -type d -print
+read -r -p 'Chemin complet du bundle échoué 2de68362... : ' SOURCE
+read -r -p 'Chemin complet du nouveau bundle corrigé : ' CANDIDATE
+export SOURCE CANDIDATE
+python3 - <<'PY'
+import json, os
+from pathlib import Path
+root = Path('/srv/documind-ai')
+source, candidate = (Path(os.environ[name]).resolve() for name in ('SOURCE', 'CANDIDATE'))
+assert source.parent == candidate.parent == root / 'releases' and source != candidate
+assert not os.path.lexists(root / 'current') and not os.path.lexists(root / 'previous')
+original = json.loads((source / 'release.json').read_text())
+report = json.loads((source / 'deployment-report.json').read_text())
+target = json.loads((candidate / 'release.json').read_text())
+assert original['git_sha'] == '2de68362d2fe0f4dece2d01da34dc5a06f00d4c8'
+assert report['status'] == 'failed' and report['phase'] == 'start'
+assert original['schema_revision'] == target['schema_revision'] == report['schema_after'] == '0006'
+assert target['git_sha'] != original['git_sha']
+print('Source :', original['git_sha'], '\nCible :', target['git_sha'], '\nSchéma : 0006')
+PY
+```
+
+3. Arrêter ici si une assertion échoue. Vérifier l’identité de la cible contre le run CI choisi.
+   Vérifier `.env.production` (mode 0600, `TRAEFIK_CONTAINER=traefik`, secrets déjà en place,
+   inscriptions `disabled` ou `invite`). La commande suivante nécessite l’authentification
+   Docker existante avec un compte Registry en lecture, via `docker login` interactif si nécessaire,
+   en conservant TLS. Ne pas passer de mot de passe en argument. Puis lancer **une seule** reprise :
+
+```bash
+python3 "$CANDIDATE/deploy_production.py" \
+  --root /srv/documind-ai \
+  --recover-from "$SOURCE"
+```
+
+Le déployeur télécharge/vérifie les images, arrête gracieusement API/BFF, revérifie l’état source
+et le schéma, contrôle la capacité disque, puis crée une sauvegarde cohérente sous
+`var/backups/deploy-<date>/` : dump PostgreSQL, documents, empreintes et manifeste SHA-256.
+Un échec de sauvegarde interdit tout démarrage de la cible. La reprise **ne lance aucune migration,
+aucun `up db`, aucune restauration** : PostgreSQL et son image existante restent en place,
+même si le manifeste cible contient un nouveau digest PostgreSQL. Ce digest conservé est
+consigné dans `retained_database_image` ; la prochaine mise à jour ordinaire pourra appliquer
+l’image PostgreSQL 17 de la release après sa propre sauvegarde.
+
+Seuls API/BFF sont ensuite mis à jour. `current` est créé par le déployeur **après** les trois
+healthchecks et les sondes HTTPS/CSRF/refus anonyme. Aucun pointeur `previous` n’est inventé.
+En cas d’échec, API/BFF restent arrêtés, PostgreSQL et les données sont conservés ; le rapport
+source n’est pas écrasé. Examiner le nouveau rapport avant une nouvelle tentative, sans créer
+de lien à la main. Une panne survenue après remplacement des conteneurs peut rendre leurs
+images différentes de celles du bundle source : une nouvelle reprise automatique sera alors
+refusée et nécessitera un diagnostic explicite, pas un changement artificiel du rapport source.
+
+4. Après succès, contrôler :
+
+```bash
+readlink -f /srv/documind-ai/current
+python3 -m json.tool "$CANDIDATE/deployment-report.json"
+curl --fail --show-error https://documind.adelinemeistertzheim.fr/bff/health
+```
+
+Le rapport doit indiquer `status=success`, `phase=complete`, schéma avant/après `0006`, source
+correcte, digest PostgreSQL conservé et chemin de sauvegarde. Vérifier ensuite connexion utilisateur,
+import/analyse classique et isolation. Reconnecter les sessions et clés BYOK perdues au redémarrage.
+Ne pas déclencher d’appel IA payant pour cette vérification. Archiver la sauvegarde hors VPS
+selon la procédure habituelle ; aucun `down -v`, suppression de volume ou reset PostgreSQL.
 
 ## Sauvegarde et retour arrière
 

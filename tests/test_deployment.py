@@ -63,6 +63,10 @@ def test_production_reuses_confirmed_proxy_and_preserves_volumes():
     assert not any('gateway' in key.lower() or 'password' in key.lower() for key in labels)
     assert 'alembic' not in data['services']['api']['command']
     assert data['services']['api']['command'].count('--workers')==1
+    assert data['services']['web']['healthcheck']['test']==['CMD','node','server/healthcheck.mjs']
+    assert data['services']['web']['environment']['BFF_ALLOWED_HOSTS']==deploy.HOST
+    assert data['services']['web']['environment']['BFF_PORT']==3000
+    assert 'CMD node server/healthcheck.mjs' in Path('frontend/Dockerfile').read_text()
 
 
 def test_workflows_are_pinned_gated_and_never_deploy_on_push():
@@ -153,3 +157,109 @@ def test_backup_failure_prevents_migration(simulation,monkeypatch):
     monkeypatch.setattr(deploy,'create_backup',lambda *args,**kwargs:(_ for _ in ()).throw(OSError('Simulated full disk')))
     with pytest.raises(OSError):deploy.execute(args,{})
     assert not any('alembic' in event[1] for event in events)
+
+
+@pytest.fixture
+def recovery(simulation,monkeypatch):
+    args,events,state,bundle=simulation
+    source=bundle.parent/'failed-first';source.mkdir()
+    original=release(sha='2de68362d2fe0f4dece2d01da34dc5a06f00d4c8')
+    (source/'release.json').write_text(json.dumps(original))
+    evidence={'status':'failed','phase':'start','git_sha':original['git_sha'],'images':original['images'],
+              'schema_before':None,'schema_after':'0006'}
+    (source/'deployment-report.json').write_text(json.dumps(evidence))
+    args.recover_from=source
+    monkeypatch.setattr(deploy,'current_stack',lambda *args:None)
+    monkeypatch.setattr(deploy,'verify_recovery_containers',lambda *args:None)
+    return args,events,state,bundle,evidence
+
+
+def test_recovery_backs_up_then_starts_without_migration_or_database_replacement(recovery):
+    args,events,state,bundle,evidence=recovery;report={}
+    deploy.execute(args,report)
+    assert report['status']=='success' and report['schema_before']==report['schema_after']=='0006'
+    assert report['source_sha']==evidence['git_sha'] and report['backup']
+    backup=next(i for i,event in enumerate(events) if event[0]=='backup')
+    assert any(name=='failed-first' and command[0]=='stop' for name,command in events[:backup])
+    assert not any('alembic' in command or (command[0]=='up' and 'db' in command) for _,command in events if command)
+    assert backup<next(i for i,(_,command) in enumerate(events) if command and command[0]=='up')
+    assert next(i for i,event in enumerate(events) if event[0]=='https')<next(i for i,event in enumerate(events) if event[0]=='activate')
+    assert json.loads((args.recover_from/'deployment-report.json').read_text())==evidence
+
+
+@pytest.mark.parametrize('invalid',['schema','source_schema','phase','sha','images','previous','missing_report','missing_before','same_bundle','outside','current','previous_pointer','initialize','rollback','allow_migration'])
+def test_recovery_refuses_ambiguous_or_incompatible_state(recovery,invalid):
+    args,events,state,bundle,evidence=recovery
+    if invalid=='schema':state['revision']='0005'
+    elif invalid=='source_schema':(bundle/'release.json').write_text(json.dumps(release('0007')))
+    elif invalid=='phase':evidence['phase']='migration'
+    elif invalid=='sha':evidence['git_sha']='c'*40
+    elif invalid=='images':evidence['images']={}
+    elif invalid=='previous':evidence['previous_sha']='b'*40
+    elif invalid=='missing_before':evidence.pop('schema_before')
+    elif invalid=='same_bundle':args.recover_from=bundle
+    elif invalid=='outside':args.recover_from=bundle.parent.parent
+    elif invalid in ('current','previous_pointer'):(args.root/('current' if invalid=='current' else 'previous')).write_text('ambiguous')
+    elif invalid in ('initialize','rollback','allow_migration'):setattr(args,invalid,True)
+    source=bundle.parent/'failed-first'
+    (source/'deployment-report.json').write_text(json.dumps(evidence))
+    if invalid=='missing_report':(source/'deployment-report.json').unlink()
+    with pytest.raises(deploy.DeploymentError):deploy.execute(args,{})
+    assert not events
+
+
+@pytest.mark.parametrize('failure',['backup','start','schema_drift','https'])
+def test_recovery_failure_never_activates_or_reopens_failed_source(recovery,monkeypatch,failure):
+    args,events,state,bundle,evidence=recovery
+    if failure=='backup':
+        monkeypatch.setattr(deploy,'create_backup',lambda *args,**kwargs:(_ for _ in ()).throw(OSError('backup failed')))
+    elif failure=='start':state['fail_start']=True
+    elif failure=='https':
+        monkeypatch.setattr(deploy,'https_check',lambda:(_ for _ in ()).throw(deploy.DeploymentError('HTTPS probe failed')))
+    else:
+        calls=[]
+        def drift(*args):
+            calls.append(True)
+            if len(calls)==2:state['revision']='0007'
+        monkeypatch.setattr(deploy,'verify_recovery_containers',drift)
+    with pytest.raises((OSError,deploy.DeploymentError)):deploy.execute(args,{})
+    assert not any(event[0]=='activate' for event in events)
+    assert not any(name=='failed-first' and command and command[0]=='up' for name,command in events)
+    if failure in ('backup','schema_drift'):assert not any(command and command[0]=='up' for _,command in events)
+
+
+@pytest.mark.parametrize('invalid',[None,'owner','duplicate','image','mount','unhealthy','source','oneoff'])
+def test_recovery_inspects_actual_project_images_mounts_and_database(monkeypatch,tmp_path,invalid):
+    stack=deploy.Stack(tmp_path,tmp_path,release())
+    containers=[]
+    for name in ('db','api','web'):
+        destination='/var/lib/postgresql/data' if name=='db' else '/app/var/documents'
+        volume='database' if name=='db' else 'documents'
+        containers.append({'Config':{'Labels':{'com.docker.compose.project':deploy.PROJECT,
+            'com.docker.compose.service':name,'com.docker.compose.project.config_files':str(tmp_path/'compose.production.yaml')}},
+            'Image':'sha256:verified','State':{'Running':True,'Health':{'Status':'healthy'}},
+            'Mounts':[{'Type':'volume','Destination':destination,'Name':f'{deploy.PROJECT}_production_{volume}'}]})
+    if invalid=='owner':containers[0]['Config']['Labels']['com.docker.compose.project']='other-app'
+    elif invalid=='duplicate':containers[1]['Config']['Labels']['com.docker.compose.service']='db'
+    elif invalid=='image':containers[1]['Image']='sha256:unreviewed'
+    elif invalid=='mount':containers[1]['Mounts'][0]['Name']='other-volume'
+    elif invalid=='unhealthy':containers[0]['State']['Health']['Status']='unhealthy'
+    elif invalid=='source':containers[0]['Config']['Labels']['com.docker.compose.project.config_files']='other-bundle'
+    elif invalid=='oneoff':containers[1]['Config']['Labels']['com.docker.compose.oneoff']='True'
+    def run(command):
+        if command[:3]==['docker','ps','-aq']:return '1\n2\n3'
+        if command[:2]==['docker','inspect']:return json.dumps(containers)
+        if command[:3]==['docker','image','inspect']:return 'sha256:verified'
+        pytest.fail('Unexpected Docker command')
+    monkeypatch.setattr(deploy,'run',run)
+    if invalid:
+        with pytest.raises(deploy.DeploymentError):deploy.verify_recovery_containers(stack)
+    else:deploy.verify_recovery_containers(stack)
+
+
+@pytest.mark.parametrize('initialize,states',[(True,[True,True]),(True,[True,False]),(False,[True,False]),(False,[False,False])])
+def test_partial_volumes_never_enable_implicit_initialization(monkeypatch,initialize,states):
+    results=iter(states)
+    monkeypatch.setattr(deploy.subprocess,'run',lambda *args,**kwargs:SimpleNamespace(
+        returncode=0 if next(results) else 1,stderr='no such volume'))
+    with pytest.raises(deploy.DeploymentError):deploy.check_volume_state(initialize)

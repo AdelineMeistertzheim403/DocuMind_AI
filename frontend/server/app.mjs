@@ -110,6 +110,20 @@ export function createApp(config, upstreamFetch = fetch) {
 
   app.get('/bff/config', (req, res) => res.json({ max_upload_bytes: config.maxUploadBytes }))
 
+  // Readiness is public only after the same Host/origin validation as all BFF routes.
+  // No session, cookie, user data or upstream response body is exposed by this probe.
+  app.get('/bff/health', async (req, res) => {
+    if (Object.keys(req.query).length) return res.status(400).json({ detail: messages[400] })
+    try {
+      const response = await upstreamFetch(`${config.upstream}/api/v1/health`, {
+        headers: { accept: 'application/json', 'X-API-Key': config.apiKey },
+        signal: AbortSignal.timeout(3000), redirect: 'manual',
+      })
+      await response.body?.cancel()
+      return res.status(response.status === 200 ? 200 : 503).json({ status: response.status === 200 ? 'ok' : 'unavailable' })
+    } catch { return res.status(503).json({ status: 'unavailable' }) }
+  })
+
   app.use(async (req, res, next) => {
     if (!req.path.startsWith('/bff')) return next()
     if (!routeAllowed(req.method, req.path)) return res.status(404).json({ detail: 'Route non autorisée.' })

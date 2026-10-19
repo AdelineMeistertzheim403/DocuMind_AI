@@ -1,5 +1,52 @@
 # Validation Sprint 6 — CI/CD et VPS
 
+## Correctif healthcheck et reprise — 19 octobre 2026
+
+État du VPS fourni par l’administratrice : première release
+`2de68362d2fe0f4dece2d01da34dc5a06f00d4c8` échouée en phase `start`, schéma `0006`,
+deux volumes présents, aucun pointeur `current`. Aucune connexion distante effectuée pour
+ce correctif ; les validations ci-dessous sont locales.
+
+Fichiers modifiés : `compose.production.yaml`, `frontend/Dockerfile`,
+`frontend/server/app.mjs`, `frontend/server/app.test.mjs`, `tools/deploy_production.py`,
+`tests/test_deployment.py`, `docs/sprint-6-cicd.md` et ce rapport.
+Nouveau fichier : `frontend/server/healthcheck.mjs`. `config.mjs` a été examiné et conservé.
+
+| Vérification du correctif | Résultat |
+|---|---|
+| Reproduction de l’ancien `fetch` | Host de boucle locale reçu au lieu du domaine demandé, Node 22.12.0 et Node 22.23.3 Alpine |
+| Suite backend complète, SQLite, sans appel OpenAI réel | 145 tests passent en 261 s |
+| Suite finale ciblée déploiement/reprise | 45 tests passent ; inclut deux cas supplémentaires ajoutés après la collecte de la suite complète |
+| BFF sur Node Windows | 25 tests passent |
+| Mêmes tests BFF dans l’image Node Alpine de production, réseau externe désactivé | 25 tests passent |
+| Construction locale de l’image frontend corrigée | Réussite, aucune publication |
+| Véritable HEALTHCHECK Docker, BFF sur 3000, Host public seul autorisé, API simulée | `healthy`, codes de sortie 0 |
+| Workflows existants | actionlint valide, aucun changement des workflows |
+| Compilation Python, aide CLI `--recover-from`, espaces du diff Git | Valides |
+
+Les tests BFF exécutent le même script que Docker et observent le Host reçu par le serveur
+Express avec la configuration de production. Le port TCP est éphémère dans les tests Node
+pour éviter les collisions ; la vérification Docker indépendante utilise réellement 3000.
+Seule l’adresse de l’API est adaptée à une simulation locale pour cette dernière vérification.
+Le timeout, le refus des hôtes/origines étrangers, les accès anonymes et la confiance du proxy
+restent protégés. Le contrôle de santé renvoie 503 lorsque l’API est inaccessible.
+
+Les tests de reprise simulent l’état source et les commandes Docker : ils couvrent sauvegarde
+avant démarrage, absence de migration/remplacement PostgreSQL, correspondance des conteneurs,
+images et montages, schéma réel incompatible, dérive après arrêt des écrivains, rapport manquant
+ou incomplet, pointeurs ambigus, volumes incohérents, sauvegarde échouée, démarrage échoué et
+sondes HTTPS échouées. Aucun pointeur n’est activé en cas d’échec. Une reprise réelle sur le VPS
+et une restauration de sa sauvegarde n’ont pas été exécutées. La suite PostgreSQL/pgvector
+n’a pas été rejouée pour ce correctif, qui ne modifie ni schéma ni requêtes métier.
+
+Un avertissement de dépréciation Starlette/httpx est présent dans pytest, sans échec de test.
+Le conteneur Docker temporaire a été supprimé ; la stack locale et ses volumes sont conservés.
+Aucun push, publication, déploiement, appel IA payant ou modification de la Registry/Traefik.
+La [procédure de reprise](sprint-6-cicd.md#correctif-du-healthcheck-bff-et-reprise-dune-première-installation-partielle)
+nécessite une nouvelle release corrigée et une intervention manuelle approuvée.
+
+Les sections suivantes conservent le bilan initial du Sprint 6 et ses vérifications antérieures.
+
 ## Livré dans le dépôt
 
 - Adaptation de `compose.production.yaml` et `.env.production.example` aux paramètres confirmés

@@ -5,9 +5,68 @@ import { once } from 'node:events'
 import { request as httpRequest } from 'node:http'
 import { createApp } from './app.mjs'
 import { loadConfig } from './config.mjs'
+import { spawn } from 'node:child_process'
+import { createServer } from 'node:http'
+import { fileURLToPath } from 'node:url'
 
 const key = 'test-server-only-key-00000000000000001'
 const id = '11111111-1111-4111-8111-111111111111'
+
+test('production Docker healthcheck sends the exact allowed Host and preserves security', async t => {
+  const domain = 'documind.adelinemeistertzheim.fr'
+  const env = { BFF_SERVICE_KEY: key, BFF_BACKEND_URL: 'http://api:8000', BFF_HOST: '0.0.0.0',
+    BFF_PORT: '3000', BFF_ALLOWED_HOSTS: domain, BFF_TRUSTED_PROXY_IPS: '192.0.2.10' }
+  const production = loadConfig(env)
+  let host, healthy = true, upstreamCalls = 0
+  const app = createApp(production, async (url, options) => {
+    upstreamCalls++
+    assert.equal(url, 'http://api:8000/api/v1/health')
+    assert.equal(options.headers['X-API-Key'], key)
+    assert.equal(options.headers.authorization, undefined)
+    return Response.json({ private: 'never exposed' }, { status: healthy ? 200 : 503 })
+  })
+  const server = createServer((req, res) => { host = req.headers.host; app(req, res) }).listen(0, '127.0.0.1')
+  await once(server, 'listening')
+  t.after(() => { server.closeAllConnections(); server.close() })
+  const port = server.address().port
+  const probe = async overrides => {
+    const child = spawn(process.execPath, ['server/healthcheck.mjs'], {
+      cwd: fileURLToPath(new URL('../', import.meta.url)),
+      env: { ...process.env, ...env, BFF_PORT: String(port), ...overrides }, stdio: 'ignore',
+    })
+    const [code] = await once(child, 'exit')
+    return code
+  }
+  assert.equal(await probe(), 0)
+  assert.equal(host, domain)
+  const raw = (path, headers = {}, method = 'GET') => new Promise((resolve, reject) => {
+    const req = httpRequest({ hostname: '127.0.0.1', port, path, method, headers: { Host: domain, ...headers } }, res => {
+      let body = ''; res.on('data', chunk => { body += chunk }); res.on('end', () => resolve({ status: res.statusCode, body, headers: res.headers }))
+    })
+    req.on('error', reject); req.end()
+  })
+  const result = await raw('/bff/health')
+  assert.equal(result.status, 200)
+  assert.deepEqual(JSON.parse(result.body), { status: 'ok' })
+  assert.equal(result.headers['cache-control'], 'no-store')
+  assert.equal(result.headers['set-cookie'], undefined)
+  assert.equal((await raw('/bff/health', { Host: '127.0.0.1' })).status, 403)
+  assert.equal((await raw('/bff/health', { Host: 'evil.test', 'x-forwarded-host': domain })).status, 403)
+  assert.equal((await raw('/bff/health', { origin: 'https://evil.test' })).status, 403)
+  assert.equal((await raw('/bff/health?url=http://evil.test')).status, 400)
+  assert.equal((await raw('/bff/health', {}, 'POST')).status, 404)
+  assert.equal((await raw('/bff/documents')).status, 401)
+  assert.equal((await raw('/bff/ai/settings', { 'x-forwarded-proto': 'https' })).status, 403)
+  assert.equal(await probe({ BFF_ALLOWED_HOSTS: 'evil.test' }), 1)
+  assert.equal(upstreamCalls, 2)
+  healthy = false
+  assert.equal(await probe(), 1)
+})
+
+test('health explicitly reports unavailable when the API cannot be reached', async t => {
+  const base = await serve(t, async () => { throw new Error('offline') })
+  assert.equal((await fetch(base + '/bff/health')).status, 503)
+})
 const config = {
   apiKey: key, upstream: 'http://backend:8000', maxUploadBytes: 32, workerTimeoutMs: 1000,
   allowedHosts: ['127.0.0.1', 'localhost'], dist: './nonexistent-test-dist',
@@ -88,11 +147,11 @@ for (const status of [401, 404, 413, 415, 422, 503]) {
 }
 test('erreur réseau, redirection et délai contrôlés', async t => {
   const network = await serve(t, async () => { throw new Error('private url') })
-  assert.equal((await fetch(network + '/bff/health')).status, 502)
+  assert.equal((await fetch(network + '/bff/documents')).status, 502)
   const redirect = await serve(t, async () => new Response(null, { status: 302, headers: { location: 'https://evil.example' } }))
-  assert.equal((await fetch(redirect + '/bff/health')).status, 502)
+  assert.equal((await fetch(redirect + '/bff/documents')).status, 502)
   const delayed = await serve(t, async (_, { signal }) => new Promise((resolve, reject) => signal.addEventListener('abort', () => reject(new Error('timeout')), { once: true })), { workerTimeoutMs: 5 })
-  assert.equal((await fetch(delayed + '/bff/health')).status, 504)
+  assert.equal((await fetch(delayed + '/bff/documents')).status, 504)
 })
 test('rejette les corps trop grands, y compris en flux sans Content-Length', async t => {
   const base = await serve(t, async (_, options) => {

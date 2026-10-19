@@ -178,10 +178,66 @@ def point_to(root,name,bundle):
 
 
 def current_stack(root,proxy):
-    if not (root/'current').is_symlink():return None
+    if not os.path.lexists(root/'current'):return None
+    if not (root/'current').is_symlink() or not (root/'current').is_dir():
+        raise DeploymentError('Current release pointer is invalid; manual inspection required')
     prior=(root/'current').resolve()
     if prior.parent!=root/'releases':raise DeploymentError('Unexpected current release path')
     return Stack(root,prior,validate_release(json.loads((prior/'release.json').read_text())),proxy)
+
+
+def recovery_source(root,bundle,path,release,proxy):
+    """Adopt only an evidenced failed first start, without manufacturing a current pointer."""
+    if os.path.lexists(root/'current') or os.path.lexists(root/'previous'):
+        raise DeploymentError('Recovery requires no current or previous release pointer')
+    source=path.resolve()
+    if source.parent!=root/'releases' or source==bundle:
+        raise DeploymentError('Recovery source must be a distinct existing release bundle')
+    try:
+        original=validate_release(json.loads((source/'release.json').read_text()))
+        evidence=json.loads((source/'deployment-report.json').read_text())
+    except (OSError,ValueError):
+        raise DeploymentError('Recovery requires a valid source manifest and failure report') from None
+    if not (evidence.get('status')=='failed' and evidence.get('phase')=='start'
+            and evidence.get('git_sha')==original['git_sha'] and evidence.get('images')==original['images']
+            and 'schema_before' in evidence and evidence['schema_before'] is None and not evidence.get('previous_sha')
+            and evidence.get('schema_after')==original['schema_revision']):
+        raise DeploymentError('Source report does not prove a failed first installation at start')
+    if release['schema_revision']!=original['schema_revision']:
+        raise DeploymentError('Recovery refuses schema changes; recover before a separate upgrade')
+    source_stack=Stack(root,source,original,proxy)
+    check_config(source_stack)
+    verify_recovery_containers(source_stack)
+    revision=source_stack.revision()
+    if revision!=original['schema_revision'] or not can_rollback(release,revision):
+        raise DeploymentError('Recovery requires the exact compatible live schema revision')
+    return source_stack,revision
+
+
+def verify_recovery_containers(stack):
+    identifiers=run(['docker','ps','-aq','--filter',f'label=com.docker.compose.project={PROJECT}']).splitlines()
+    if len(identifiers)!=3:raise DeploymentError('Recovery requires exactly the three original service containers')
+    containers=json.loads(run(['docker','inspect',*identifiers]))
+    seen=set()
+    for container in containers:
+        labels=container['Config'].get('Labels',{})
+        service=labels.get('com.docker.compose.service')
+        if (labels.get('com.docker.compose.project')!=PROJECT or service not in ('db','api','web')
+                or service in seen or labels.get('com.docker.compose.oneoff','false').lower()!='false'
+                or labels.get('com.docker.compose.project.config_files')!=str(stack.bundle/'compose.production.yaml')):
+            raise DeploymentError('Ambiguous recovery container ownership or source bundle')
+        seen.add(service)
+        component={'db':'postgres','api':'backend','web':'frontend'}[service]
+        image=run(['docker','image','inspect',stack.release['images'][component],'--format','{{.Id}}'])
+        if container['Image']!=image:raise DeploymentError('Recovery container image differs from source manifest')
+        if service=='db' and (not container['State']['Running'] or container['State'].get('Health',{}).get('Status')!='healthy'):
+            raise DeploymentError('Recovery requires the existing healthy database')
+        if service in ('db','api'):
+            destination='/var/lib/postgresql/data' if service=='db' else '/app/var/documents'
+            volume=f'{PROJECT}_production_'+('database' if service=='db' else 'documents')
+            mounts=[mount for mount in container['Mounts'] if mount['Destination']==destination]
+            if len(mounts)!=1 or mounts[0].get('Type')!='volume' or mounts[0].get('Name')!=volume:
+                raise DeploymentError('Recovery refuses unexpected persistent mounts')
 
 
 def execute(args,report):
@@ -197,6 +253,9 @@ def execute(args,report):
     report['git_sha']=release['git_sha'];report['images']=release['images']
     stack=Stack(root,bundle,release)
     report['phase']='preflight'
+    recovery=getattr(args,'recover_from',None)
+    if recovery and (args.initialize or args.rollback or args.allow_migration):
+        raise DeploymentError('Recovery cannot be combined with initialization, rollback or migration approval')
     values=resolve_proxy(stack)
     check_config(stack)
     minimum=int(values.get('DEPLOY_MIN_FREE_GIB','8'))*(1024**3)
@@ -204,13 +263,19 @@ def execute(args,report):
     disk_check(root,minimum)
     check_volume_state(args.initialize)
     previous=current_stack(root,stack.env['BFF_TRUSTED_PROXY_IPS'])
+    source=None
+    if recovery:
+        source,before=recovery_source(root,bundle,recovery,release,stack.env['BFF_TRUSTED_PROXY_IPS'])
+        report['recovered_from']=str(source.bundle.relative_to(root))
+        report['source_sha']=source.release['git_sha']
+        report['retained_database_image']=source.release['images']['postgres']
     if previous:
         report['previous_sha']=previous.release['git_sha']
-    if not args.initialize and previous is None:
+    if not args.initialize and previous is None and not recovery:
         raise DeploymentError('Existing deployment must be adopted explicitly before automated updates')
     if args.initialize and previous is not None:raise DeploymentError('Initialization refuses an existing release')
     if args.rollback and args.initialize:raise DeploymentError('Cannot initialize a rollback')
-    before=previous.revision() if previous else None
+    if not recovery:before=previous.revision() if previous else None
     if args.rollback and not can_rollback(release,before):
         raise DeploymentError('Rollback application does not support the current database schema')
     if before and before!=release['schema_revision'] and not (args.allow_migration or args.rollback):
@@ -223,17 +288,22 @@ def execute(args,report):
     stack.call('run','--rm','--no-deps','-T','--entrypoint','python','api','-c',
         "from backend.config import Settings; s=Settings(); assert s.registration_mode in ('disabled','invite'); assert not s.legacy_api_enabled")
     try:
-        if previous:
+        snapshot=source or previous
+        if snapshot:
             report['phase']='backup'
-            previous.call('stop','--timeout','150','web','api')
+            snapshot.call('stop','--timeout','150','web','api')
+            if recovery:
+                # Recheck after quiescing writers; never migrate or replace PostgreSQL here.
+                verify_recovery_containers(source)
+                if source.revision()!=before:raise DeploymentError('Schema changed during recovery')
             # Budget enough uncompressed room for the full DB and document archive plus normal headroom.
-            database_bytes=int(previous.sql('SELECT pg_database_size(current_database())'))
-            document_bytes=int(previous.call('run','--rm','--no-deps','-T','--entrypoint','du','api','-sb','/app/var/documents').split()[0])
+            database_bytes=int(snapshot.sql('SELECT pg_database_size(current_database())'))
+            document_bytes=int(snapshot.call('run','--rm','--no-deps','-T','--entrypoint','du','api','-sb','/app/var/documents').split()[0])
             disk_check(root,minimum+int((database_bytes+document_bytes)*1.25))
             destination=root/'var/backups'/('deploy-'+datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S'))
-            create_backup(previous.command,destination,env=previous.env)
+            create_backup(snapshot.command,destination,env=snapshot.env)
             report['backup']=str(destination.relative_to(root))
-        if not args.rollback:
+        if not args.rollback and not recovery:
             report['phase']='database'
             stack.call('up','-d','--no-deps','--wait','--wait-timeout','120','db')
             report['phase']='migration'
@@ -269,6 +339,7 @@ def main():
     parser.add_argument('--initialize',action='store_true')
     parser.add_argument('--allow-migration',action='store_true')
     parser.add_argument('--rollback',action='store_true')
+    parser.add_argument('--recover-from',type=Path,help='Explicit source bundle of a failed first installation at start; no migrations')
     parser.add_argument('--registry-login',action='store_true',help='Read ephemeral registry credentials from SSH stdin')
     args=parser.parse_args()
     os.umask(0o077)
