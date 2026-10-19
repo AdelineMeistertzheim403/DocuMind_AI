@@ -8,7 +8,20 @@ L'[audit du code](docs/audit-sprint-1.md) détaille la réutilisation et les dif
 L'[ancien guide de bureau](docs/desktop.md) est conservé intégralement.
 Le [rapport de validation](docs/validation-sprint-1.md) précise les tests exécutés et la limite Docker rencontrée.
 
+## VPS, Registry privée et CI/CD
+
+Le [guide Sprint 6](docs/sprint-6-cicd.md) décrit les secrets GitHub, les paramètres VPS,
+le déploiement manuel approuvé et le retour arrière. Le Compose de production réutilise
+Traefik `web` / `websecure` / `letsencrypt` ; il ne crée aucun second proxy.
+La CI publie des images identifiées par SHA après réussite des tests. Aucun push ne déploie le VPS.
+Les secrets et les accès doivent être configurés par l’administrateur avant le premier lancement.
+
 ## Ouvrir l'application web
+
+**Sprint 5 :** l’accès documentaire du navigateur nécessite désormais un compte et HTTPS.
+Les comptes existants gardent leur identifiant et leurs documents. Consultez le
+[guide des comptes et de migration des propriétaires](docs/sprint-5-accounts.md) et le
+[rapport de validation](docs/validation-sprint-5.md).
 
 Pour une installation existante des Sprints 1–3, suivre d’abord la [sauvegarde et mise à niveau Sprint 4](docs/sprint-4-rag.md).
 Les migrations `0004` (pgvector/RAG) et `0005` (résumés persistants) conservent les données précédentes.
@@ -17,19 +30,20 @@ Ne jamais supprimer le volume PostgreSQL pour mettre à niveau.
 Avec Docker Desktop démarré et votre `.env` existant configuré :
 
 ```powershell
-docker compose up --build -d
+docker compose --profile https up --build -d
 docker compose ps
 ```
 
-Ouvrez **http://127.0.0.1:3000**. Le service `web` contient le build React et le BFF Node.
+Ouvrez **https://localhost:8443/login** après installation du certificat local décrit dans
+[le guide HTTPS](docs/sprint-3-ai-byok.md). Le service `web` contient le build React et le BFF Node.
 Les services `api` et `db` restent séparés. Le BFF attend un backend opérationnel ; l'indicateur
 « Services connectés » confirme la connexion à PostgreSQL via FastAPI.
 
-La clé d’authentification FastAPI est ajoutée par le serveur et ne passe jamais dans le navigateur.
-Si `API_KEYS` contient une seule clé, le BFF l'utilise automatiquement. Avec plusieurs clés,
-définissez `BFF_API_KEY` côté serveur dans `.env`. Ne créez aucune variable `VITE_*` avec une clé.
-L’accès HTTP utilise l’espace documentaire partagé du BFF. Les comptes personnels et les clés OpenAI
-BYOK utilisent exclusivement l’accès HTTPS décrit ci-dessous.
+Configurez une clé interne `BFF_SERVICE_KEY` aléatoire, distincte de `API_KEYS`, dans `.env`.
+Elle authentifie le BFF ; les droits documentaires proviennent exclusivement de la session personnelle.
+L’ancien réglage `BFF_API_KEY` reste compatible pour les installations non migrées.
+`LEGACY_API_ENABLED=false` désactive l’accès X-API-Key des scripts, sans désactiver les comptes.
+Ne créez aucune variable `VITE_*` contenant une clé. L’accès HTTP ne donne plus accès aux documents.
 
 Parcours : **Importer un document** → choisir ou déposer un PDF/TXT → consulter le texte extrait →
 **Lancer l'analyse** → explorer les sections et graphiques. La suppression demande confirmation.

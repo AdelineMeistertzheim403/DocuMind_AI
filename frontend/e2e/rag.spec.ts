@@ -29,13 +29,16 @@ e.dispose()`
   const page=await context.newPage(),ids:string[]=[]
   const names=[`atlas-A-${randomUUID()}.txt`,`atlas-B-${randomUUID()}.txt`]
   try{
-    await page.goto('https://localhost:8443/settings/ai')
-    await page.getByLabel('Identifiant',{exact:true}).fill(username)
+    await page.goto('https://localhost:8443/login')
+    await page.getByLabel('Email ou identifiant historique',{exact:true}).fill(username)
     await page.getByLabel('Mot de passe',{exact:true}).fill(password)
-    await page.getByRole('button',{name:'Se connecter',exact:true}).click()
+    await page.getByRole('button',{name:'Connexion',exact:true}).click()
+    await expect(page.getByRole('heading',{name:'Tableau de bord'})).toBeVisible()
+    await page.goto('https://localhost:8443/settings/ai')
     await expect(page.getByRole('heading',{name:`Compte : ${username}`})).toBeVisible()
     for(const [index,name]of names.entries()){
-      const response=await page.request.post('https://localhost:8443/bff/documents',{multipart:{file:{name,mimeType:'text/plain',buffer:Buffer.from(`Le budget du projet Atlas est de ${index?150:120} euros.`)}}})
+      const csrf=(await (await page.request.get('https://localhost:8443/bff/auth/csrf')).json()).csrf_token
+      const response=await page.request.post('https://localhost:8443/bff/documents',{headers:{'X-CSRF-Token':csrf},multipart:{file:{name,mimeType:'text/plain',buffer:Buffer.from(`Le budget du projet Atlas est de ${index?150:120} euros.`)}}})
       expect(response.status()).toBe(201);ids.push((await response.json()).id)
     }
     await page.goto('https://localhost:8443/library')
@@ -56,7 +59,8 @@ e.dispose()`
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy()
     await page.screenshot({path:`test-results/sprint4-${test.info().project.name}.png`,fullPage:true})
     // Estimate a long summary, but never confirm or send a generation request.
-    const longFile=await page.request.post('https://localhost:8443/bff/documents',{multipart:{file:{name:'long-summary-preflight.txt',mimeType:'text/plain',buffer:Buffer.from(('Chapitre Atlas.\n\nLe budget du projet est de 120 euros. Camille est responsable.\n\n').repeat(1100))}}})
+    const csrf=(await (await page.request.get('https://localhost:8443/bff/auth/csrf')).json()).csrf_token
+    const longFile=await page.request.post('https://localhost:8443/bff/documents',{headers:{'X-CSRF-Token':csrf},multipart:{file:{name:'long-summary-preflight.txt',mimeType:'text/plain',buffer:Buffer.from(('Chapitre Atlas.\n\nLe budget du projet est de 120 euros. Camille est responsable.\n\n').repeat(1100))}}})
     expect(longFile.status()).toBe(201)
     const longId=(await longFile.json()).id;ids.push(longId)
     let paidPosts=0
@@ -67,7 +71,10 @@ e.dispose()`
     await expect(page.getByRole('button',{name:'Confirmer et lancer le résumé approfondi'})).toBeDisabled()
     expect(paidPosts).toBe(0)
   }finally{
-    for(const id of ids)expect((await page.request.delete(`https://localhost:8443/bff/documents/${id}`)).status()).toBe(204)
+    for(const id of ids){
+      const csrf=(await (await page.request.get('https://localhost:8443/bff/auth/csrf')).json()).csrf_token
+      expect((await page.request.delete(`https://localhost:8443/bff/documents/${id}`,{headers:{'X-CSRF-Token':csrf}})).status()).toBe(204)
+    }
     await context.close();account('delete')
   }
 })

@@ -48,12 +48,15 @@ def import_document(session, settings, upload, owner_id, slots):
                 stream.write(data)
         if size == 0:
             raise HTTPException(422, "Fichier vide")
+        pages = run_worker(settings, "extract", str(temporary), extension, settings.max_pdf_pages, settings.max_text_chars)
         from ..resource_limits import lock_workspace
         lock_workspace(session, owner_id)
         count, used = session.execute(select(func.count(), func.coalesce(func.sum(Document.size_bytes),0)).where(Document.owner_id==owner_id)).one()
         if count >= settings.max_documents_per_owner or used + size > settings.max_storage_bytes_per_owner:
             raise HTTPException(413, 'Quota documentaire ou stockage personnel atteint')
-        pages = run_worker(settings, "extract", str(temporary), extension, settings.max_pdf_pages, settings.max_text_chars)
+        total=session.scalar(select(func.coalesce(func.sum(Document.size_bytes),0)))
+        if total+size>settings.max_storage_bytes_total:
+            raise HTTPException(413,'Quota global de stockage atteint')
         document = Document(owner_id=owner_id, filename=filename, storage_name=final.name,
                             media_type="application/pdf" if extension == ".pdf" else "text/plain",
                             size_bytes=size, sha256=digest.hexdigest())

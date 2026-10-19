@@ -12,8 +12,17 @@ const fallback: Record<number, string> = {
 
 export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   let response: Response
-  try { response = await fetch(`/bff${path}`, { ...options, credentials: 'same-origin' }) }
+  try {
+    if (location.protocol==='https:' && !['GET','HEAD'].includes(options.method||'GET')) {
+      const protection=await fetch('/bff/auth/csrf',{credentials:'same-origin',cache:'no-store'})
+      if (!protection.ok) throw new ApiError(protection.status,'La protection de session est indisponible.')
+      const data=await protection.json() as {csrf_token:string}
+      options={...options,headers:{...Object.fromEntries(new Headers(options.headers)), 'X-CSRF-Token':data.csrf_token}}
+    }
+    response = await fetch(`/bff${path}`, { ...options, credentials: 'same-origin' })
+  }
   catch (error) {
+    if (error instanceof ApiError) throw error
     if (error instanceof DOMException && error.name === 'AbortError') throw error
     throw new ApiError(0, 'Connexion interrompue. Vérifiez que DocuMind est démarré.')
   }

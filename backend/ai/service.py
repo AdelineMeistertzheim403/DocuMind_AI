@@ -140,6 +140,9 @@ def reserve(session, settings, owner_id, document_id, key, fingerprint, feature,
     maximum = cost(settings, settings.ai_max_input_tokens, settings.ai_max_output_tokens) * steps * 2
     if budget.spent_usd + budget.reserved_usd + maximum > settings.ai_budget_usd:
         fail('budget_exhausted', 402)
+    personal_active = session.scalar(select(func.count()).select_from(AIReservation).where(AIReservation.owner_id==owner_id, AIReservation.status=='reserved'))
+    if personal_active >= settings.ai_max_concurrent_per_owner:
+        fail('busy',429)
     reservation = AIReservation(owner_id=owner_id, budget_id=settings.ai_budget_scope, document_id=document_id, idempotency_key=key,
                                 request_hash=fingerprint, feature=feature, reserved_usd=maximum,
                                 model=settings.openai_model, provider=settings.ai_provider)

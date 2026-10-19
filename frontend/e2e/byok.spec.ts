@@ -36,10 +36,12 @@ engine.dispose()`
   const responses: Promise<string>[] = []
   page.on('response', response => { if (response.url().includes('/bff/')) responses.push(response.text().catch(() => '')) })
   try {
-    await page.goto('https://localhost:8443/settings/ai')
-    await page.getByLabel('Identifiant', { exact: true }).fill(username)
+    await page.goto('https://localhost:8443/login')
+    await page.getByLabel('Email ou identifiant historique', { exact: true }).fill(username)
     await page.getByLabel('Mot de passe', { exact: true }).fill(password)
-    await page.getByRole('button', { name: 'Se connecter', exact: true }).click()
+    await page.getByRole('button', { name: 'Connexion', exact: true }).click()
+    await expect(page.getByRole('heading',{name:'Tableau de bord'})).toBeVisible()
+    await page.goto('https://localhost:8443/settings/ai')
     await expect(page.getByRole('heading', { name: `Compte : ${username}` })).toBeVisible()
     const cookie = (await context.cookies()).find(cookie => cookie.name === '__Host-documind')
     expect(cookie).toMatchObject({ secure: true, httpOnly: true, sameSite: 'Strict' })
@@ -52,7 +54,7 @@ engine.dispose()`
     await page.getByRole('button', { name: 'Déconnecter la clé', exact: true }).click()
     await expect(page.getByText('Aucune clé personnelle connectée.')).toBeVisible()
     await page.getByRole('button', { name: 'Fermer la session' }).click()
-    await expect(page.getByRole('button', { name: 'Se connecter', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Connexion', exact: true })).toBeVisible()
     expect((await Promise.all(responses)).some(body => body.includes(personal) || body.includes(password))).toBe(false)
   } finally {
     await context.close()

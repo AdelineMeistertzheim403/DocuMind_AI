@@ -164,3 +164,57 @@ test('routes Sprint 4 bornées : session HTTPS pour indexation, recherche et syn
   assert.equal((await fetch(base+`/bff/comparisons/${id}`)).status,200)
   assert.equal((await fetch(base+`/bff/comparisons/${id}/arbitrary`)).status,404)
 })
+
+
+test('SaaS refuses document access without a personal session',async t=>{
+  const base=await serve(t,()=>assert.fail('No fallback to shared owner'),{requireLogin:true,gatewayToken:'gateway'})
+  assert.equal((await fetch(base+'/bff/documents')).status,401)
+  assert.equal((await fetch(base+'/bff/documents',{headers:{'x-forwarded-proto':'https','x-documind-gateway':'gateway'}})).status,401)
+})
+
+test('signed CSRF is mandatory and bound to the authenticated session',async t=>{
+  let calls=0
+  const base=await serve(t,async()=>{calls++;return Response.json({ok:true})},{requireLogin:true,csrfProtection:true,gatewayToken:'gateway'})
+  const secure={'x-forwarded-proto':'https','x-documind-gateway':'gateway'}
+  const session='A'.repeat(43),cookie='__Host-documind='+session
+  const protect=await fetch(base+'/bff/auth/csrf',{headers:{...secure,cookie}})
+  const {csrf_token}=await protect.json()
+  const csrfCookie=protect.headers.get('set-cookie').split(';')[0]
+  const send=(headers)=>fetch(base+'/bff/account/password',{method:'POST',headers:{...secure,'content-type':'application/json',cookie:cookie+'; '+csrfCookie,...headers},body:'{}'})
+  assert.equal((await send({})).status,403)
+  assert.equal((await send({'x-csrf-token':'wrong'})).status,403)
+  assert.equal((await send({'x-csrf-token':csrf_token,cookie:'__Host-documind='+'B'.repeat(43)+'; '+csrfCookie})).status,403)
+  assert.equal(calls,0)
+  assert.equal((await send({'x-csrf-token':csrf_token})).status,200)
+  assert.equal(calls,1)
+  assert.ok(!csrf_token.includes(key) && !csrf_token.includes(session))
+})
+
+test('Traefik: exact TCP peer is trusted, forwarded headers alone are refused',async t=>{
+  const upstream=[]
+  const base=await serve(t,async(url,options)=>{upstream.push(options);return Response.json({ok:true})},
+    {trustedProxyIPs:['127.0.0.1'],requireLogin:true})
+  const headers={'x-forwarded-proto':'https','x-forwarded-for':'203.0.113.10',cookie:'__Host-documind='+'A'.repeat(43)}
+  assert.equal((await fetch(base+'/bff/ai/settings',{headers})).status,200)
+  assert.equal(upstream[0].headers['x-documind-secure'],'1')
+  assert.equal(upstream[0].headers['x-documind-client-ip'],'203.0.113.10')
+  const refused=await serve(t,()=>assert.fail('Untrusted peer'),{trustedProxyIPs:['127.0.0.2'],requireLogin:true})
+  assert.equal((await fetch(refused+'/bff/ai/settings',{headers})).status,403)
+  assert.equal((await fetch(base+'/bff/ai/settings',{headers:{...headers,'x-forwarded-proto':'http'}})).status,403)
+})
+
+test('Traefik: secure cookies and CSRF remain enforced behind TLS termination',async t=>{
+  const base=await serve(t,async()=>Response.json({session_token:'B'.repeat(43),expires_in:1800}),
+    {trustedProxyIPs:['127.0.0.1'],csrfProtection:true,requireLogin:true})
+  const headers={'x-forwarded-proto':'https','content-type':'application/json'}
+  const url=base+'/bff/auth/login'
+  assert.equal((await fetch(url,{method:'POST',headers,body:'{}'})).status,403)
+  const protection=await fetch(base+'/bff/auth/csrf',{headers})
+  const {csrf_token}=await protection.json()
+  const cookie=protection.headers.get('set-cookie').split(';')[0]
+  const response=await fetch(url,{method:'POST',headers:{...headers,cookie,'x-csrf-token':csrf_token},body:'{}'})
+  assert.equal(response.status,200)
+  assert.deepEqual(await response.json(),{connected:true})
+  for(const flag of ['HttpOnly','Secure','SameSite=Strict'])assert.ok(response.headers.get('set-cookie').includes(flag))
+  assert.throws(()=>loadConfig({BFF_API_KEY:key,BFF_TRUSTED_PROXY_IPS:'0.0.0.0/0'}))
+})

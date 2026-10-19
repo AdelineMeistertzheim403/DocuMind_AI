@@ -224,3 +224,38 @@ def deletion(body: PasswordInput, request: Request, owner: Owner, session: Sessi
     session.commit()
     request.app.state.session_vault.revoke_user(user.id)
     return {'requested':True,'message':'Compte désactivé. La suppression doit être traitée par l’administrateur local.'}
+
+
+@router.delete('/documents/{document_id}/ai-results',status_code=204)
+def clear_ai(document_id: UUID, request: Request, owner: Owner, session: Session):
+    from .services.documents import owned_document
+    from .ai.long_models import LongSummaryJob
+    from .rag.models import RAGDocument, RAGResult, OperationDocument
+    current_user(request,session,owner)
+    lock_workspace(session,owner)
+    owned_document(session,document_id,owner,lock=True)
+    linked_reservations=select(OperationDocument.reservation_id).where(OperationDocument.document_id==document_id)
+    if session.scalar(select(AIReservation.id).where(AIReservation.status=='reserved',
+        (AIReservation.document_id==document_id)|(AIReservation.id.in_(linked_reservations))).limit(1)):
+        raise HTTPException(409,'Un traitement est en cours ou réservé')
+    for model in [AISource,AISummary,AIInteraction,LongSummaryJob]:
+        session.execute(delete(model).where(model.document_id==document_id))
+    linked=select(RAGDocument.result_id).where(RAGDocument.document_id==document_id)
+    session.execute(delete(RAGResult).where(RAGResult.owner_id==owner,RAGResult.id.in_(linked)))
+    session.commit()
+
+
+@router.delete('/documents/{document_id}/embeddings',status_code=204)
+def clear_embeddings(document_id: UUID, request: Request, owner: Owner, session: Session):
+    from .services.documents import owned_document
+    from .rag.models import ChunkEmbedding,IndexJob,RAGResult,RAGDocument
+    current_user(request,session,owner)
+    lock_workspace(session,owner)
+    owned_document(session,document_id,owner,lock=True)
+    if session.scalar(select(IndexJob.id).where(IndexJob.document_id==document_id,IndexJob.status.in_(['queued','running'])).limit(1)):
+        raise HTTPException(409,'Une indexation est en cours')
+    session.execute(delete(ChunkEmbedding).where(ChunkEmbedding.document_id==document_id,ChunkEmbedding.owner_id==owner))
+    session.execute(delete(IndexJob).where(IndexJob.document_id==document_id,IndexJob.owner_id==owner))
+    linked=select(RAGDocument.result_id).where(RAGDocument.document_id==document_id)
+    session.execute(delete(RAGResult).where(RAGResult.owner_id==owner,RAGResult.kind=='index_request',RAGResult.id.in_(linked)))
+    session.commit()

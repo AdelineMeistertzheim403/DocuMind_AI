@@ -1,5 +1,9 @@
 # Sprint 3 — Assistant documentaire et BYOK
 
+Le [Sprint 5](sprint-5-accounts.md) remplace les parcours de comptes décrits ci-dessous :
+Argon2id, connexion obligatoire pour les documents, invitations, récupération et CSRF.
+Les anciennes sections scrypt et espace HTTP partagé constituent l’historique des sprints.
+
 Le Sprint 4 et la [correction des résumés longs](long-document-summary.md) étendent ce socle. Les documents longs utilisent désormais des tâches persistantes et une réduction multi-niveaux, avec confirmation chiffrée ; la limite de cinq étapes du premier résumé ne s’applique plus à ce parcours.
 
 L’analyse classique reste locale et disponible sans IA. Aucun appel OpenAI réel n’a été effectué pendant cette implémentation. `AI_ENABLED=false` est conservé dans la configuration locale. Les résultats des tests sont simulés explicitement, jamais présentés comme une validation du compte OpenAI.

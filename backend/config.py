@@ -2,6 +2,7 @@ from pathlib import Path
 from decimal import Decimal
 from typing import Literal
 from uuid import UUID
+from urllib.parse import urlsplit
 
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -26,6 +27,7 @@ class Settings(BaseSettings):
     uploads_per_minute: int = Field(5, ge=1)
     max_documents_per_owner: int = Field(100, ge=1)
     max_storage_bytes_per_owner: int = Field(500 * 1024 * 1024, ge=1024)
+    max_storage_bytes_total: int = Field(5 * 1024 * 1024 * 1024, ge=1024)
     ai_max_concurrent_per_owner: int = Field(1, ge=1, le=4)
     storage_dir: Path = Path("var/documents")
     max_upload_bytes: int = Field(10 * 1024 * 1024, gt=0)
@@ -85,4 +87,11 @@ class Settings(BaseSettings):
     def validate_keys(self):
         if any(len(key) < 32 for key in self.api_keys):
             raise ValueError("Chaque clé API doit contenir au moins 32 caractères")
+        service=self.bff_service_key.get_secret_value()
+        if service and (len(service)<32 or any(c.isspace() for c in service)):
+            raise ValueError('BFF_SERVICE_KEY doit contenir au moins 32 caractères sans espace')
+        origin=urlsplit(self.account_base_url)
+        if origin.scheme!='https' or not origin.hostname or origin.username or origin.password or origin.query or origin.fragment or origin.path not in ('','/'):
+            raise ValueError('ACCOUNT_BASE_URL doit être une origine HTTPS sans identifiants')
+        self.account_base_url=self.account_base_url.rstrip('/')
         return self

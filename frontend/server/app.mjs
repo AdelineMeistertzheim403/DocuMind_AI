@@ -2,7 +2,8 @@ import express from 'express'
 import helmet from 'helmet'
 import { Transform, Readable } from 'node:stream'
 import { existsSync } from 'node:fs'
-import { timingSafeEqual } from 'node:crypto'
+import { timingSafeEqual, createHmac, randomBytes } from 'node:crypto'
+import {isIP} from 'node:net'
 
 const uuid = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
 const detailRoute = new RegExp(`^/bff/documents/${uuid}$`)
@@ -17,6 +18,8 @@ const summaryJob = new RegExp(`^/bff/summary-jobs/${uuid}$`)
 const summaryJobAction = new RegExp(`^/bff/summary-jobs/${uuid}/(?:resume|cancel)$`)
 const documentSummaryJob = new RegExp(`^/bff/documents/${uuid}/summary-jobs$`)
 const summaryPlan = new RegExp(`^/bff/documents/${uuid}/summary-plan$`)
+const accountSession = /^\/bff\/account\/sessions\/[a-f0-9]{64}$/
+const privateDelete = new RegExp(`^/bff/documents/${uuid}/(?:ai-results|embeddings)$`)
 const aiCodes = {
     'output_truncated': 'La réponse IA a atteint la limite de sortie avant de terminer. Les étapes validées sont conservées.',
     'provider_refusal': 'Le fournisseur a refusé cette étape. Les étapes validées sont conservées.',
@@ -54,6 +57,11 @@ const messages = {
 }
 
 function routeAllowed(method, path) {
+  if (path === '/bff/auth/csrf' && method === 'GET') return true
+  if (path === '/bff/auth/options' && method === 'GET') return true
+  if (['/bff/auth/register','/bff/auth/forgot-password','/bff/auth/reset-password','/bff/account/password','/bff/account/deletion-request'].includes(path) && method === 'POST') return true
+  if (['/bff/account','/bff/account/sessions'].includes(path) && method === 'GET') return true
+  if ((accountSession.test(path)||privateDelete.test(path)) && method === 'DELETE') return true
   return (path === '/bff/documents' && ['GET', 'POST'].includes(method)) ||
     (detailRoute.test(path) && ['GET', 'DELETE'].includes(method)) ||
     (analyzeRoute.test(path) && method === 'POST') ||
@@ -114,11 +122,29 @@ export function createApp(config, upstreamFetch = fetch) {
     }
     const headers = { accept: 'application/json', 'X-API-Key': config.apiKey }
     const gateway = req.headers['x-documind-gateway'] || ''
-    const secure = req.secure || (config.gatewayToken && typeof gateway === 'string' && Buffer.byteLength(gateway) === Buffer.byteLength(config.gatewayToken) && timingSafeEqual(Buffer.from(gateway), Buffer.from(config.gatewayToken)) && req.headers['x-forwarded-proto'] === 'https')
-    const protectedSessionRoute = /^\/bff\/(?:auth\/|ai\/(?:settings|key))/.test(req.path)
+    const peer=(req.socket.remoteAddress||'').replace(/^::ffff:/,'')
+    const trustedProxy=(config.trustedProxyIPs||[]).includes(peer) || Boolean(config.gatewayToken && typeof gateway === 'string' && Buffer.byteLength(gateway) === Buffer.byteLength(config.gatewayToken) && timingSafeEqual(Buffer.from(gateway), Buffer.from(config.gatewayToken)))
+    const secure = req.secure || (trustedProxy && req.headers['x-forwarded-proto'] === 'https')
+    const protectedSessionRoute = /^\/bff\/(?:auth\/|account(?:\/|$)|ai\/(?:settings|key))/.test(req.path)
     if (protectedSessionRoute && !secure) return res.status(403).json({ detail: 'Ouvrez la connexion HTTPS locale pour gérer votre compte et votre clé.' })
     const token = /(?:^|;\s*)__Host-documind=([A-Za-z0-9_-]{40,100})(?:;|$)/.exec(req.headers.cookie || '')?.[1]
+    const publicRoute = /^\/bff\/auth\/(?:csrf|options|login|register|forgot-password|reset-password)$/.test(req.path) || req.path==='/bff/health'
+    if (config.requireLogin && !publicRoute && (!secure || !token)) return res.status(401).json({detail:'Connectez votre compte sur HTTPS.',code:'login_required'})
+    const sign = nonce => createHmac('sha256',config.apiKey).update(`${token||'anonymous'}:${nonce}`).digest('hex')
+    if (req.path==='/bff/auth/csrf') {
+      const nonce=randomBytes(32).toString('hex'), value=`${nonce}.${sign(nonce)}`
+      res.set('Set-Cookie',`__Host-documind-csrf=${value}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=3600`)
+      return res.json({csrf_token:value})
+    }
+    if (config.csrfProtection && !['GET','HEAD'].includes(req.method)) {
+      const csrf=/(?:^|;\s*)__Host-documind-csrf=([a-f0-9]{64}\.[a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie||'')?.[1]
+      const supplied=req.headers['x-csrf-token']
+      if (!secure || !csrf || typeof supplied!=='string' || supplied!==csrf || csrf!==`${csrf.slice(0,64)}.${sign(csrf.slice(0,64))}`) return res.status(403).json({detail:'Protection CSRF : rechargez la page puis réessayez.'})
+      if (req.headers.origin && new URL(req.headers.origin).protocol!=='https:') return res.status(403).json({detail:'Origine HTTPS requise.'})
+    }
     if (secure) headers['x-documind-secure'] = '1'
+    const forwarded=typeof req.headers['x-forwarded-for']==='string'?req.headers['x-forwarded-for'].split(',').at(-1).trim():''
+    headers['x-documind-client-ip'] = secure && trustedProxy && isIP(forwarded) ? forwarded : req.socket.remoteAddress || 'unknown'
     if (secure && token) headers.authorization = `Bearer ${token}`
     const isAI = aiPost.test(req.path) || (indexRoute.test(req.path) && req.method === 'POST') ||
       comparisonSummary.test(req.path) || ['/bff/search/semantic', '/bff/search/ask'].includes(req.path) ||
@@ -167,7 +193,7 @@ export function createApp(config, upstreamFetch = fetch) {
         res.set('Set-Cookie', `__Host-documind=${data.session_token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${Math.min(3600, Number(data.expires_in) || 1800)}`)
         return res.json({ connected: true })
       }
-      if (req.path === '/bff/auth/logout') res.set('Set-Cookie', '__Host-documind=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0')
+      if (['/bff/auth/logout','/bff/account/password','/bff/account/deletion-request'].includes(req.path)) res.set('Set-Cookie', '__Host-documind=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0')
       // Never forward upstream headers, cookies, redirects, or a supplied client API key.
       return res.status(response.status).json(data)
     } catch {

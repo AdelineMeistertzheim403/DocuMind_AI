@@ -4,6 +4,7 @@ import hashlib
 import secrets
 import threading
 import time
+from functools import wraps
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -32,12 +33,27 @@ class User(Base):
 
 
 PASSWORD_HASHER = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=1, type=Type.ID)
+PASSWORD_SLOTS = threading.BoundedSemaphore(2)
 
 
+def bounded_password_work(function):
+    @wraps(function)
+    def run(*args,**kwargs):
+        if not PASSWORD_SLOTS.acquire(timeout=1):
+            raise HTTPException(503,'Capacité de vérification atteinte')
+        try:
+            return function(*args,**kwargs)
+        finally:
+            PASSWORD_SLOTS.release()
+    return run
+
+
+@bounded_password_work
 def hash_password(password):
     return PASSWORD_HASHER.hash(password)
 
 
+@bounded_password_work
 def verify_password(password, encoded):
     try:
         if encoded.startswith('$argon2id$'):

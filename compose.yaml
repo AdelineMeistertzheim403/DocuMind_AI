@@ -46,6 +46,7 @@ services:
     environment:
       API_KEYS: ${API_KEYS:-}
       BFF_API_KEY: ${BFF_API_KEY:-}
+      BFF_SERVICE_KEY: ${BFF_SERVICE_KEY:-}
       BFF_BACKEND_URL: http://api:8000
       BFF_HOST: 0.0.0.0
       BFF_PORT: 3000

@@ -82,6 +82,8 @@ def get_document(document_id: UUID, owner_id: Owner, session: Session):
 
 @protected.delete("/{document_id}", status_code=204, summary="Supprimer le fichier et toutes ses données")
 def remove_document(document_id: UUID, request: Request, owner_id: Owner, session: Session):
+    from .resource_limits import lock_workspace
+    lock_workspace(session,owner_id)
     delete_document(session, request.app.state.settings, owned_document(session, document_id, owner_id, lock=True))
     return Response(status_code=204)
 

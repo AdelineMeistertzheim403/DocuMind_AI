@@ -15,6 +15,15 @@ KEY = "test-owner-one-key-000000000000000001"
 OTHER_KEY = "test-owner-two-key-000000000000000002"
 
 
+@pytest.fixture(autouse=True)
+def prohibit_real_openai_clients(monkeypatch):
+    import openai
+    def prohibited(*args,**kwargs):
+        raise AssertionError('Real OpenAI clients are forbidden in automated tests')
+    monkeypatch.setattr(openai,'OpenAI',prohibited)
+    monkeypatch.setattr(openai,'AsyncOpenAI',prohibited)
+
+
 @pytest.fixture
 def app(tmp_path, monkeypatch):
     # Set TEST_DATABASE_URL to a dedicated, disposable PostgreSQL database to test the same API there.
@@ -29,7 +38,7 @@ def app(tmp_path, monkeypatch):
     config = Config("alembic.ini")
     command.upgrade(config, "head")
     settings = Settings(_env_file=None, database_url=url, storage_dir=tmp_path / "private",
-                        api_keys={KEY: UUID(int=1), OTHER_KEY: UUID(int=2)})
+                        api_keys={KEY: UUID(int=1), OTHER_KEY: UUID(int=2)}, requests_per_minute=10000)
     application = create_app(settings)
     yield application
     application.state.engine.dispose()

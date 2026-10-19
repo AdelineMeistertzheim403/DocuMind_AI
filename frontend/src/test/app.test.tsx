@@ -7,15 +7,18 @@ import { AppRoutes, makeQueryClient } from '../App'
 import { api, ApiError } from '../services/api'
 import { document, analysis } from './fixtures'
 import { ai } from '../services/ai'
+import {account} from '../services/account'
 import {longSummary} from '../services/longSummary'
 
 function mount(path = '/') {
   const client = makeQueryClient()
+  client.setQueryData(['account'],{id:'test-user',email:'test@example.test',username:'test',owner_id:'test-owner',workspace:'Espace personnel'})
   client.setDefaultOptions({ queries: { retry: false, gcTime: 0 }, mutations: { retry: false } })
   const view = render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[path]}><AppRoutes/></MemoryRouter></QueryClientProvider>)
   return { ...view, client, user: userEvent.setup() }
 }
 beforeEach(() => {
+  vi.spyOn(account,'me').mockResolvedValue({id:'test-user',email:'test@example.test',username:'test',owner_id:'test-owner',workspace:'Espace personnel'})
   vi.spyOn(longSummary,'plan').mockResolvedValue({direct:true,parts:1,steps:1,levels:1,root:'map-0',summary_chars:100,pages_total:1,empty_pages:[],maximum_usd:.01,input_limit:16000,overlap_chars:200})
   vi.spyOn(ai, 'status').mockResolvedValue({ mode:'OWNER_DEMO', enabled:false, available:false, reason:'disabled', provider:'openai', model:'gpt-5.6-luna', budget_usd:4, spent_usd:0, reserved_usd:0, remaining_usd:4, summary_quota:20, question_quota:100, summaries_used:0, questions_used:0, requests:0, provider_calls:0, input_tokens:0, output_tokens:0, reasoning_tokens:0, pending_requests:0, pricing_verified_on:'2026-10-19' })
   vi.spyOn(ai, 'summaries').mockResolvedValue({ items: [], total: 0, offset: 0, limit: 10 })

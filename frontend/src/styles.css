@@ -264,3 +264,7 @@ dialog { background: #151F35; border: 1px solid #394561; border-radius: 15px; co
 #source-text { scroll-margin-top: 80px; }
 #source-text mark { background: #d7c276; color: #111725; border-radius: 2px; }
 @media (max-width: 720px) { .diff-columns { grid-template-columns: 1fr; } .rag-picker { padding: 16px; } .rag-index-control .settings-actions { flex-direction: column; align-items: stretch; } }
+.account-access { max-width: 620px; margin: 5vh auto; }
+.account-access .brand { margin-bottom: 28px; }
+.account-access nav { flex-wrap: wrap; gap: 18px; margin-top: 24px; }
+.settings-card { overflow-wrap: anywhere; }

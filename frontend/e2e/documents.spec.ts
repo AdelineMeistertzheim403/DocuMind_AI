@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './account-fixture'
 import { readFile } from 'node:fs/promises'
 
 for (const format of ['txt', 'pdf'] as const) {

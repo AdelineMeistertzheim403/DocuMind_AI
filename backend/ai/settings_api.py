@@ -146,7 +146,7 @@ def settings_for_request(request, session):
     context = getattr(request.state, 'user_session', None)
     if context is None:
         return settings
-    user = session.get(User, context.user_id)
+    user = session.get(User, context.user_id, populate_existing=True)
     if user is None or user.disabled_at is not None:
         raise HTTPException(401, 'Compte désactivé')
     if context.mode == 'OWNER_DEMO':

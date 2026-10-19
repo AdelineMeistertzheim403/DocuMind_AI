@@ -43,7 +43,10 @@ export function Layout() {
         <NavLink to="/documents" onClick={() => setMenu(false)}><FolderOpen size={20}/>Documents</NavLink>
         <NavLink to="/library" onClick={() => setMenu(false)}><BookOpen size={19}/>Bibliothèque intelligente</NavLink>
         <NavLink to="/compare" onClick={() => setMenu(false)}><FileStack size={19}/>Comparer deux documents</NavLink>
-        <NavLink to="/settings/ai" onClick={() => setMenu(false)}><Sparkles size={19}/>Paramètres IA</NavLink></nav>
+        <NavLink to="/settings/ai" onClick={() => setMenu(false)}><Sparkles size={19}/>Paramètres IA</NavLink>
+        <NavLink to="/settings/profile" onClick={() => setMenu(false)}><ShieldCheck size={19}/>Mon profil</NavLink>
+        <NavLink to="/settings/security" onClick={() => setMenu(false)}><ShieldCheck size={19}/>Sécurité</NavLink>
+        <NavLink to="/settings/privacy" onClick={() => setMenu(false)}><ShieldCheck size={19}/>Confidentialité</NavLink></nav>
       <div className="sidebar-bottom"><div className="local-card"><span className="local-card-icon"><ShieldCheck size={19}/></span><strong>Votre espace, vos données.</strong><p>Vos documents restent dans votre environnement local.</p><span className="local-label"><span/>Stockage privé</span></div>
         <button className="help-link" onClick={() => { setMenu(false); setGuide(true) }}><CircleHelp size={18}/>Prise en main<ArrowUpRight size={15}/></button>
         <div className="workspace-profile"><span className="avatar">DM</span><div><strong>Espace personnel</strong><small>Environnement local</small></div></div>

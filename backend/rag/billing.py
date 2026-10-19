@@ -63,6 +63,8 @@ def reserve_operation(session, settings, owner, ids, key, digest, feature, maxim
         cap = session.scalar(select(User.ai_limit_usd).where(User.owner_id == owner))
     if budget.spent_usd + budget.reserved_usd + maximum > cap:
         fail('budget_exhausted', 402)
+    if session.scalar(select(func.count()).select_from(AIReservation).where(AIReservation.owner_id==owner, AIReservation.status=='reserved')) >= settings.ai_max_concurrent_per_owner:
+        fail('busy',429)
     row = AIReservation(owner_id=owner, budget_id=settings.ai_budget_scope, document_id=ids[0],
         idempotency_key=key, request_hash=digest, feature=feature, reserved_usd=maximum,
         model=settings.openai_model, provider=settings.ai_provider)

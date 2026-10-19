@@ -16,12 +16,17 @@ def main():
     integrity=json.loads((args.snapshot/'integrity.json').read_text(encoding='utf-8'))
     allowed={'documents','document_pages','document_chunks','analyses','users','ai_budgets',
         'ai_reservations','ai_usage','ai_summaries','ai_interactions','ai_sources','chunk_embeddings',
-        'index_jobs','rag_results','rag_documents','ai_operation_documents','long_summary_jobs','summary_steps'}
+        'index_jobs','rag_results','rag_documents','ai_operation_documents','long_summary_jobs','summary_steps',
+        'workspaces','workspace_memberships','account_tokens','account_deletion_requests'}
     if not set(integrity).issubset(allowed) or not {'documents','document_pages','document_chunks','analyses'}.issubset(integrity):
         raise SystemExit('Invalid snapshot manifest')
     for table,expected in integrity.items():
-        order='row_to_json(t)::text' if table=='ai_operation_documents' else 'id'
-        sql=f"SELECT count(*),md5(coalesce(string_agg(row_to_json(t)::text,'' ORDER BY {order}),'')) FROM {table} t"
+        columns=expected.get('columns')
+        if columns is not None and (not columns or any(not re.fullmatch(r'[a-z_][a-z0-9_]*',name) for name in columns)):
+            raise SystemExit('Invalid column manifest')
+        order='row_to_json(t)::text' if columns or table=='ai_operation_documents' else 'id'
+        source=f"(SELECT {','.join(columns)} FROM {table})" if columns else table
+        sql=f"SELECT count(*),md5(coalesce(string_agg(row_to_json(t)::text,'' ORDER BY {order}),'')) FROM {source} t"
         output=subprocess.check_output(['docker','compose','exec','-T','db','sh','-c',
             'exec psql -U "$POSTGRES_USER" -d "$1" -At -c "$2"', 'snapshot-check',args.database,sql],text=True)
         count,digest=output.strip().split('|')

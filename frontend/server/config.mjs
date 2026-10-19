@@ -1,12 +1,13 @@
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import dotenv from 'dotenv'
+import {isIP} from 'node:net'
 
 export function loadConfig(env = process.env) {
   if (env === process.env) {
     dotenv.config({ path: fileURLToPath(new URL('../../.env', import.meta.url)), quiet: true })
   }
-  let apiKey = env.BFF_API_KEY
+  let apiKey = env.BFF_SERVICE_KEY || env.BFF_API_KEY
   if (!apiKey) {
     let keys
     try { keys = Object.keys(JSON.parse(env.API_KEYS || '{}')) } catch { throw new Error('API_KEYS doit être un objet JSON valide') }
@@ -20,9 +21,13 @@ export function loadConfig(env = process.env) {
   }
   const maxUploadBytes = Number(env.MAX_UPLOAD_BYTES || 10485760)
   const port = Number(env.BFF_PORT || 3000)
+  const trustedProxyIPs=(env.BFF_TRUSTED_PROXY_IPS||'').split(',').map(value=>value.trim()).filter(Boolean)
+  if(trustedProxyIPs.some(value=>!isIP(value))) throw new Error('BFF_TRUSTED_PROXY_IPS doit contenir des adresses IP exactes')
   if (!Number.isSafeInteger(maxUploadBytes) || maxUploadBytes < 1 || !Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Limites BFF invalides')
   return {
     apiKey, upstream: upstream.origin, maxUploadBytes, port,
+    requireLogin: true, csrfProtection: true,
+    trustedProxyIPs,
     gatewayToken: env.DOCUMIND_GATEWAY_TOKEN || '',
     host: env.BFF_HOST || '127.0.0.1',
     allowedHosts: (env.BFF_ALLOWED_HOSTS || 'localhost,127.0.0.1,::1').split(',').map(s => s.trim()),
