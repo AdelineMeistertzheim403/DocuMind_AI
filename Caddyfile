@@ -1,0 +1,10 @@
+{
+    auto_https disable_redirects
+    admin off
+}
+https://localhost, https://127.0.0.1 {
+    tls internal
+    reverse_proxy web:3000 {
+        header_up X-Documind-Gateway {$DOCUMIND_GATEWAY_TOKEN}
+    }
+}

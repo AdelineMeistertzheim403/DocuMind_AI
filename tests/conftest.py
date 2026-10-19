@@ -1,0 +1,43 @@
+import os
+from uuid import UUID
+
+import pytest
+from alembic import command
+from alembic.config import Config
+from fastapi.testclient import TestClient
+from sqlalchemy import inspect
+
+from backend.config import Settings
+from backend.main import create_app
+from backend.db import make_engine
+
+KEY = "test-owner-one-key-000000000000000001"
+OTHER_KEY = "test-owner-two-key-000000000000000002"
+
+
+@pytest.fixture
+def app(tmp_path, monkeypatch):
+    # Set TEST_DATABASE_URL to a dedicated, disposable PostgreSQL database to test the same API there.
+    url = os.environ.get("TEST_DATABASE_URL", f"sqlite:///{(tmp_path / 'test.db').as_posix()}")
+    probe = make_engine(url)
+    try:
+        if set(inspect(probe).get_table_names()) - {"alembic_version"}:
+            pytest.fail("TEST_DATABASE_URL doit désigner une base vide dédiée aux tests")
+    finally:
+        probe.dispose()
+    monkeypatch.setenv("DATABASE_URL", url)
+    config = Config("alembic.ini")
+    command.upgrade(config, "head")
+    settings = Settings(_env_file=None, database_url=url, storage_dir=tmp_path / "private",
+                        api_keys={KEY: UUID(int=1), OTHER_KEY: UUID(int=2)})
+    application = create_app(settings)
+    yield application
+    application.state.engine.dispose()
+    command.downgrade(config, "base")
+
+
+@pytest.fixture
+def client(app):
+    with TestClient(app) as connection:
+        connection.headers["X-API-Key"] = KEY
+        yield connection
