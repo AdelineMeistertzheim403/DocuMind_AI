@@ -1,0 +1,33 @@
+[Unit]
+Description=DocuMind read-only retention simulation (deletion disabled)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=debian
+Group=debian
+WorkingDirectory=/srv/documind-ai/ops
+StateDirectory=documind-retention
+StateDirectoryMode=0700
+UMask=0077
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=HOME=/home/debian
+ExecStart=/usr/bin/python3 /srv/documind-ai/ops/retention_production.py --simulate
+TimeoutStartSec=30min
+TimeoutStopSec=90
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/documind-retention
+InaccessiblePaths=-/run/docker.sock -/var/run/docker.sock
+CapabilityBoundingSet=
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+StandardOutput=journal
+StandardError=journal
