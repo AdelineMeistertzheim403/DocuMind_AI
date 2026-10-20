@@ -29,6 +29,11 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://documind:${POSTGRES_PASSWORD:?}@db:5432/documind
       STORAGE_DIR: /app/var/documents
+      # Mandatory Linux Landlock/seccomp. Never fall back to the development adapter.
+      EXTRACTION_MODE: sandbox
+      MAX_CONCURRENT_WORKERS: '2'
+      WORKER_MEMORY_MB: '512'
+      WORKER_TIMEOUT_SECONDS: '30'
       API_KEYS: '{}'
       LEGACY_API_ENABLED: 'false'
       BFF_SERVICE_KEY: ${BFF_SERVICE_KEY:?Configure an independent service credential}

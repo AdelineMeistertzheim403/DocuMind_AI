@@ -19,7 +19,7 @@ test = ["pytest>=8,<10", "httpx>=0.28,<1"]
 desktop = ["customtkinter>=5.2,<6", "Pillow>=11,<13", "matplotlib>=3.9,<4"]
 
 [tool.setuptools.packages.find]
-include = ["backend*", "analyseur_documents*"]
+include = ["backend*", "analyseur_documents*", "documind_extractor*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

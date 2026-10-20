@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     max_storage_bytes_total: int = Field(5 * 1024 * 1024 * 1024, ge=1024)
     ai_max_concurrent_per_owner: int = Field(1, ge=1, le=4)
     storage_dir: Path = Path("var/documents")
+    extraction_mode: Literal['sandbox', 'development'] = 'sandbox'
     max_upload_bytes: int = Field(10 * 1024 * 1024, gt=0)
     max_pdf_pages: int = Field(200, gt=0)
     max_text_chars: int = Field(1_000_000, gt=0)

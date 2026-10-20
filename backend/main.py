@@ -59,6 +59,9 @@ def create_app(settings=None):
     async def lifespan(app):
         if not settings.api_keys and not settings.bff_service_key.get_secret_value():
             raise RuntimeError("Configurez API_KEYS avant de démarrer le serveur")
+        if settings.extraction_mode == 'sandbox':
+            from .services.extraction import check_available
+            await asyncio.to_thread(check_available, settings)
         settings.storage_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
         from .rag.indexing import recover_jobs
         recover_jobs(app)

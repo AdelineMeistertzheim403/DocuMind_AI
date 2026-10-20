@@ -79,7 +79,7 @@ def test_workflows_are_pinned_gated_and_never_deploy_on_push():
     production=yaml.load(Path('.github/workflows/deploy.yml').read_text(),Loader=yaml.BaseLoader)
     assert set(production['on'])=={'workflow_dispatch'}
     assert production['jobs']['deploy']['environment']['name']=='production'
-    assert ci['jobs']['publish']['needs']==['python','frontend']
+    assert ci['jobs']['publish']['needs']==['python','windows','frontend']
     assert "github.event_name != 'pull_request'" in ci['jobs']['publish']['if']
     import re
     for workflow in (ci,production):
@@ -89,6 +89,40 @@ def test_workflows_are_pinned_gated_and_never_deploy_on_push():
     text=Path('.github/workflows/deploy.yml').read_text()
     assert 'required_reviewers' in text and 'StrictHostKeyChecking=yes' in text
     assert 'StrictHostKeyChecking=no' not in text and 'ssh-keyscan' not in text
+
+
+def test_windows_ci_runs_portable_suite_without_production_services_or_secrets():
+    ci=yaml.load(Path('.github/workflows/ci.yml').read_text(),Loader=yaml.BaseLoader)
+    job=ci['jobs']['windows']
+    assert job['runs-on']=='windows-2022' and job['defaults']['run']['shell']=='pwsh'
+    assert not job.get('services') and not job.get('environment') and not job.get('if')
+    assert job.get('continue-on-error','false')=='false'
+    assert '${{ secrets.' not in json.dumps(job)
+    assert job['env']['AI_ENABLED']=='false' and job['env']['OPENAI_API_KEY']==''
+    assert job['env']['REGISTRATION_MODE']=='disabled'
+    assert 'OWNER_DEMO_ENABLED' not in job['env']  # Preserve mock-provider fixture behavior.
+    assert job['env']['DATABASE_URL']=='sqlite://' and 'TEST_DATABASE_URL' not in job['env']
+    setup=next(step for step in job['steps'] if step.get('uses','').startswith('actions/setup-python@'))
+    assert setup['with']=={'python-version':'3.13','architecture':'x64'}
+    commands=[step['run'] for step in job['steps'] if 'run' in step]
+    assert any('pip install -c requirements.lock' in command and 'tzdata' in command for command in commands)
+    suite=next(command for command in commands if 'python -m pytest' in command)
+    assert 'Remove-Item Env:TEST_DATABASE_URL -ErrorAction SilentlyContinue' in suite
+    assert '--ignore=tests/test_extraction_linux.py' in suite
+    assert suite.count('--ignore=')==1 and ' -k ' not in suite and ' -m ' not in suite.replace('python -m pytest','pytest')
+    for name in ('python','windows','frontend'):
+        required=ci['jobs'][name]
+        assert required.get('continue-on-error','false')=='false'
+        assert all(step.get('continue-on-error','false')=='false' for step in required['steps'])
+
+
+def test_new_registry_images_are_limited_to_certified_amd64():
+    ci=yaml.load(Path('.github/workflows/ci.yml').read_text(),Loader=yaml.BaseLoader)
+    publish=ci['jobs']['publish']
+    builds=[step for step in publish['steps'] if step.get('uses','').startswith('docker/build-push-action@')]
+    assert {step['id'] for step in builds}=={'backend','frontend','postgres'}
+    assert all(step['with']['platforms']=='linux/amd64' for step in builds)
+    assert not any(step.get('uses','').startswith('docker/setup-qemu-action@') for step in publish['steps'])
 
 
 @pytest.fixture

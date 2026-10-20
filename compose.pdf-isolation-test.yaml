@@ -1,0 +1,16 @@
+# Disposable local proofs only. No env_file, volumes, published ports or production networks.
+name: documind-isolation-tests
+services:
+  proofs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: isolation-tests
+    network_mode: none
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 1536m
+    cpus: 2
+    pids_limit: 64
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=256m,mode=1777"]
