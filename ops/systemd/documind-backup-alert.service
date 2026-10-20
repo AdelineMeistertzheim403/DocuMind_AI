@@ -1,0 +1,16 @@
+[Unit]
+Description=Optional local DocuMind backup failure notification
+
+[Service]
+Type=oneshot
+User=debian
+Group=debian
+EnvironmentFile=-/etc/documind-backup-alert.conf
+ExecStart=/usr/bin/python3 /srv/documind-ai/ops/backup_production.py --alert
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+StandardOutput=journal
+StandardError=journal

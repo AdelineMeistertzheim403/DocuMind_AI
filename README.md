@@ -16,6 +16,26 @@ Traefik `web` / `websecure` / `letsencrypt` ; il ne crée aucun second proxy.
 La CI publie des images identifiées par SHA après réussite des tests. Aucun push ne déploie le VPS.
 Les secrets et les accès doivent être configurés par l’administrateur avant le premier lancement.
 
+Le [guide Sprint 7](docs/sprint-7-backups.md) prépare les sauvegardes quotidiennes vers le dépôt
+Restic/B2 existant, le timer Europe/Paris, les alertes et la reprise après erreur. Aucune purge
+n’est activée ; l’installation et l’activation sur le VPS restent manuelles.
+
+Le [guide Sprint 8](docs/sprint-8-monitoring.md) prépare la surveillance quotidienne à 08 h
+Europe/Paris : espace disque, fraîcheur B2, timer de sauvegarde et alertes Gmail sans interruption
+applicative, avec anti-spam et retours à la normale.
+
+Le [guide Sprint 9](docs/sprint-9-retention.md) prépare la simulation de conservation locale/B2
+à 09 h Europe/Paris. Les suppressions restent verrouillées, avec protection des copies restaurées
+et contrôle des empreintes ; installation et activation du timer de simulation restent manuelles.
+
+Le [confinement PDF/TXT du Sprint 10](docs/sprint-10-pdf-isolation-design.md) impose Landlock
+et seccomp sous Docker/Linux, sans nouveau service ni changement des volumes. L'API refuse
+de démarrer en mode `sandbox` si ces protections sont indisponibles. Hors Docker sous Windows,
+ajouter explicitement `EXTRACTION_MODE=development` à la configuration locale pour utiliser
+l'adaptateur de développement **non confiné** ; ce mode ne convient pas à la production.
+Les [preuves et limites de validation](docs/sprint-10-pdf-isolation-validation.md) distinguent
+les tests Linux natifs des contrôles Docker et VPS restant nécessaires.
+
 ## Ouvrir l'application web
 
 **Sprint 5 :** l’accès documentaire du navigateur nécessite désormais un compte et HTTPS.
@@ -330,12 +350,12 @@ python -m backend.maintenance
 python -m backend.maintenance --apply
 ```
 
-Les traitements s'exécutent dans des processus jetables. Le parent surveille durée et mémoire
-sous Windows et Linux et termine le processus si nécessaire ; sous Linux, des limites système
-CPU/espace d'adressage s'ajoutent. Sous Windows, la mémoire est contrôlée par sondage, avec
-un dépassement transitoire possible ; les plafonds du conteneur renforcent la protection sous Docker.
-Ce mécanisme ne constitue pas une sandbox contre les vulnérabilités natives de PyMuPDF ;
-maintenez les dépendances à jour. Pas d’OCR, antivirus ni quota disque par utilisateur.
+L'extraction de production s'exécute dans la sandbox Linux Landlock/seccomp décrite au Sprint 10.
+L'analyse classique et l'adaptateur de développement conservent leurs processus jetables,
+surveillés en durée et mémoire, avec limites CPU/espace d'adressage sous Linux. Sous Windows,
+le contrôle mémoire par sondage peut laisser un dépassement transitoire ; cet adaptateur
+de développement ne constitue pas une sandbox. Maintenez les dépendances à jour.
+Pas d'OCR ni d'antivirus ; les quotas documentaires et de stockage sont décrits au Sprint 5.
 Les comptes HTTPS ajoutés au Sprint 3 et les clés API serveur résolvent tous deux un `owner_id` ;
 les clés API conviennent à l’accès administratif local.
 

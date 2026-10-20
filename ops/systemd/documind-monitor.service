@@ -1,0 +1,30 @@
+[Unit]
+Description=Read-only DocuMind disk, B2 backup and systemd monitoring
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=debian
+Group=debian
+WorkingDirectory=/srv/documind-ai/ops
+StateDirectory=documind-monitor
+StateDirectoryMode=0700
+UMask=0077
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=HOME=/home/debian
+Environment=RESTIC_CACHE_DIR=/var/lib/documind-monitor/restic-cache
+ExecStart=/usr/bin/python3 /srv/documind-ai/ops/monitor_production.py --reminder-hours 72
+TimeoutStartSec=15min
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/documind-monitor
+InaccessiblePaths=-/run/docker.sock -/var/run/docker.sock
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+RestrictSUIDSGID=yes
+StandardOutput=journal
+StandardError=journal

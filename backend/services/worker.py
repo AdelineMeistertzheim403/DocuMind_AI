@@ -9,45 +9,14 @@ from fastapi import HTTPException
 
 
 def extract(path, extension, max_pages, max_chars):
-    import pymupdf as fitz
-
-    if extension == ".txt":
-        with open(path, "rb") as stream:
-            data = stream.read()
-        if data.startswith((b"%PDF-", b"PK\x03\x04", b"MZ", b"\x89PNG", b"\xff\xd8\xff")):
-            raise ValueError("Le contenu ne correspond pas à un fichier TXT")
-        try:
-            text = data.decode("utf-8-sig")
-        except UnicodeDecodeError as exc:
-            raise ValueError("TXT UTF-8 requis") from exc
-        if any(ord(c) < 32 and c not in "\n\r\t\f" for c in text):
-            raise ValueError("Contenu binaire interdit")
-        pages = [text]
-    else:
-        with open(path, "rb") as stream:
-            if not stream.read(8).startswith(b"%PDF-"):
-                raise ValueError("Signature PDF invalide")
-        try:
-            with fitz.open(path, filetype="pdf") as document:
-                if not document.is_pdf or document.needs_pass or document.is_repaired:
-                    raise ValueError("PDF corrompu ou chiffré")
-                if not 0 < document.page_count <= max_pages:
-                    raise ValueError("Limite du nombre de pages dépassée")
-                pages = []
-                total = 0
-                for page in document:
-                    text = page.get_text("text", sort=True)
-                    total += len(text)
-                    if total > max_chars:
-                        raise ValueError("Limite de texte extrait dépassée")
-                    pages.append(text)
-        except (fitz.FileDataError, fitz.EmptyFileError, RuntimeError) as exc:
-            raise ValueError("PDF illisible") from exc
-    if sum(map(len, pages)) > max_chars:
-        raise ValueError("Limite de texte extrait dépassée")
-    if not any(text.strip() for text in pages):
-        raise ValueError("Document vide ou sans texte extractible (OCR non disponible)")
-    return pages
+    # Portable development adapter only; production never sends a path to a parser.
+    from documind_extractor.engine import extract as extract_bytes
+    with open(path, 'rb') as source:
+        data = source.read()
+    try:
+        return extract_bytes(data, extension, max_pages, max_chars)
+    except Exception:
+        raise ValueError('Document illisible ou non conforme') from None
 
 
 def analyze(pages, options):
@@ -80,6 +49,9 @@ def child(connection, operation, args, memory_mb, timeout):
 
 
 def run_worker(settings, operation, *args):
+    if operation == 'extract' and settings.extraction_mode == 'sandbox':
+        from .extraction import extract_isolated
+        return extract_isolated(settings, *args)
     context = multiprocessing.get_context("spawn")
     receiver, sender = context.Pipe(duplex=False)
     process = context.Process(target=child, args=(sender, operation, args, settings.worker_memory_mb, settings.worker_timeout_seconds))

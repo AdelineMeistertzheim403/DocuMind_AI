@@ -38,7 +38,8 @@ def app(tmp_path, monkeypatch):
     config = Config("alembic.ini")
     command.upgrade(config, "head")
     settings = Settings(_env_file=None, database_url=url, storage_dir=tmp_path / "private",
-                        api_keys={KEY: UUID(int=1), OTHER_KEY: UUID(int=2)}, requests_per_minute=10000)
+                        api_keys={KEY: UUID(int=1), OTHER_KEY: UUID(int=2)}, requests_per_minute=10000,
+                        extraction_mode='development')  # Explicitly unconfined portable regression suite.
     application = create_app(settings)
     yield application
     application.state.engine.dispose()
