@@ -1,0 +1,32 @@
+[Unit]
+Description=DocuMind encrypted production backup
+Wants=network-online.target
+After=network-online.target docker.service
+OnFailure=documind-backup-alert.service
+
+[Service]
+Type=oneshot
+User=debian
+Group=debian
+SupplementaryGroups=docker
+WorkingDirectory=/srv/documind-ai
+ExecStart=/usr/bin/python3 /srv/documind-ai/ops/backup_production.py
+ExecStopPost=/usr/bin/python3 /srv/documind-ai/ops/backup_production.py --resume
+UMask=0077
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=HOME=/home/debian
+TimeoutStartSec=infinity
+TimeoutStopSec=300
+KillMode=process
+SendSIGKILL=no
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/srv/documind-ai /home/debian/.cache/restic
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+StandardOutput=journal
+StandardError=journal

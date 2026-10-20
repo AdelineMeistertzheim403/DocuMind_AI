@@ -445,3 +445,10 @@ def test_existing_report_is_never_overwritten_or_reused_as_candidate(tmp_path,mo
     monkeypatch.setattr(deploy,'verify_registry_tls',lambda:pytest.fail('No network preflight before preserving old evidence'))
     assert deploy.main()==1
     assert report.read_text()=='immutable prior failure'
+
+
+def test_deployment_refuses_pending_backup_maintenance(simulation):
+    args,events,state,bundle=simulation
+    marker=args.root/'var/backup-maintenance.json';marker.parent.mkdir();marker.write_text('{}')
+    with pytest.raises(deploy.DeploymentError,match='Backup maintenance is pending'):deploy.execute(args,{})
+    assert events==[]

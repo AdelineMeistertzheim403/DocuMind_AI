@@ -386,6 +386,8 @@ def execute(args,report):
         raise DeploymentError('Production environment must exist and have mode 0600')
     lock=(root/'deployment.lock').open('a')
     fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+    if (root/'var/backup-maintenance.json').exists():
+        raise DeploymentError('Backup maintenance is pending; resume services before deployment')
     release=validate_release(json.loads((bundle/'release.json').read_text(encoding='utf-8')))
     report['git_sha']=release['git_sha'];report['images']=release['images']
     stack=Stack(root,bundle,release)
