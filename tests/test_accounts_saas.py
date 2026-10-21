@@ -159,6 +159,8 @@ def test_concurrent_imports_cannot_bypass_personal_document_quota(accounts,monke
     from concurrent.futures import ThreadPoolExecutor
     from threading import Barrier
     client,app=accounts;login(client,'alice')
+    # Exercise the DB quota race independently of the new default one-upload admission.
+    app.state.settings.upload_max_per_owner=2
     app.state.settings.max_documents_per_owner=1
     barrier=Barrier(2)
     def extraction(*args):

@@ -84,7 +84,17 @@ function routeAllowed(method, path) {
 
 export function createApp(config, upstreamFetch = fetch) {
   const app = express()
+  let pendingUploadChecks = 0
+  let activeUploads = 0
   app.disable('x-powered-by')
+  app.use((req, res, next) => {
+    if (req.method === 'POST' && req.path.replace(/\/+$/, '') === '/bff/documents') {
+      // Do not drain an unauthenticated body to reuse an upstream HTTP/1 connection.
+      res.set('Connection', 'close')
+      res.once('finish', () => { if (!req.complete) req.socket.end() })
+    }
+    next()
+  })
   app.use(helmet({ contentSecurityPolicy: { directives: {
     defaultSrc: ["'self'"], scriptSrc: ["'self'"], styleSrc: ["'self'", "'unsafe-inline'"],
     imgSrc: ["'self'", 'data:'], fontSrc: ["'self'"], connectSrc: ["'self'"],
@@ -164,17 +174,45 @@ export function createApp(config, upstreamFetch = fetch) {
       comparisonSummary.test(req.path) || ['/bff/search/semantic', '/bff/search/ask'].includes(req.path) ||
       ((documentSummaryJob.test(req.path)||summaryJobAction.test(req.path))&&req.method==='POST')
     if (isAI && (!secure || !token)) return res.status(403).json({ detail: 'Connectez votre compte sur l’accès HTTPS avant tout traitement IA.', code: 'login_required' })
+    const upload = req.method === 'POST' && req.path === '/bff/documents'
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), isAI ? (config.aiTimeoutMs || config.workerTimeoutMs) : config.workerTimeoutMs)
+    const timeout = setTimeout(() => controller.abort(), upload ? (config.uploadTimeoutMs || 75000) : isAI ? (config.aiTimeoutMs || config.workerTimeoutMs) : config.workerTimeoutMs)
     let exceeded = false
+    let readTimedOut = false
+    let uploadReserved = false
+    let readDeadline, idleDeadline
     let limiter
     const onAborted = () => controller.abort()
+    const onResponseClosed = () => { if (!res.writableFinished) controller.abort() }
     req.on('aborted', onAborted)
+    res.on('close', onResponseClosed)
     try {
       const options = { method: req.method, headers, signal: controller.signal, redirect: 'manual' }
+      if (upload && config.requireLogin) {
+        req.pause()
+        if (pendingUploadChecks >= (config.uploadMaxPreflights || 8)) return res.status(503).json({detail:messages[503]})
+        pendingUploadChecks++
+        try {
+          const response = await upstreamFetch(`${config.upstream}/api/v1/internal/upload-admission`, {
+            method: 'GET', headers, redirect: 'manual',
+            signal: AbortSignal.any([controller.signal, AbortSignal.timeout(config.uploadAuthTimeoutMs || 3000)]),
+          })
+          await response.body?.cancel()
+          if (response.status !== 204) {
+            const status = [401,403,429].includes(response.status) ? response.status : 503
+            if (status === 401) res.set('Set-Cookie','__Host-documind=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0')
+            return res.status(status).json({detail:status===401?'Connectez votre compte ; la session est invalide.':messages[status]})
+          }
+        } catch { return res.status(503).json({detail:messages[503]}) }
+        finally { pendingUploadChecks-- }
+      }
+      if (upload) {
+        if (activeUploads >= (config.uploadMaxConcurrent || 2)) return res.status(503).json({detail:messages[503]})
+        activeUploads++
+        uploadReserved = true
+      }
       if (['POST', 'PUT'].includes(req.method)) {
         const contentType = req.headers['content-type'] || ''
-        const upload = req.path === '/bff/documents'
         if (upload ? !/^multipart\/form-data;\s*boundary=/i.test(contentType) : !/^application\/json(?:;|$)/i.test(contentType)) {
           return res.status(415).json({ detail: 'Format de requête non pris en charge.' })
         }
@@ -183,9 +221,20 @@ export function createApp(config, upstreamFetch = fetch) {
         if (Number(req.headers['content-length']) > maximum) return res.status(413).json({ detail: messages[413] })
         let length = 0
         limiter = new Transform({ transform(chunk, encoding, done) {
+          if (upload) {
+            clearTimeout(idleDeadline)
+            idleDeadline = setTimeout(() => { readTimedOut = true; controller.abort() }, config.uploadIdleTimeoutMs || 5000)
+          }
           length += chunk.length
           if (length > maximum) { exceeded = true; done(new Error('Request size limit')) } else done(null, chunk)
         } })
+        if (upload) {
+          const abortRead = () => { readTimedOut = true; controller.abort() }
+          readDeadline = setTimeout(abortRead, config.uploadReadTimeoutMs || 30000)
+          idleDeadline = setTimeout(abortRead, config.uploadIdleTimeoutMs || 5000)
+          req.once('end', () => { clearTimeout(readDeadline); clearTimeout(idleDeadline) })
+          if (req.headers.expect?.toLowerCase() === '100-continue') res.writeContinue()
+        }
         req.pipe(limiter)
         options.body = Readable.toWeb(limiter)
         options.duplex = 'half'
@@ -211,11 +260,15 @@ export function createApp(config, upstreamFetch = fetch) {
       // Never forward upstream headers, cookies, redirects, or a supplied client API key.
       return res.status(response.status).json(data)
     } catch {
-      const status = exceeded ? 413 : controller.signal.aborted ? 504 : 502
-      return res.status(status).json({ detail: exceeded ? messages[413] : status === 504 ? 'Le traitement a pris trop de temps.' : 'Impossible de joindre le service documentaire.' })
+      const status = exceeded ? 413 : readTimedOut ? 408 : controller.signal.aborted ? 504 : 502
+      return res.status(status).json({ detail: exceeded ? messages[413] : readTimedOut ? 'Délai de réception dépassé.' : status === 504 ? 'Le traitement a pris trop de temps.' : 'Impossible de joindre le service documentaire.' })
     } finally {
       clearTimeout(timeout)
+      clearTimeout(readDeadline)
+      clearTimeout(idleDeadline)
+      if (uploadReserved) activeUploads--
       req.removeListener('aborted', onAborted)
+      res.removeListener('close', onResponseClosed)
       if (limiter) { req.unpipe(limiter); limiter.destroy() }
     }
   })

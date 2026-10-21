@@ -1,0 +1,83 @@
+# Disposable local recipe only: no production env_file, networks, secrets or named volumes.
+name: documind-sec11-upload-test
+services:
+  db:
+    build: {context: ., dockerfile: Dockerfile.db}
+    environment:
+      POSTGRES_DB: upload_test
+      POSTGRES_USER: upload_test
+      POSTGRES_PASSWORD: fictitious-upload-test-password
+    tmpfs: ["/var/lib/postgresql/data:size=256m"]
+    networks: [data]
+    mem_limit: 512m
+    cpus: 1
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U upload_test -d upload_test"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  api:
+    build: {context: ., target: production}
+    environment:
+      DATABASE_URL: postgresql+psycopg://upload_test:fictitious-upload-test-password@db:5432/upload_test
+      STORAGE_DIR: /app/var/documents
+      API_KEYS: '{}'
+      LEGACY_API_ENABLED: 'false'
+      BFF_SERVICE_KEY: test-upload-service-credential-not-real-00001
+      REGISTRATION_MODE: disabled
+      AI_ENABLED: 'false'
+      OWNER_DEMO_ENABLED: 'false'
+      EXTRACTION_MODE: sandbox
+    command: ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log", "--limit-concurrency", "32"]
+    depends_on: {db: {condition: service_healthy}}
+    networks: [data, application]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: ["/tmp:size=256m,mode=1777", "/app/var:size=128m,uid=1000,gid=1000,mode=0700"]
+    mem_limit: 1536m
+    cpus: 2
+    pids_limit: 64
+  web:
+    build: {context: frontend}
+    environment:
+      BFF_SERVICE_KEY: test-upload-service-credential-not-real-00001
+      BFF_BACKEND_URL: http://api:8000
+      BFF_HOST: 0.0.0.0
+      BFF_PORT: '3000'
+      BFF_ALLOWED_HOSTS: documind.test
+      BFF_TRUSTED_PROXY_IPS: 172.30.251.10
+    networks: [application, proxy]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: ["/tmp:size=32m"]
+    mem_limit: 512m
+    cpus: 1
+    pids_limit: 64
+  traefik:
+    image: ${TRAEFIK_TEST_IMAGE:?Provide an approved Traefik test image pinned by digest}
+    user: ${UPLOAD_TEST_UID:?Supply the test certificate owner UID}:${UPLOAD_TEST_GID:?Supply the test certificate owner GID}
+    command:
+      - --entrypoints.websecure.address=:8443
+      - --entrypoints.websecure.transport.respondingtimeouts.readtimeout=60s
+      - --entrypoints.websecure.transport.respondingtimeouts.writetimeout=90s
+      - --providers.file.filename=/etc/traefik/upload-test.yaml
+      - --api=false
+    ports: ["127.0.0.1:18443:8443"]
+    volumes:
+      - ./ops/testing/traefik-upload-test.yaml:/etc/traefik/upload-test.yaml:ro
+      - ./var/sec11-upload-test/tls:/certs:ro
+    networks:
+      proxy: {ipv4_address: 172.30.251.10}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 256m
+    cpus: 1
+networks:
+  data: {internal: true}
+  application: {internal: true}
+  proxy:
+    internal: true
+    ipam: {config: [{subnet: 172.30.251.0/24}]}
