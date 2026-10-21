@@ -3,16 +3,17 @@ import logging
 import tempfile
 import threading
 import queue
+import time
 from contextlib import asynccontextmanager, suppress
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.exc import SQLAlchemyError
 
 from .api import router
 from .config import Settings
-from .db import make_engine, make_sessions
+from .db import make_engine, make_sessions, make_authentication_engine
 from .ai.api import router as ai_router
 from .auth import SessionVault
 from .ai.settings_api import router as settings_router
@@ -20,6 +21,7 @@ from .rag.api import router as rag_router
 from .ai.long_api import router as long_router
 from .account_api import router as account_router
 from .resource_limits import RateLimiter
+from .upload_admission import IPAdmission, UploadAdmission, UploadCapacity, is_upload
 
 
 class RequestSizeLimit:
@@ -33,16 +35,36 @@ class RequestSizeLimit:
         with tempfile.SpooledTemporaryFile(max_size=256 * 1024) as body:
             size = 0
             while True:
-                message = await receive()
+                upload = is_upload(scope)
+                try:
+                    if upload:
+                        settings = scope['app'].state.settings
+                        left = settings.upload_read_timeout_seconds - (time.monotonic() - scope['state']['upload_started'])
+                        if left <= 0:
+                            raise TimeoutError
+                        message = await asyncio.wait_for(receive(), min(left, settings.upload_idle_timeout_seconds))
+                        authorization = dict(scope['headers']).get(b'authorization', b'').decode('latin-1')
+                        if authorization.startswith('Bearer '):
+                            scope['app'].state.session_vault.resolve(authorization[7:])
+                    else:
+                        message = await receive()
+                except TimeoutError:
+                    return await JSONResponse({'detail': 'Délai de réception dépassé'}, 408)(scope, receive, send)
+                except HTTPException as exc:
+                    return await JSONResponse({'detail': exc.detail}, exc.status_code)(scope, receive, send)
                 if message["type"] == "http.disconnect":
                     return
                 data = message.get("body", b"")
                 size += len(data)
-                if size > self.maximum:
+                maximum = scope['app'].state.settings.max_upload_bytes + 65536 if upload else self.maximum
+                if size > maximum:
                     return await JSONResponse({"detail": "Requête trop volumineuse"}, status_code=413)(scope, receive, send)
                 body.write(data)
                 if not message.get("more_body", False):
                     break
+            expected = dict(scope['headers']).get(b'content-length')
+            if is_upload(scope) and expected is not None and size != int(expected):
+                return await JSONResponse({'detail': 'Corps incomplet'}, 400)(scope, receive, send)
             body.seek(0)
 
             async def replay():
@@ -107,39 +129,35 @@ def create_app(settings=None):
             app.state.mail_stopping.set()
             await asyncio.to_thread(mail_thread.join,12)
             app.state.session_vault.clear()
+            app.state.authentication_engine.dispose()
             app.state.engine.dispose()
 
     app = FastAPI(title="DocuMind AI", version="0.1.0", lifespan=lifespan)
     app.state.settings = settings
     app.state.engine = make_engine(settings.database_url)
     app.state.sessions = make_sessions(app.state.engine)
+    app.state.authentication_engine = make_authentication_engine(settings.database_url, app.state.engine)
+    app.state.authentication_sessions = make_sessions(app.state.authentication_engine)
     app.state.slots = threading.BoundedSemaphore(settings.max_concurrent_workers)
     app.state.ai_provider = None
     app.state.embedding_provider = None
     app.state.session_vault = SessionVault(settings.ai_session_ttl_seconds)
     app.state.rate_limiter = RateLimiter()
+    app.state.upload_capacity = UploadCapacity()
+    app.state.authentication_slots = threading.BoundedSemaphore(settings.upload_max_preflights)
     app.state.mail_queue = queue.Queue(maxsize=100)
     app.state.mail_stopping = threading.Event()
     from .ai.long_summary import SummaryWorker
     app.state.summary_worker = SummaryWorker(app)
     app.add_middleware(RequestSizeLimit, maximum=settings.max_upload_bytes + 64 * 1024)
+    app.add_middleware(UploadAdmission)
+    app.add_middleware(IPAdmission)
     app.include_router(router)
     app.include_router(ai_router)
     app.include_router(settings_router)
     app.include_router(rag_router)
     app.include_router(long_router)
     app.include_router(account_router)
-
-    @app.middleware('http')
-    async def ip_admission(request, call_next):
-        if request.url.path != '/api/v1/health':
-            from .gateway import client_ip
-            from fastapi import HTTPException
-            try:
-                app.state.rate_limiter.check(f'ip:{client_ip(request)}', settings.requests_per_minute * 4)
-            except HTTPException as exc:
-                return JSONResponse({'detail': exc.detail}, status_code=exc.status_code, headers=exc.headers)
-        return await call_next(request)
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(request, exc):

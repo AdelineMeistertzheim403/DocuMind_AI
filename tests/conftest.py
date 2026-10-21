@@ -2,6 +2,7 @@ import os
 from uuid import UUID
 
 import pytest
+from pydantic import SecretStr
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
@@ -38,10 +39,11 @@ def app(tmp_path, monkeypatch):
     config = Config("alembic.ini")
     command.upgrade(config, "head")
     settings = Settings(_env_file=None, database_url=url, storage_dir=tmp_path / "private",
-                        api_keys={KEY: UUID(int=1), OTHER_KEY: UUID(int=2)}, requests_per_minute=10000,
+                        api_keys={KEY: UUID(int=1), OTHER_KEY: UUID(int=2)}, bff_service_key=SecretStr(''), requests_per_minute=10000,
                         extraction_mode='development')  # Explicitly unconfined portable regression suite.
     application = create_app(settings)
     yield application
+    application.state.authentication_engine.dispose()
     application.state.engine.dispose()
     command.downgrade(config, "base")
 

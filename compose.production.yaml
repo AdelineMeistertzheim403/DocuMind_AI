@@ -29,6 +29,15 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://documind:${POSTGRES_PASSWORD:?}@db:5432/documind
       STORAGE_DIR: /app/var/documents
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-10485760}
+      UPLOAD_MAX_CONCURRENT: ${UPLOAD_MAX_CONCURRENT:-2}
+      UPLOAD_MAX_PER_OWNER: ${UPLOAD_MAX_PER_OWNER:-1}
+      UPLOAD_MAX_PREFLIGHTS: ${UPLOAD_MAX_PREFLIGHTS:-8}
+      UPLOAD_TEMP_BUDGET_BYTES: ${UPLOAD_TEMP_BUDGET_BYTES:-67108864}
+      UPLOAD_MIN_FREE_BYTES: ${UPLOAD_MIN_FREE_BYTES:-33554432}
+      UPLOAD_AUTH_TIMEOUT_SECONDS: ${UPLOAD_AUTH_TIMEOUT_SECONDS:-3}
+      UPLOAD_READ_TIMEOUT_SECONDS: ${UPLOAD_READ_TIMEOUT_SECONDS:-30}
+      UPLOAD_IDLE_TIMEOUT_SECONDS: ${UPLOAD_IDLE_TIMEOUT_SECONDS:-5}
       # Mandatory Linux Landlock/seccomp. Never fall back to the development adapter.
       EXTRACTION_MODE: sandbox
       MAX_CONCURRENT_WORKERS: '2'
@@ -68,6 +77,12 @@ services:
       BFF_ALLOWED_HOSTS: documind.adelinemeistertzheim.fr
       BFF_TRUSTED_PROXY_IPS: ${BFF_TRUSTED_PROXY_IPS:?Resolve the actual Traefik address on web before deployment}
       MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-10485760}
+      UPLOAD_MAX_CONCURRENT: ${UPLOAD_MAX_CONCURRENT:-2}
+      UPLOAD_MAX_PREFLIGHTS: ${UPLOAD_MAX_PREFLIGHTS:-8}
+      UPLOAD_AUTH_TIMEOUT_SECONDS: ${UPLOAD_AUTH_TIMEOUT_SECONDS:-3}
+      UPLOAD_READ_TIMEOUT_SECONDS: ${UPLOAD_READ_TIMEOUT_SECONDS:-30}
+      UPLOAD_IDLE_TIMEOUT_SECONDS: ${UPLOAD_IDLE_TIMEOUT_SECONDS:-5}
+      UPLOAD_TOTAL_TIMEOUT_SECONDS: ${UPLOAD_TOTAL_TIMEOUT_SECONDS:-75}
       WORKER_TIMEOUT_SECONDS: ${WORKER_TIMEOUT_SECONDS:-30}
       AI_TIMEOUT_SECONDS: ${AI_TIMEOUT_SECONDS:-30}
       AI_MAX_SUMMARY_STEPS: ${AI_MAX_SUMMARY_STEPS:-5}
@@ -81,6 +96,16 @@ services:
       traefik.http.routers.documind-ai.tls.certresolver: letsencrypt
       traefik.http.routers.documind-ai.service: documind-ai
       traefik.http.routers.documind-ai.middlewares: documind-ai-headers@docker
+      # Upload-only admission. No buffering middleware and no shared entrypoint changes.
+      traefik.http.routers.documind-ai-upload.rule: Host(`documind.adelinemeistertzheim.fr`) && Method(`POST`) && Path(`/bff/documents`)
+      traefik.http.routers.documind-ai-upload.entrypoints: websecure
+      traefik.http.routers.documind-ai-upload.tls: 'true'
+      traefik.http.routers.documind-ai-upload.tls.certresolver: letsencrypt
+      traefik.http.routers.documind-ai-upload.service: documind-ai
+      traefik.http.routers.documind-ai-upload.priority: '100'
+      traefik.http.routers.documind-ai-upload.middlewares: documind-ai-headers@docker,documind-ai-upload-capacity@docker
+      traefik.http.middlewares.documind-ai-upload-capacity.inflightreq.amount: ${UPLOAD_MAX_PREFLIGHTS:-8}
+      traefik.http.middlewares.documind-ai-upload-capacity.inflightreq.sourcecriterion.requesthost: 'true'
       traefik.http.services.documind-ai.loadbalancer.server.port: '3000'
       traefik.http.services.documind-ai.loadbalancer.passhostheader: 'true'
       traefik.http.middlewares.documind-ai-headers.headers.customrequestheaders.X-Forwarded-Proto: https

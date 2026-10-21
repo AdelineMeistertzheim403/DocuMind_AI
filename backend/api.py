@@ -1,8 +1,7 @@
-import secrets
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, Request, Response, Security, UploadFile
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, Response, Security
 from fastapi.security import APIKeyHeader
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
@@ -16,28 +15,10 @@ key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
 def owner(request: Request, key: Annotated[str | None, Security(key_header)]):
-    authorization = request.headers.get('authorization', '')
-    if authorization.startswith('Bearer '):
-        context = request.app.state.session_vault.resolve(authorization[7:])
-        from .auth import User
-        with request.app.state.sessions() as session:
-            user = session.get(User, context.user_id)
-            if user is None or user.disabled_at is not None or user.owner_id != context.owner_id:
-                request.app.state.session_vault.revoke(authorization[7:])
-                raise HTTPException(401, 'Session révoquée')
-        request.state.user_session = context
-        request.app.state.rate_limiter.check(f'user:{context.user_id}', request.app.state.settings.requests_per_minute)
-        return context.owner_id
-    settings = request.app.state.settings
-    for expected, owner_id in (settings.api_keys.items() if settings.legacy_api_enabled else []):
-        if key and secrets.compare_digest(key.encode(), expected.encode()):
-            from .auth import User
-            with request.app.state.sessions() as session:
-                if session.scalar(select(User.id).where(User.owner_id == owner_id, User.disabled_at.is_not(None))):
-                    raise HTTPException(403, 'Propriétaire désactivé')
-            request.app.state.rate_limiter.check(f'owner:{owner_id}', settings.requests_per_minute)
-            return owner_id
-    raise HTTPException(401, "Clé API absente ou invalide", headers={"WWW-Authenticate": "APIKey"})
+    from .authentication import authenticate
+    if getattr(request.state, 'admitted_owner', None) is not None:
+        return request.state.admitted_owner
+    return authenticate(request, key)
 
 
 def db(request: Request):
@@ -54,17 +35,31 @@ Owner = Annotated[UUID, Depends(owner)]
 Session = Annotated[object, Depends(db)]
 
 
-@protected.post("", response_model=DocumentOut, status_code=201, summary="Importer et extraire un PDF ou TXT", responses={
+@protected.post("", response_model=DocumentOut, status_code=201, summary="Importer et extraire un PDF ou TXT", openapi_extra={
+    'requestBody': {'required': True, 'content': {'multipart/form-data': {'schema': {
+        'type': 'object', 'required': ['file'], 'properties': {'file': {'type': 'string', 'format': 'binary'}}}}}},
+}, responses={
     413: {"model": ErrorOut, "description": "Limite de taille dépassée"},
     415: {"model": ErrorOut, "description": "Extension non prise en charge"},
     422: {"description": "Fichier vide, corrompu, binaire, chiffré ou limite de traitement dépassée"},
 })
-def upload_document(request: Request, owner_id: Owner, session: Session, file: UploadFile = File(...)):
+async def upload_document(request: Request, owner_id: Owner, session: Session):
+    from .uploads import parse_upload
+    from .upload_admission import early_authenticate
+    from .authentication import authenticate
+    from starlette.concurrency import run_in_threadpool
+    form = await parse_upload(request)
     try:
-        request.app.state.rate_limiter.check(f'upload:{owner_id}', request.app.state.settings.uploads_per_minute)
-        return import_document(session, request.app.state.settings, file, owner_id, request.app.state.slots)
+        current = await early_authenticate(request, charge=False)
+        if current != owner_id:
+            raise HTTPException(401, 'Session révoquée')
+        def verify_before_commit():
+            if authenticate(request, charge=False) != owner_id:
+                raise HTTPException(401, 'Session révoquée')
+        return await run_in_threadpool(import_document, session, request.app.state.settings, form['file'], owner_id,
+                                      request.app.state.slots, before_commit=verify_before_commit)
     finally:
-        file.file.close()
+        await form.close()
 
 
 @protected.get("", response_model=DocumentList, summary="Lister les documents du propriétaire")
@@ -105,6 +100,17 @@ def latest_analysis(document_id: UUID, owner_id: Owner, session: Session):
 
 
 router.include_router(protected)
+
+
+@router.get('/internal/upload-admission', include_in_schema=False, status_code=204)
+async def upload_preflight(request: Request):
+    from .gateway import secure_gateway
+    from .upload_admission import early_authenticate
+    secure_gateway(request)
+    if not request.headers.get('authorization', '').startswith('Bearer '):
+        raise HTTPException(401, 'Session personnelle requise')
+    await early_authenticate(request, charge=False)
+    return Response(status_code=204, headers={'Cache-Control': 'no-store'})
 
 
 @router.get("/health", response_model=HealthOut, tags=["health"], responses={503: {"model": ErrorOut}})

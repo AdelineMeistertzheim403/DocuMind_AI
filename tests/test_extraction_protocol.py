@@ -112,6 +112,7 @@ def test_startup_checks_fail_closed_before_starting_application(app, monkeypatch
 def test_two_inflight_extractions_refuse_a_third_and_release_slots(client, app, monkeypatch):
     from concurrent.futures import ThreadPoolExecutor
     from threading import Event, Lock
+    from tests.conftest import KEY, OTHER_KEY
     app.state.settings.extraction_mode = 'sandbox'
     both = Event(); release = Event(); lock = Lock(); entered = []
     def blocked(*args):
@@ -122,7 +123,9 @@ def test_two_inflight_extractions_refuse_a_third_and_release_slots(client, app, 
         return ['Safe fictitious text.']
     monkeypatch.setattr(extraction, 'extract_isolated', blocked)
     def send(index):
-        return client.post('/api/v1/documents', files={'file': (f'{index}.txt', b'fictitious')}).status_code
+        # Two distinct owners respect the one-upload-per-owner admission policy.
+        return client.post('/api/v1/documents', headers={'X-API-Key': OTHER_KEY if index == 2 else KEY},
+                           files={'file': (f'{index}.txt', b'fictitious')}).status_code
     with ThreadPoolExecutor(max_workers=2) as pool:
         pending = [pool.submit(send, index) for index in (1, 2)]
         try:
@@ -130,5 +133,6 @@ def test_two_inflight_extractions_refuse_a_third_and_release_slots(client, app, 
             assert send(3) == 503
         finally: release.set()
         assert [future.result() for future in pending] == [201, 201]
-    assert client.get('/api/v1/documents').json()['total'] == 2
+    assert client.get('/api/v1/documents').json()['total'] == 1
+    assert client.get('/api/v1/documents', headers={'X-API-Key': OTHER_KEY}).json()['total'] == 1
     assert not list(app.state.settings.storage_dir.glob('*.part'))

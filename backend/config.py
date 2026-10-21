@@ -32,6 +32,14 @@ class Settings(BaseSettings):
     storage_dir: Path = Path("var/documents")
     extraction_mode: Literal['sandbox', 'development'] = 'sandbox'
     max_upload_bytes: int = Field(10 * 1024 * 1024, gt=0)
+    upload_max_concurrent: int = Field(2, ge=1, le=8)
+    upload_max_per_owner: int = Field(1, ge=1, le=4)
+    upload_max_preflights: int = Field(8, ge=1, le=32)
+    upload_temp_budget_bytes: int = Field(64 * 1024 * 1024, ge=1024)
+    upload_min_free_bytes: int = Field(32 * 1024 * 1024, ge=0)
+    upload_auth_timeout_seconds: float = Field(3, gt=0, le=10)
+    upload_read_timeout_seconds: float = Field(30, gt=0, le=120)
+    upload_idle_timeout_seconds: float = Field(5, gt=0, le=30)
     max_pdf_pages: int = Field(200, gt=0)
     max_text_chars: int = Field(1_000_000, gt=0)
     worker_timeout_seconds: float = Field(30, gt=0)
@@ -86,6 +94,10 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_keys(self):
+        if self.upload_idle_timeout_seconds > self.upload_read_timeout_seconds:
+            raise ValueError('Le délai inactif doit être inférieur au délai de réception')
+        if self.upload_temp_budget_bytes < 3 * self.max_upload_bytes + 2 * 65536:
+            raise ValueError('Le budget temporaire doit permettre au moins un upload')
         if any(len(key) < 32 for key in self.api_keys):
             raise ValueError("Chaque clé API doit contenir au moins 32 caractères")
         service=self.bff_service_key.get_secret_value()

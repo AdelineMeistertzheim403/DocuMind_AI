@@ -23,7 +23,7 @@ def owned_document(session, document_id, owner_id, lock=False):
     return document
 
 
-def import_document(session, settings, upload, owner_id, slots):
+def import_document(session, settings, upload, owner_id, slots, before_commit=None):
     filename = (upload.filename or "").replace("\\", "/").split("/")[-1]
     extension = Path(filename).suffix.lower()
     if extension not in {".pdf", ".txt"}:
@@ -49,6 +49,8 @@ def import_document(session, settings, upload, owner_id, slots):
         if size == 0:
             raise HTTPException(422, "Fichier vide")
         pages = run_worker(settings, "extract", str(temporary), extension, settings.max_pdf_pages, settings.max_text_chars)
+        if before_commit is not None:
+            before_commit()
         from ..resource_limits import lock_workspace
         lock_workspace(session, owner_id)
         count, used = session.execute(select(func.count(), func.coalesce(func.sum(Document.size_bytes),0)).where(Document.owner_id==owner_id)).one()
