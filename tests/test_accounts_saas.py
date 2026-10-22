@@ -14,6 +14,7 @@ from backend.models import now,Document,DocumentChunk,DocumentPage
 from tests.test_byok import accounts,login,PASSWORD,connect
 from tests.test_ai import upload,ai,payload
 from tests.test_rag import rag,index
+from tests.conftest import KEY
 
 
 def invite(app,email='new@example.test',ttl=600):
@@ -104,7 +105,7 @@ def test_document_quota_legacy_switch_and_cross_owner_access(accounts):
     for method,path in [('GET',''),('DELETE',''),('DELETE','/ai-results'),('DELETE','/embeddings')]:
         assert client.request(method,'/api/v1/documents/'+identifier+path).status_code==404
     app.state.settings.legacy_api_enabled=False
-    assert client.get('/api/v1/documents',headers={'Authorization':''}).status_code==401
+    assert client.get('/api/v1/documents',headers={'Authorization':'','X-API-Key':KEY}).status_code==401
     assert client.get('/api/v1/documents').status_code==200
 
 

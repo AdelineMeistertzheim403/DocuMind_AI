@@ -8,14 +8,15 @@ from sqlalchemy import select
 from backend.auth import User, hash_password
 from backend.ai.models import AIBudget, AIReservation
 from backend.ai.providers import MockAIProvider
-from tests.conftest import KEY
+from tests.conftest import BFF_KEY
 
 PASSWORD = 'test-password-minimum-12'
 PERSONAL = 'test-personal-key-not-a-real-secret-12345'
 
 
 @pytest.fixture
-def accounts(client, app):
+def accounts(gateway_client, app):
+    client = gateway_client
     with app.state.sessions() as db:
         for number, name in [(101, 'alice'), (202, 'bob')]:
             owner = UUID(int=number)
@@ -27,9 +28,10 @@ def accounts(client, app):
 
 
 def login(client, username):
-    response = client.post('/api/v1/auth/login', json={'username': username, 'password': PASSWORD}, headers={'X-Documind-Secure': '1', 'Authorization': ''})
+    response = client.post('/api/v1/auth/login', json={'username': username, 'password': PASSWORD}, headers={'X-API-Key': BFF_KEY, 'X-Documind-Secure': '1', 'Authorization': ''})
     assert response.status_code == 200, response.text
     token = response.json()['session_token']
+    client.headers['X-API-Key'] = BFF_KEY
     client.headers['Authorization'] = f'Bearer {token}'
     client.headers['X-Documind-Secure'] = '1'
     return token

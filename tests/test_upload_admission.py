@@ -207,7 +207,8 @@ def test_session_revoked_during_extraction_cannot_commit(app, monkeypatch):
 
 def test_preflight_is_body_free_and_contains_no_session_data(app):
     token = session_token(app)
-    headers = {**legacy_headers(),'authorization':'Bearer '+token,'x-documind-secure':'1'}
+    headers = {'x-api-key':app.state.settings.bff_service_key.get_secret_value(),
+               'authorization':'Bearer '+token,'x-documind-secure':'1'}
     result = raw_request(app,headers,[b'never consumed'],path='/api/v1/internal/upload-admission',method='GET')
     assert result['status'] == 204 and result['receive_calls'] == 0
     assert token.encode() not in b''.join(m.get('body',b'') for m in result['messages'])
