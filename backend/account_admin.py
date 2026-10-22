@@ -15,6 +15,7 @@ from .ai.models import AIReservation
 from .ai.long_models import LongSummaryJob, SummaryStep
 from .ai.long_summary import cancel
 from .rag.models import IndexJob, RAGResult
+from .security_audit import emit
 
 
 def purge_account(session, settings, identifier):
@@ -36,6 +37,7 @@ def purge_account(session, settings, identifier):
         session.execute(delete(AccountToken).where(AccountToken.email==user.email))
     session.delete(user)
     session.commit()
+    emit('account.deletion.completed', reason_code='completed')
     # Anonymous owner UUID and accounting remain to prevent budget/quota reset.
 
 

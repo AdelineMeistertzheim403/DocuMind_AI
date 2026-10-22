@@ -11,6 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from .authentication import authenticate
 from .gateway import client_ip
+from .security_audit import mark
 
 
 def is_upload(scope):
@@ -119,7 +120,9 @@ class UploadAdmission:
             if reservation is not None:
                 state.upload_capacity.release(owner, reservation)
             return await JSONResponse({'detail': exc.detail}, exc.status_code, headers=exc.headers)(scope, receive, send)
-        except (SQLAlchemyError, OSError):
+        except (SQLAlchemyError, OSError) as exc:
+            if isinstance(exc, SQLAlchemyError):
+                mark('system.database.unavailable', 'database')
             if reservation is not None:
                 state.upload_capacity.release(owner, reservation)
             return await JSONResponse({'detail': 'Admission indisponible'}, 503)(scope, receive, send)

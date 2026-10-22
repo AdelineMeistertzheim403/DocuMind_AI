@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import tempfile
 import threading
 import queue
@@ -22,6 +21,8 @@ from .ai.long_api import router as long_router
 from .account_api import router as account_router
 from .resource_limits import RateLimiter
 from .upload_admission import IPAdmission, UploadAdmission, UploadCapacity, is_upload
+from .audit_middleware import SecurityAudit
+from .security_audit import emit, mark
 
 
 class RequestSizeLimit:
@@ -80,10 +81,15 @@ def create_app(settings=None):
     @asynccontextmanager
     async def lifespan(app):
         if not settings.api_keys and not settings.bff_service_key.get_secret_value():
+            emit('system.security_config.invalid', reason_code='security_unavailable')
             raise RuntimeError("Configurez API_KEYS avant de démarrer le serveur")
         if settings.extraction_mode == 'sandbox':
             from .services.extraction import check_available
-            await asyncio.to_thread(check_available, settings)
+            try:
+                await asyncio.to_thread(check_available, settings)
+            except Exception:
+                emit('system.security_config.invalid', reason_code='security_unavailable')
+                raise RuntimeError('Confinement requis indisponible') from None
         settings.storage_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
         from .rag.indexing import recover_jobs
         recover_jobs(app)
@@ -105,7 +111,7 @@ def create_app(settings=None):
                     else:
                         send_reset(settings,email,token)
                 except Exception:
-                    logging.getLogger(__name__).warning('mail_delivery_failed')
+                    emit('system.mail.failed', reason_code='mail_failed')
                 finally:
                     app.state.mail_queue.task_done()
 
@@ -152,6 +158,7 @@ def create_app(settings=None):
     app.add_middleware(RequestSizeLimit, maximum=settings.max_upload_bytes + 64 * 1024)
     app.add_middleware(UploadAdmission)
     app.add_middleware(IPAdmission)
+    app.add_middleware(SecurityAudit)
     app.include_router(router)
     app.include_router(ai_router)
     app.include_router(settings_router)
@@ -166,10 +173,15 @@ def create_app(settings=None):
 
     @app.exception_handler(SQLAlchemyError)
     async def database_error(request, exc):
-        logging.getLogger(__name__).error("database_error type=%s", type(exc).__name__)
+        mark('system.database.unavailable', 'database')
         return JSONResponse({"detail": "Base de données indisponible"}, status_code=503)
 
     return app
 
 
-app = create_app()
+try:
+    app = create_app()
+except Exception:
+    # Settings/engine exceptions may include a DSN or raw validation input.
+    emit('system.security_config.invalid', reason_code='security_unavailable')
+    raise RuntimeError('Configuration du service invalide') from None

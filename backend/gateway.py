@@ -15,6 +15,8 @@ def trusted_gateway(request):
 
 def secure_gateway(request: Request):
     if request.headers.get('x-documind-secure') != '1' or not trusted_gateway(request):
+        from .security_audit import mark
+        mark('gateway.authentication.failed', 'invalid_service_credential' if not trusted_gateway(request) else 'secure_transport_required')
         raise HTTPException(403, 'HTTPS via le BFF est obligatoire')
 
 

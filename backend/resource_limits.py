@@ -8,6 +8,7 @@ from fastapi import HTTPException
 from sqlalchemy import select, text
 
 from .account_models import Workspace
+from .security_audit import mark
 
 
 class RateLimiter:
@@ -21,12 +22,14 @@ class RateLimiter:
             now = time.monotonic()
             values = [t for t in self.buckets.pop(key, []) if t > now-window]
             if len(values) >= limit:
+                mark('rate_limit.exceeded', 'rate_limit')
                 self.buckets[key] = values
                 raise HTTPException(429, 'Limite de requêtes atteinte', headers={'Retry-After': str(window)})
             if len(self.buckets) >= 10000:
                 # Never evict an active bucket to let a distributed flood bypass its limits.
                 oldest, times = next(iter(self.buckets.items()))
                 if times[-1] > now-3600:
+                    mark('rate_limit.exceeded', 'rate_limit')
                     raise HTTPException(429, 'Capacité de limitation atteinte')
                 self.buckets.pop(oldest)
             self.buckets[key] = [*values, now]

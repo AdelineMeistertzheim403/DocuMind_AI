@@ -112,6 +112,9 @@ def extract_isolated(settings, path, extension, max_pages, max_chars):
     except HTTPException:
         raise
     except ExtractionFailure as error:
+        if str(error) in {'sandbox_unavailable', 'worker_failed', 'invalid_output'}:
+            from ..security_audit import mark
+            mark('system.worker.failed', 'worker_failed')
         if str(error) == 'sandbox_unavailable':
             raise HTTPException(503, 'Extraction confinée indisponible') from None
         raise HTTPException(422, 'Document illisible ou limite de traitement atteinte') from None
