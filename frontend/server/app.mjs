@@ -2,7 +2,8 @@ import express from 'express'
 import helmet from 'helmet'
 import { Transform, Readable } from 'node:stream'
 import { existsSync } from 'node:fs'
-import { timingSafeEqual, createHmac, randomBytes } from 'node:crypto'
+import { timingSafeEqual, createHmac, randomBytes, randomUUID } from 'node:crypto'
+import {createSecurityLogger,auditOperation} from './security-audit.mjs'
 import {isIP} from 'node:net'
 
 const uuid = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
@@ -82,11 +83,38 @@ function routeAllowed(method, path) {
     (path === '/bff/health' && method === 'GET')
 }
 
-export function createApp(config, upstreamFetch = fetch) {
+export function createApp(config, upstreamFetch = fetch, {auditSink}={}) {
   const app = express()
+  const audit=createSecurityLogger(auditSink)
   let pendingUploadChecks = 0
   let activeUploads = 0
   app.disable('x-powered-by')
+  app.use((req,res,next)=>{
+    req.auditId=randomUUID().replaceAll('-','')
+    res.set('X-Request-ID',req.auditId)
+    let recorded=false
+    const record=aborted=>{
+      if(recorded)return
+      recorded=true
+      if(req.auditHandledByAPI && !aborted)return
+      const upload=req.method==='POST' && req.path.replace(/\/+$/,'')==='/bff/documents'
+      let entry=req.auditEvent
+      if(aborted && upload)entry=['upload.aborted','disconnected']
+      if(!entry && req.path.startsWith('/bff')) {
+        const status=res.statusCode
+        entry=status===401?['auth.session.invalid','missing_session']:
+          [400,403,404].includes(status)?['access.denied','local_guard']:
+          status===413?['upload.size.exceeded','size']:
+          status===408?['upload.timeout','timeout']:
+          status>=500?['system.api.unavailable','upstream_unavailable']:null
+      }
+      if(entry)audit.emit(entry[0],{request_id:req.auditId,operation:upload?'upload':auditOperation(req.path),
+        http_status:aborted?499:res.statusCode,reason_code:entry[1]})
+    }
+    res.once('finish',()=>record(false))
+    res.once('close',()=>record(!res.writableFinished))
+    next()
+  })
   app.use((req, res, next) => {
     if (req.method === 'POST' && req.path.replace(/\/+$/, '') === '/bff/documents') {
       // Do not drain an unauthenticated body to reuse an upstream HTTP/1 connection.
@@ -126,7 +154,7 @@ export function createApp(config, upstreamFetch = fetch) {
     if (Object.keys(req.query).length) return res.status(400).json({ detail: messages[400] })
     try {
       const response = await upstreamFetch(`${config.upstream}/api/v1/health`, {
-        headers: { accept: 'application/json', 'X-API-Key': config.apiKey },
+        headers: { accept: 'application/json', 'X-API-Key': config.apiKey, 'X-Request-ID':req.auditId },
         signal: AbortSignal.timeout(3000), redirect: 'manual',
       })
       await response.body?.cancel()
@@ -144,7 +172,7 @@ export function createApp(config, upstreamFetch = fetch) {
         (key !== 'limit' || (Number(value) >= 1 && Number(value) <= 100)) && url.searchParams.getAll(key).length === 1
       if (!allowed) return res.status(400).json({ detail: messages[400] })
     }
-    const headers = { accept: 'application/json', 'X-API-Key': config.apiKey }
+    const headers = { accept: 'application/json', 'X-API-Key': config.apiKey, 'X-Request-ID':req.auditId }
     const gateway = req.headers['x-documind-gateway'] || ''
     const peer=(req.socket.remoteAddress||'').replace(/^::ffff:/,'')
     const trustedProxy=(config.trustedProxyIPs||[]).includes(peer) || Boolean(config.gatewayToken && typeof gateway === 'string' && Buffer.byteLength(gateway) === Buffer.byteLength(config.gatewayToken) && timingSafeEqual(Buffer.from(gateway), Buffer.from(config.gatewayToken)))
@@ -190,7 +218,10 @@ export function createApp(config, upstreamFetch = fetch) {
       const options = { method: req.method, headers, signal: controller.signal, redirect: 'manual' }
       if (upload && config.requireLogin) {
         req.pause()
-        if (pendingUploadChecks >= (config.uploadMaxPreflights || 8)) return res.status(503).json({detail:messages[503]})
+        if (pendingUploadChecks >= (config.uploadMaxPreflights || 8)) {
+          req.auditEvent=['upload.capacity.exceeded','capacity']
+          return res.status(503).json({detail:messages[503]})
+        }
         pendingUploadChecks++
         try {
           const response = await upstreamFetch(`${config.upstream}/api/v1/internal/upload-admission`, {
@@ -200,14 +231,18 @@ export function createApp(config, upstreamFetch = fetch) {
           await response.body?.cancel()
           if (response.status !== 204) {
             const status = [401,403,429].includes(response.status) ? response.status : 503
+            req.auditHandledByAPI=[401,403,429,503].includes(response.status)
             if (status === 401) res.set('Set-Cookie','__Host-documind=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0')
             return res.status(status).json({detail:status===401?'Connectez votre compte ; la session est invalide.':messages[status]})
           }
-        } catch { return res.status(503).json({detail:messages[503]}) }
+        } catch { req.auditEvent=['system.api.unavailable','upstream_unavailable']; return res.status(503).json({detail:messages[503]}) }
         finally { pendingUploadChecks-- }
       }
       if (upload) {
-        if (activeUploads >= (config.uploadMaxConcurrent || 2)) return res.status(503).json({detail:messages[503]})
+        if (activeUploads >= (config.uploadMaxConcurrent || 2)) {
+          req.auditEvent=['upload.capacity.exceeded','capacity']
+          return res.status(503).json({detail:messages[503]})
+        }
         activeUploads++
         uploadReserved = true
       }
@@ -241,8 +276,9 @@ export function createApp(config, upstreamFetch = fetch) {
       }
       const upstreamPath = req.path.replace(/^\/bff/, '/api/v1')
       const response = await upstreamFetch(`${config.upstream}${upstreamPath}${url.search}`, options)
-      if (response.status === 204) return res.status(204).end()
+      if (response.status === 204) {req.auditHandledByAPI=true;return res.status(204).end()}
       if (!response.ok) {
+        req.auditHandledByAPI=true
         let code
         try { const error = await response.json(); if (Object.hasOwn(aiCodes, error.detail?.code)) code = error.detail.code } catch { /* Controlled fallback */ }
         const status = messages[response.status] ? response.status : 502
@@ -250,9 +286,14 @@ export function createApp(config, upstreamFetch = fetch) {
         return res.status(status).json({ detail: response.status === 401 && (token || protectedSessionRoute) ? 'Connectez votre compte ; la session ou les identifiants sont invalides.' : code ? aiCodes[code] : messages[status] || 'Le service a renvoyé une réponse inattendue.', ...(code ? { code } : {}) })
       }
       const data = await response.json()
+      req.auditHandledByAPI=true
       if (req.path === '/bff/ai/status' && (!secure || !token)) { data.available = false; data.reason = data.enabled ? 'login_required' : 'disabled' }
       if (req.path === '/bff/auth/login') {
-        if (typeof data.session_token !== 'string' || !/^[A-Za-z0-9_-]{40,100}$/.test(data.session_token)) return res.status(502).json({ detail: 'Session invalide.' })
+        if (typeof data.session_token !== 'string' || !/^[A-Za-z0-9_-]{40,100}$/.test(data.session_token)) {
+          req.auditHandledByAPI=false
+          req.auditEvent=['system.worker.failed','unexpected_error']
+          return res.status(502).json({ detail: 'Session invalide.' })
+        }
         res.set('Set-Cookie', `__Host-documind=${data.session_token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${Math.min(3600, Number(data.expires_in) || 1800)}`)
         return res.json({ connected: true })
       }
@@ -278,5 +319,10 @@ export function createApp(config, upstreamFetch = fetch) {
     app.get('/{*path}', (req, res) => res.sendFile(`${config.dist}/index.html`))
   }
   app.use((req, res) => res.status(404).json({ detail: 'Page introuvable.' }))
+  app.use((error,req,res,next)=>{
+    req.auditEvent=['system.worker.failed','unexpected_error']
+    if(res.headersSent)return res.end()
+    return res.status(500).json({detail:'Erreur interne du service'})
+  })
   return app
 }

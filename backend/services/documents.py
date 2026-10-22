@@ -1,5 +1,4 @@
 import hashlib
-import logging
 from pathlib import Path
 from uuid import uuid4
 
@@ -10,7 +9,7 @@ from ..models import Analysis, Document, DocumentChunk, DocumentPage
 from ..schemas import AnalysisResult
 from .worker import run_worker
 
-logger = logging.getLogger(__name__)
+from ..security_audit import emit, mark
 
 
 def owned_document(session, document_id, owner_id, lock=False):
@@ -19,6 +18,9 @@ def owned_document(session, document_id, owner_id, lock=False):
         query = query.with_for_update()
     document = session.scalar(query)
     if document is None:
+        exists = session.scalar(select(Document.id).where(Document.id == document_id))
+        mark('access.cross_owner.denied' if exists is not None else 'access.denied',
+             'not_owner' if exists is not None else 'not_found')
         raise HTTPException(404, "Document introuvable")
     return document
 
@@ -55,9 +57,11 @@ def import_document(session, settings, upload, owner_id, slots, before_commit=No
         lock_workspace(session, owner_id)
         count, used = session.execute(select(func.count(), func.coalesce(func.sum(Document.size_bytes),0)).where(Document.owner_id==owner_id)).one()
         if count >= settings.max_documents_per_owner or used + size > settings.max_storage_bytes_per_owner:
+            mark('quota.exceeded', 'quota')
             raise HTTPException(413, 'Quota documentaire ou stockage personnel atteint')
         total=session.scalar(select(func.coalesce(func.sum(Document.size_bytes),0)))
         if total+size>settings.max_storage_bytes_total:
+            mark('quota.exceeded', 'quota')
             raise HTTPException(413,'Quota global de stockage atteint')
         document = Document(owner_id=owner_id, filename=filename, storage_name=final.name,
                             media_type="application/pdf" if extension == ".pdf" else "text/plain",
@@ -117,7 +121,7 @@ def delete_document(session, settings, document):
     try:
         tombstone.unlink(missing_ok=True)
     except OSError:
-        logger.exception("Suppression différée du fichier %s", tombstone.name)
+        emit('system.file_cleanup.failed', reason_code='cleanup_failed')
 
 
 def analyze_document(session, settings, document, options, slots):

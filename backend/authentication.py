@@ -17,6 +17,8 @@ def authenticate(request, key=None, *, charge=True):
         with sessions() as session:
             user = session.get(User, context.user_id)
             if user is None or user.disabled_at is not None or user.owner_id != context.owner_id:
+                from .security_audit import mark
+                mark('auth.session.revoked', 'session_revoked')
                 request.app.state.session_vault.revoke(token)
                 raise HTTPException(401, 'Session révoquée')
         # Recheck after SQL, which may have overlapped a logout or expiration.

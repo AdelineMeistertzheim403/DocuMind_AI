@@ -1,6 +1,5 @@
 import hashlib
 import json
-import logging
 from datetime import date, timedelta
 from decimal import Decimal
 from uuid import UUID
@@ -16,7 +15,6 @@ from .providers import ProviderError, input_bound
 from .retrieval import load_passages, relevant_passages, summary_groups
 from .schemas import AIResultOut, AIStatus, AnswerContent, SourceOut, SummaryContent
 
-logger = logging.getLogger(__name__)
 ACTIVE = ['reserved', 'uncertain']
 MESSAGES = {
     'output_truncated': 'La réponse IA a atteint la limite de sortie avant de terminer. Les étapes validées sont conservées.',
@@ -186,7 +184,8 @@ def settle(session, reservation_id, code=None, status=None, uncertain=False):
     budget = lock_budget(session, scope)
     reservation = apply_settlement(session, budget, reservation_id, code, status, uncertain)
     session.commit()
-    logger.info('ai_operation reservation=%s status=%s', reservation_id, reservation.status)
+    from ..security_audit import emit
+    emit('system.ai.settled', reason_code='settled')
 
 
 def validate_content(response, schema, allowed):
@@ -198,8 +197,8 @@ def validate_content(response, schema, allowed):
         content = schema.model_validate(response.content)
     except (ValidationError, TypeError) as exc:
         # Diagnostics contain categories only: no document text, provider output or keys.
-        kinds = sorted({item['type'] for item in exc.errors()}) if isinstance(exc, ValidationError) else ['type_error']
-        logger.warning('AI response schema rejected: schema=%s categories=%s', schema.__name__, kinds)
+        from ..security_audit import emit
+        emit('system.ai.output_rejected', reason_code='invalid_output')
         fail('invalid_schema', 502)
     references = content.source_ids
     if any(source not in allowed for source in references):

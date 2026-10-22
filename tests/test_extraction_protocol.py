@@ -105,7 +105,7 @@ def test_startup_checks_fail_closed_before_starting_application(app, monkeypatch
     app.state.settings.extraction_mode = 'sandbox'
     def unavailable(settings): raise RuntimeError('sandbox unavailable')
     monkeypatch.setattr(extraction, 'check_available', unavailable)
-    with pytest.raises(RuntimeError, match='sandbox unavailable'):
+    with pytest.raises(RuntimeError, match='Confinement requis indisponible'):
         with TestClient(app): pass
 
 

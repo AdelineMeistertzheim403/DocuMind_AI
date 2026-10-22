@@ -167,8 +167,8 @@ class SummaryWorker:
             try: self.run(identifier,context)
             except Exception:
                 # Never log input, provider exception, configuration or credentials.
-                import logging
-                logging.getLogger(__name__).error('long_summary_worker_failed job=%s',identifier)
+                from ..security_audit import emit
+                emit('system.worker.failed', reason_code='worker_failed')
             finally:
                 with self.lock: self.active.discard(identifier)
 

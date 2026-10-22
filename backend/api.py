@@ -118,5 +118,7 @@ def health(session: Session):
     try:
         session.execute(text("SELECT 1"))
     except SQLAlchemyError as exc:
+        from .security_audit import mark
+        mark('system.database.unavailable', 'database')
         raise HTTPException(503, "Base indisponible") from exc
     return {"status": "ok", "database": "ok"}

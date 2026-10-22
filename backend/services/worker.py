@@ -42,8 +42,10 @@ def child(connection, operation, args, memory_mb, timeout):
             resource.setrlimit(resource.RLIMIT_CPU, (cpu, cpu))
         result = {"extract": extract, "analyze": analyze}[operation](*args)
         connection.send_bytes(json.dumps({"result": result}).encode())
-    except (ValueError, MemoryError) as exc:
-        connection.send_bytes(json.dumps({"error": str(exc) or "Limite mémoire dépassée"}).encode())
+    except (ValueError, MemoryError):
+        connection.send_bytes(json.dumps({"error": "Document illisible ou limite de traitement atteinte"}).encode())
+    except Exception:
+        connection.send_bytes(json.dumps({"error": "Le traitement du document a échoué", "worker_failed": True}).encode())
     finally:
         connection.close()
 
@@ -75,6 +77,9 @@ def run_worker(settings, operation, *args):
         except EOFError as exc:
             raise HTTPException(422, "Le traitement du document a échoué") from exc
         if "error" in payload:
+            if payload.get('worker_failed'):
+                from ..security_audit import mark
+                mark('system.worker.failed', 'worker_failed')
             raise HTTPException(422, payload["error"])
         return payload["result"]
     finally:
