@@ -7,8 +7,10 @@ def trusted_gateway(request):
     key = request.headers.get('x-api-key', '')
     settings = request.app.state.settings
     service = settings.bff_service_key.get_secret_value()
-    candidates = [service] if service else list(settings.api_keys)
-    return bool(key and any(secrets.compare_digest(key.encode(), candidate.encode()) for candidate in candidates))
+    return bool(
+        key and service
+        and secrets.compare_digest(key.encode(), service.encode())
+    )
 
 
 def secure_gateway(request: Request):

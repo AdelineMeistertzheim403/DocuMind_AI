@@ -14,6 +14,7 @@ from backend.db import make_engine
 
 KEY = "test-owner-one-key-000000000000000001"
 OTHER_KEY = "test-owner-two-key-000000000000000002"
+BFF_KEY = "test-bff-service-key-not-a-real-secret-0001"
 
 
 @pytest.fixture(autouse=True)
@@ -39,7 +40,7 @@ def app(tmp_path, monkeypatch):
     config = Config("alembic.ini")
     command.upgrade(config, "head")
     settings = Settings(_env_file=None, database_url=url, storage_dir=tmp_path / "private",
-                        api_keys={KEY: UUID(int=1), OTHER_KEY: UUID(int=2)}, bff_service_key=SecretStr(''), requests_per_minute=10000,
+                        api_keys={KEY: UUID(int=1), OTHER_KEY: UUID(int=2)}, bff_service_key=SecretStr(BFF_KEY), requests_per_minute=10000,
                         extraction_mode='development')  # Explicitly unconfined portable regression suite.
     application = create_app(settings)
     yield application
@@ -53,3 +54,10 @@ def client(app):
     with TestClient(app) as connection:
         connection.headers["X-API-Key"] = KEY
         yield connection
+
+
+@pytest.fixture
+def gateway_client(client):
+    # Gateway identity is independent of both legacy owners and personal sessions.
+    client.headers['X-API-Key'] = BFF_KEY
+    return client
