@@ -30,6 +30,10 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     email: Mapped[str | None] = mapped_column(String(254), unique=True)
     disabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    registration_kind: Mapped[str] = mapped_column(String(16), default='legacy', server_default='legacy')
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    terms_version: Mapped[str | None] = mapped_column(String(40))
+    terms_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 PASSWORD_HASHER = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=1, type=Type.ID)

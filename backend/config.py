@@ -14,7 +14,19 @@ class Settings(BaseSettings):
     api_keys: dict[str, UUID] = Field(default_factory=dict)
     legacy_api_enabled: bool = True
     bff_service_key: SecretStr = SecretStr('')
-    registration_mode: Literal['disabled', 'invite'] = 'disabled'
+    registration_mode: Literal['disabled', 'invite', 'public'] = 'disabled'
+    public_registration_limit: int = Field(0, ge=0, le=10000)
+    public_registration_per_hour: int = Field(3, ge=1, le=10)
+    public_verification_ttl_seconds: int = Field(3600, ge=300, le=86400)
+    public_challenge_difficulty: int = Field(12, ge=10, le=18)
+    public_ai_max_budget_usd: Decimal = Field(Decimal('1'), ge=0, le=10)
+    public_legal_ready: bool = False
+    public_operator_name: str = Field('', max_length=200)
+    public_contact_email: str = Field('', max_length=254)
+    public_legal_notice_url: str = ''
+    public_privacy_url: str = ''
+    public_terms_url: str = ''
+    public_terms_version: str = Field('', max_length=40)
     account_base_url: str = 'https://localhost:8443'
     smtp_host: str = ''
     smtp_port: int = Field(465, ge=1, le=65535)
@@ -94,6 +106,15 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_keys(self):
+        if self.registration_mode == 'public':
+            if (not self.bff_service_key.get_secret_value() or self.legacy_api_enabled or self.owner_demo_enabled or
+                    not self.smtp_host or self.smtp_from == 'no-reply@localhost' or not self.public_legal_ready or
+                    not self.public_operator_name.strip() or '@' not in self.public_contact_email or not self.public_terms_version):
+                raise ValueError('Le mode public exige BFF, SMTP, documents validés, identité exploitant, legacy et owner demo désactivés')
+            for url in (self.public_legal_notice_url, self.public_privacy_url, self.public_terms_url):
+                parsed=urlsplit(url)
+                if parsed.scheme!='https' or not parsed.hostname or parsed.username or parsed.password or parsed.fragment:
+                    raise ValueError('Les documents de la bêta publique doivent utiliser des URLs HTTPS sans identifiants')
         if self.upload_idle_timeout_seconds > self.upload_read_timeout_seconds:
             raise ValueError('Le délai inactif doit être inférieur au délai de réception')
         if self.upload_temp_budget_bytes < 3 * self.max_upload_bytes + 2 * 65536:

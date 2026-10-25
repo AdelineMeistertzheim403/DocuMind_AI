@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 EVENTS = {
+    'account.registration.requested':'INFO','account.registration.denied':'WARNING','account.email.verified':'INFO',
     'auth.login.success': 'INFO', 'auth.login.failure': 'WARNING', 'auth.logout': 'INFO',
     'auth.session.invalid': 'WARNING', 'auth.session.revoked': 'WARNING',
     'auth.password_reset.requested': 'INFO', 'auth.password_reset.completed': 'INFO',

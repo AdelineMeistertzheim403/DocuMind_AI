@@ -52,7 +52,8 @@ def login(body: Login, request: Request, session: Session):
     user = session.scalar(select(User).where((User.username == username) | (User.email == username)))
     # Do a real password derivation for unknown users too.
     encoded = user.password_hash if user else DUMMY_HASH
-    if not verify_password(body.password.get_secret_value(), encoded) or user is None or user.disabled_at is not None:
+    if (not verify_password(body.password.get_secret_value(), encoded) or user is None or user.disabled_at is not None or
+            (user.registration_kind=='public' and user.email_verified_at is None)):
         raise HTTPException(401, 'Identifiants invalides')
     if not encoded.startswith('$argon2id$') or PASSWORD_HASHER.check_needs_rehash(encoded):
         user.password_hash = hash_password(body.password.get_secret_value())
@@ -86,6 +87,8 @@ def set_preferences(body: Preferences, request: Request, owner_id: Owner, sessio
     user = session.get(User, context.user_id)
     if user is None or user.disabled_at is not None:
         raise HTTPException(401, 'Compte désactivé')
+    if user.registration_kind=='public' and (body.mode!='USER_BYOK' or body.limit_usd>request.app.state.settings.public_ai_max_budget_usd):
+        raise HTTPException(403,'La bêta publique utilise uniquement BYOK avec le budget autorisé')
     user.ai_limit_usd = body.limit_usd
     session.commit()
     with request.app.state.session_vault.lock:
@@ -150,6 +153,8 @@ def settings_for_request(request, session):
     if user is None or user.disabled_at is not None:
         raise HTTPException(401, 'Compte désactivé')
     if context.mode == 'OWNER_DEMO':
+        if user.registration_kind=='public':
+            raise HTTPException(403,'La clé de démonstration est interdite aux comptes publics')
         return settings
     with request.app.state.session_vault.lock:
         request.app.state.session_vault.purge()

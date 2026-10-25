@@ -6,7 +6,7 @@ from pydantic import SecretStr
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
-from sqlalchemy import inspect
+from sqlalchemy import delete, inspect, update
 
 from backend.config import Settings
 from backend.main import create_app
@@ -44,6 +44,13 @@ def app(tmp_path, monkeypatch):
                         extraction_mode='development')  # Explicitly unconfined portable regression suite.
     application = create_app(settings)
     yield application
+    # Only this fixture's empty-at-entry disposable DB: release the production downgrade
+    # guard after removing fake public identities. Never copy this cleanup to operations.
+    from backend.auth import User
+    from backend.account_models import PublicRegistrationQuota
+    with application.state.engine.begin() as connection:
+        connection.execute(delete(User).where(User.registration_kind=='public'))
+        connection.execute(update(PublicRegistrationQuota).values(issued_count=0))
     application.state.authentication_engine.dispose()
     application.state.engine.dispose()
     command.downgrade(config, "base")

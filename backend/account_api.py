@@ -10,7 +10,7 @@ from email.message import EmailMessage
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, StrictBool, field_validator
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 
@@ -41,7 +41,17 @@ class EmailInput(StrictModel):
 
 class Register(EmailInput):
     password: SecretStr = Field(min_length=12, max_length=256)
-    invitation: SecretStr = Field(min_length=32, max_length=128)
+    invitation: SecretStr | None = Field(None, min_length=32, max_length=128)
+    challenge: str = Field('', max_length=100)
+    proof: str = Field('', max_length=12)
+    website: str = Field('', max_length=200)
+    terms_accepted: StrictBool = False
+    terms_version: str = Field('', max_length=40)
+
+
+class VerifyEmail(StrictModel):
+    token: SecretStr = Field(min_length=32,max_length=128)
+    password: SecretStr = Field(min_length=12,max_length=256)
 
 
 class Reset(StrictModel):
@@ -90,22 +100,57 @@ def profile(user):
 
 
 @router.get('/auth/options')
-def options(request: Request):
-    return {'registration_mode':request.app.state.settings.registration_mode}
+def options(request: Request, session: Session):
+    settings=request.app.state.settings
+    capacity=False
+    if settings.registration_mode=='public':
+        from .account_models import PublicRegistrationQuota
+        quota=session.get(PublicRegistrationQuota,'public')
+        capacity=bool(quota and not quota.closed and quota.issued_count<settings.public_registration_limit)
+    return {'registration_mode':settings.registration_mode,
+            'public_capacity_configured':capacity,
+            'terms_version':settings.public_terms_version,
+            'legal_notice_url':settings.public_legal_notice_url,'privacy_url':settings.public_privacy_url,
+            'terms_url':settings.public_terms_url,'operator_name':settings.public_operator_name,
+            'contact_email':settings.public_contact_email}
+
+
+@router.get('/auth/registration-challenge')
+def registration_challenge(request: Request):
+    from .public_registration import challenge
+    return challenge(request)
+
+
+@router.post('/auth/verify-email')
+def verify_email(body: VerifyEmail, request: Request, session: Session):
+    from .public_registration import verify
+    return verify(request,session,body)
+
+
+@router.post('/auth/resend-verification',status_code=202)
+def resend_verification(body: Register, request: Request, session: Session):
+    from .public_registration import admit
+    return admit(request,session,body,resend=True)
 
 
 @router.post('/auth/register', status_code=201)
 def register(body: Register, request: Request, session: Session):
+    if request.app.state.settings.registration_mode=='public':
+        from .public_registration import admit
+        from fastapi.responses import JSONResponse
+        return JSONResponse(admit(request,session,body),status_code=202)
     request.app.state.rate_limiter.check(f'register:{client_ip(request)}', 5)
     if request.app.state.settings.registration_mode != 'invite':
         raise HTTPException(403, 'Inscription désactivée')
+    if body.invitation is None:
+        raise HTTPException(422,'Invitation requise')
     consume_token(session, body.invitation.get_secret_value(), 'invite', body.email)
     if session.scalar(select(User.id).where(User.email==body.email)):
         raise HTTPException(400, 'Inscription impossible avec cette invitation')
     owner = uuid4()
     lock_workspace(session, owner)
     user = User(owner_id=owner, email=body.email, username=f'user-{uuid4().hex}',
-                password_hash=hash_password(body.password.get_secret_value()))
+                password_hash=hash_password(body.password.get_secret_value()),registration_kind='invite')
     session.add(user)
     session.flush()
     session.add(WorkspaceMembership(user_id=user.id, owner_id=owner))
@@ -118,13 +163,16 @@ def register(body: Register, request: Request, session: Session):
     return {'created':True}
 
 
-def send_reset(settings, email, token):
+def send_account_link(settings, email, token, *, verification=False):
     if not settings.smtp_host:
         return
     message = EmailMessage()
-    message['From'], message['To'], message['Subject'] = settings.smtp_from, email, 'Réinitialisation DocuMind'
+    message['From'], message['To'], message['Subject'] = settings.smtp_from, email, 'Vérification DocuMind' if verification else 'Réinitialisation DocuMind'
     # Fragment is never sent to the web server or its access log; UI immediately clears it.
-    message.set_content(f"Réinitialisez votre mot de passe : {settings.account_base_url}/reset-password#token={token}\nCe lien est temporaire et à usage unique.")
+    route='verify-email' if verification else 'reset-password'
+    message.set_content(f"Ouvrez ce lien DocuMind : {settings.account_base_url}/{route}#token={token}\nCe lien est temporaire et à usage unique.\n"+
+        ('La vérification exige aussi le mot de passe choisi lors de l’inscription.\n' if verification else '')+
+        'Si vous n’êtes pas à l’origine de cette demande, ignorez ce message.')
     context = ssl.create_default_context()
     if settings.smtp_starttls:
         client = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10)
@@ -138,11 +186,21 @@ def send_reset(settings, email, token):
         client.send_message(message)
 
 
+def send_reset(settings,email,token):
+    return send_account_link(settings,email,token)
+
+
+def send_verification(settings,email,token):
+    return send_account_link(settings,email,token,verification=True)
+
+
 @router.post('/auth/forgot-password', status_code=202)
 def forgot(body: EmailInput, request: Request, session: Session):
     request.app.state.rate_limiter.check(f'reset-ip:{client_ip(request)}', 5, 900)
     request.app.state.rate_limiter.check(f'reset-email:{body.email}', 3, 900)
-    user = session.scalar(select(User).where(User.email==body.email, User.disabled_at.is_(None)))
+    recoverable=(User.disabled_at.is_(None)) | ((User.registration_kind=='public') & User.email_verified_at.is_(None))
+    user = session.scalar(select(User).where(User.email==body.email, recoverable,
+        ~select(DeletionRequest.id).where(DeletionRequest.user_id==User.id).exists()))
     # Do the same token derivation and minimum work for unknown addresses.
     token = secrets.token_urlsafe(32)
     if user and (request.app.state.settings.smtp_host or getattr(request.app.state,'mail_sender',None)):
@@ -159,8 +217,13 @@ def forgot(body: EmailInput, request: Request, session: Session):
 @router.post('/auth/reset-password')
 def reset(body: Reset, request: Request, session: Session):
     request.app.state.rate_limiter.check(f'reset-consume:{client_ip(request)}',10,900)
-    email = consume_token(session,body.token.get_secret_value(),'reset')
-    user = session.scalar(select(User).where(User.email==email, User.disabled_at.is_(None)).with_for_update())
+    email=session.scalar(select(AccountToken.email).where(AccountToken.digest==SessionVault.digest(body.token.get_secret_value()),
+                                                         AccountToken.kind=='reset'))
+    if email is None:raise HTTPException(400,'Lien invalide ou expiré')
+    recoverable=(User.disabled_at.is_(None)) | ((User.registration_kind=='public') & User.email_verified_at.is_(None))
+    user = session.scalar(select(User).where(User.email==email,recoverable,
+        ~select(DeletionRequest.id).where(DeletionRequest.user_id==User.id).exists()).with_for_update())
+    consume_token(session,body.token.get_secret_value(),'reset')
     if user is None:
         raise HTTPException(400,'Lien invalide ou expiré')
     user.password_hash = hash_password(body.password.get_secret_value())

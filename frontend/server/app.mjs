@@ -58,6 +58,8 @@ const messages = {
 }
 
 function routeAllowed(method, path) {
+  if(path==='/bff/auth/registration-challenge' && method==='GET')return true
+  if(['/bff/auth/verify-email','/bff/auth/resend-verification'].includes(path) && method==='POST')return true
   if (path === '/bff/auth/csrf' && method === 'GET') return true
   if (path === '/bff/auth/options' && method === 'GET') return true
   if (['/bff/auth/register','/bff/auth/forgot-password','/bff/auth/reset-password','/bff/account/password','/bff/account/deletion-request'].includes(path) && method === 'POST') return true
@@ -180,7 +182,7 @@ export function createApp(config, upstreamFetch = fetch, {auditSink}={}) {
     const protectedSessionRoute = /^\/bff\/(?:auth\/|account(?:\/|$)|ai\/(?:settings|key))/.test(req.path)
     if (protectedSessionRoute && !secure) return res.status(403).json({ detail: 'Ouvrez la connexion HTTPS locale pour gérer votre compte et votre clé.' })
     const token = /(?:^|;\s*)__Host-documind=([A-Za-z0-9_-]{40,100})(?:;|$)/.exec(req.headers.cookie || '')?.[1]
-    const publicRoute = /^\/bff\/auth\/(?:csrf|options|login|register|forgot-password|reset-password)$/.test(req.path) || req.path==='/bff/health'
+    const publicRoute = /^\/bff\/auth\/(?:csrf|options|login|register|forgot-password|reset-password|verify-email|resend-verification|registration-challenge)$/.test(req.path) || req.path==='/bff/health'
     if (config.requireLogin && !publicRoute && (!secure || !token)) return res.status(401).json({detail:'Connectez votre compte sur HTTPS.',code:'login_required'})
     const sign = nonce => createHmac('sha256',config.apiKey).update(`${token||'anonymous'}:${nonce}`).digest('hex')
     if (req.path==='/bff/auth/csrf') {

@@ -98,10 +98,12 @@ def create_app(settings=None):
         app.state.summary_worker.thread.start()
 
         def deliver_mail():
-            from .account_api import send_reset
+            from .account_api import send_reset,send_verification
             while not app.state.mail_stopping.is_set():
                 try:
-                    email, token = app.state.mail_queue.get(timeout=.2)
+                    item = app.state.mail_queue.get(timeout=.2)
+                    email, token = item[:2]
+                    verification = len(item)==3 and item[2]=='verify'
                 except queue.Empty:
                     continue
                 try:
@@ -109,7 +111,7 @@ def create_app(settings=None):
                     if sender:
                         sender(email,token)
                     else:
-                        send_reset(settings,email,token)
+                        (send_verification if verification else send_reset)(settings,email,token)
                 except Exception:
                     emit('system.mail.failed', reason_code='mail_failed')
                 finally:
@@ -148,6 +150,8 @@ def create_app(settings=None):
     app.state.ai_provider = None
     app.state.embedding_provider = None
     app.state.session_vault = SessionVault(settings.ai_session_ttl_seconds)
+    from .public_registration import RegistrationChallenges
+    app.state.registration_challenges = RegistrationChallenges()
     app.state.rate_limiter = RateLimiter()
     app.state.upload_capacity = UploadCapacity()
     app.state.authentication_slots = threading.BoundedSemaphore(settings.upload_max_preflights)

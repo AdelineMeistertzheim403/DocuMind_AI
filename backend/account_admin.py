@@ -1,21 +1,48 @@
 """Local administrator only; deliberately not exposed as HTTP routes."""
 import argparse
+import json
 from uuid import UUID
 
-from sqlalchemy import select, delete,func
+from sqlalchemy import select, delete,func,update
 
 from .account_api import EmailInput, issue_token
-from .account_models import AccountToken, DeletionRequest, WorkspaceMembership
+from .account_models import AccountToken, DeletionRequest, PublicRegistrationQuota, WorkspaceMembership
 from .auth import User
 from .config import Settings
 from .db import make_engine, make_sessions
 from .models import Document
 from .services.documents import delete_document
-from .ai.models import AIReservation
+from .ai.models import AIReservation, AIUsage
 from .ai.long_models import LongSummaryJob, SummaryStep
 from .ai.long_summary import cancel
 from .rag.models import IndexJob, RAGResult
 from .security_audit import emit
+
+
+def purge_pending(session, settings, hours=48, execute=False):
+    """Local explicit cleanup only. Never free lifetime admission slots or touch active users."""
+    from datetime import timedelta
+    from .models import now
+    if not 48<=hours<=720:raise ValueError('Choisir une ancienneté entre 48 et 720 heures')
+    candidates=session.scalars(select(User.id).where(User.registration_kind=='public',User.email_verified_at.is_(None),
+        User.created_at<now()-timedelta(hours=hours))).all()
+    count=0
+    for identifier in candidates:
+        user=session.get(User,identifier,populate_existing=True,with_for_update=True)
+        if user is None or user.registration_kind!='public' or user.email_verified_at is not None:continue
+        if session.scalar(select(AccountToken.id).where(AccountToken.email==user.email,AccountToken.kind=='verify',
+                AccountToken.used_at.is_(None),AccountToken.expires_at>now()).limit(1)) is not None:continue
+        if session.scalar(select(Document.id).where(Document.owner_id==user.owner_id).limit(1)) is not None:continue
+        if session.scalar(select(AIReservation.id).where(AIReservation.owner_id==user.owner_id).limit(1)) is not None:continue
+        if session.scalar(select(AIUsage.id).where(AIUsage.owner_id==user.owner_id).limit(1)) is not None:continue
+        count+=1
+        if execute:
+            user.disabled_at=now()
+            if session.scalar(select(DeletionRequest.id).where(DeletionRequest.user_id==user.id)) is None:
+                session.add(DeletionRequest(user_id=user.id,owner_id=user.owner_id))
+            session.commit()
+            purge_account(session,settings,user.id)
+    return count
 
 
 def purge_account(session, settings, identifier):
@@ -48,10 +75,23 @@ def main():
     attach=commands.add_parser('attach-email');attach.add_argument('username');attach.add_argument('email')
     purge=commands.add_parser('purge');purge.add_argument('user_id',type=UUID)
     commands.add_parser('owners')
+    pending=commands.add_parser('purge-pending');pending.add_argument('--older-than-hours',type=int,default=48);pending.add_argument('--execute',action='store_true')
+    control=commands.add_parser('public-registration');control.add_argument('action',choices=['status','close','reopen']);control.add_argument('--execute',action='store_true')
     args=parser.parse_args();settings=Settings();engine=make_engine(settings.database_url)
     try:
         with make_sessions(engine)() as session:
-            if args.command=='owners':
+            if args.command=='public-registration':
+                if args.action!='status' and args.execute:
+                    session.execute(update(PublicRegistrationQuota).where(PublicRegistrationQuota.id=='public').values(closed=args.action=='close'))
+                    session.commit()
+                quota=session.get(PublicRegistrationQuota,'public')
+                if quota is None:raise ValueError('Migration 0007 requise')
+                print(json.dumps({'closed':quota.closed,'issued_count':quota.issued_count,'limit':settings.public_registration_limit,
+                                  'mode':settings.registration_mode,'simulation':args.action!='status' and not args.execute}))
+            elif args.command=='purge-pending':
+                count=purge_pending(session,settings,args.older_than_hours,args.execute)
+                print('Comptes en attente :',count,'; mode :','exécution' if args.execute else 'simulation')
+            elif args.command=='owners':
                 from .account_models import Workspace
                 for workspace in session.scalars(select(Workspace)).all():
                     user=session.scalar(select(User.username).where(User.owner_id==workspace.owner_id))

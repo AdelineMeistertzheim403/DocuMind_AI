@@ -11,7 +11,7 @@ import { ApiError } from './services/api'
 import { AISettingsPage } from './pages/AISettings'
 import { IntelligentLibrary } from './pages/IntelligentLibrary'
 import { CompareDocuments } from './pages/CompareDocuments'
-import {RequireAccount,AccountAccess,ProfilePage,SecurityPage,PrivacyPage} from './pages/Account'
+import {RequireAccount,AccountAccess,ProfilePage,SecurityPage,PrivacyPage,PublicInformationPage} from './pages/Account'
 
 const AnalysisPage = lazy(() => import('./pages/Analysis').then(module => ({ default: module.AnalysisPage })))
 
@@ -27,6 +27,9 @@ export function AppRoutes() {
     <Route path="register" element={<AccountAccess mode="register"/>}/>
     <Route path="forgot-password" element={<AccountAccess mode="forgot"/>}/>
     <Route path="reset-password" element={<AccountAccess mode="reset"/>}/>
+    <Route path="verify-email" element={<AccountAccess mode="verify"/>}/>
+    <Route path="resend-verification" element={<AccountAccess mode="resend"/>}/>
+    <Route path="legal" element={<PublicInformationPage/>}/>
     <Route element={<RequireAccount/>}><Route element={<Layout/>}>
     <Route index element={<Dashboard/>}/><Route path="documents" element={<Documents/>}/>
     <Route path="documents/:id" element={<DocumentDetailPage/>}/><Route path="documents/:id/analysis" element={<Suspense fallback={<Spinner label="Ouverture des résultats…"/>}><AnalysisPage/></Suspense>}/>
