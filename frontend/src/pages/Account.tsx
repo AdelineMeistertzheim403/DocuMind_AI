@@ -4,6 +4,7 @@ import {useQuery} from '@tanstack/react-query'
 import {account,accountPost} from '../services/account'
 import {api,ApiError,request} from '../services/api'
 import {ErrorState,SectionTitle,Spinner} from '../components/ui'
+import {registrationProof} from '../services/registration'
 
 export function RequireAccount(){
   const location=useLocation()
@@ -14,14 +15,17 @@ export function RequireAccount(){
   return <Outlet/>
 }
 
-export function AccountAccess({mode}:{mode:'login'|'register'|'forgot'|'reset'}){
+export function AccountAccess({mode}:{mode:'login'|'register'|'forgot'|'reset'|'verify'|'resend'}){
   const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[invitation,setInvitation]=useState('')
   const [token,setToken]=useState(()=>new URLSearchParams(location.hash.slice(1)).get('token')||'')
+  const [website,setWebsite]=useState(''),[terms,setTerms]=useState(false)
   const [busy,setBusy]=useState(false),[error,setError]=useState<unknown>(null),[message,setMessage]=useState('')
   const secure=location.protocol==='https:'
   const options=useQuery({queryKey:['account-options'],queryFn:account.options,retry:false,enabled:secure})
-  useEffect(()=>{if(mode==='reset'&&location.hash)history.replaceState(null,'',location.pathname)},[mode])
-  const title={login:'Connexion',register:'Inscription',forgot:'Mot de passe oublié',reset:'Réinitialiser le mot de passe'}[mode]
+  useEffect(()=>{if(['reset','verify'].includes(mode)&&location.hash)history.replaceState(null,'',location.pathname)},[mode])
+  const isPublic=options.data?.registration_mode==='public'
+  const canRegister=options.data?.registration_mode==='invite'||(isPublic&&options.data?.public_capacity_configured===true)
+  const title={login:'Connexion',register:'Inscription',forgot:'Mot de passe oublié',reset:'Réinitialiser le mot de passe',verify:'Vérifier mon adresse e-mail',resend:'Renvoyer le lien de vérification'}[mode]
   async function submit(event:FormEvent){
     event.preventDefault();setBusy(true);setError(null);setMessage('')
     const entered=password;setPassword('')
@@ -31,8 +35,17 @@ export function AccountAccess({mode}:{mode:'login'|'register'|'forgot'|'reset'})
       }
       if(mode==='register'){
         const code=invitation;setInvitation('')
-        await accountPost('/auth/register',{email,password:entered,invitation:code})
-        setMessage('Compte créé. Vous pouvez vous connecter.')
+        const body=isPublic?{email,password:entered,website,terms_accepted:terms,terms_version:options.data?.terms_version,...await registrationProof()}:{email,password:entered,invitation:code}
+        await accountPost('/auth/register',body)
+        setMessage(isPublic?'Si cette demande peut aboutir, un lien de vérification sera envoyé. Vérifiez aussi les courriers indésirables.':'Compte créé. Vous pouvez vous connecter.')
+      }
+      if(mode==='resend'){
+        await accountPost('/auth/resend-verification',{email,password:entered,website,...await registrationProof()})
+        setMessage('Si cette demande peut aboutir, un lien de vérification sera envoyé.')
+      }
+      if(mode==='verify'){
+        await accountPost('/auth/verify-email',{token,password:entered});setToken('')
+        setMessage('Adresse vérifiée. Vous pouvez maintenant vous connecter.')
       }
       if(mode==='forgot'){
         await accountPost('/auth/forgot-password',{email})
@@ -46,17 +59,36 @@ export function AccountAccess({mode}:{mode:'login'|'register'|'forgot'|'reset'})
   }
   return <main className="page account-access"><section className="panel settings-card"><Link className="brand" to="/login">DocuMind AI</Link><SectionTitle eyebrow="VOTRE ESPACE PERSONNEL" title={title}/>
     {!secure&&<p className="notice">Une connexion HTTPS est nécessaire. <a href="https://localhost:8443/login">Ouvrir la connexion locale sécurisée</a>.</p>}
-    {mode==='register'&&<p className="notice">{options.data?.registration_mode==='invite'?'Inscription sur invitation personnelle, valable 24 heures.':'Les inscriptions sont désactivées. Contactez votre administrateur.'}</p>}
+    {mode==='register'&&<p className="notice">{options.data?.registration_mode==='invite'?'Inscription sur invitation personnelle, valable 24 heures.':canRegister?'Bêta publique limitée : un e-mail doit être vérifié avant la première connexion.':'Les nouvelles inscriptions sont fermées. Les comptes existants restent accessibles.'}</p>}
+    {mode==='verify'&&<p className="notice">Saisissez le mot de passe choisi lors de votre inscription. N’activez pas une inscription que vous n’avez pas demandée.</p>}
     <form onSubmit={submit}>
-      {mode!=='reset'&&<><label className="field-label" htmlFor="account-email">{mode==='login'?'Email ou identifiant historique':'Email'}</label><input id="account-email" className="text-input" type={mode==='login'?'text':'email'} autoComplete="username" required maxLength={254} value={email} onChange={e=>setEmail(e.target.value)} disabled={busy||!secure}/></>}
+      {!['reset','verify'].includes(mode)&&<><label className="field-label" htmlFor="account-email">{mode==='login'?'Email ou identifiant historique':'Email'}</label><input id="account-email" className="text-input" type={mode==='login'?'text':'email'} autoComplete="username" required maxLength={254} value={email} onChange={e=>setEmail(e.target.value)} disabled={busy||!secure}/></>}
       {mode!=='forgot'&&<><label className="field-label" htmlFor="account-password">Mot de passe</label><input id="account-password" className="text-input" type="password" autoComplete={mode==='login'?'current-password':'new-password'} required minLength={mode==='login'?1:12} maxLength={256} value={password} onChange={e=>setPassword(e.target.value)} disabled={busy||!secure}/></>}
-      {mode==='register'&&<><label className="field-label" htmlFor="account-invitation">Invitation</label><input id="account-invitation" type="password" className="text-input" autoComplete="off" required value={invitation} onChange={e=>setInvitation(e.target.value)} disabled={busy||!secure}/></>}
+      {mode==='register'&&options.data?.registration_mode==='invite'&&<><label className="field-label" htmlFor="account-invitation">Invitation</label><input id="account-invitation" type="password" className="text-input" autoComplete="off" required value={invitation} onChange={e=>setInvitation(e.target.value)} disabled={busy||!secure}/></>}
+      {(mode==='resend'||(mode==='register'&&isPublic))&&<div aria-hidden="true" style={{position:'absolute',left:'-10000px'}}><label htmlFor="account-website">Site internet</label><input id="account-website" name="website" tabIndex={-1} autoComplete="off" maxLength={200} value={website} onChange={e=>setWebsite(e.target.value)}/></div>}
+      {mode==='register'&&isPublic&&<label><input type="checkbox" required checked={terms} onChange={e=>setTerms(e.target.checked)} disabled={busy||!secure}/> J’ai consulté les <LegalLink url={options.data?.terms_url}>conditions d’utilisation</LegalLink> et les <LegalLink url={options.data?.privacy_url}>informations de confidentialité</LegalLink>, et j’accepte les conditions.</label>}
       {mode==='reset'&&!token&&<p className="notice">Ouvrez le lien de réinitialisation reçu par email. Les liens sont temporaires et à usage unique.</p>}
-      <button className="button primary" disabled={busy||!secure||(mode==='register'&&options.data?.registration_mode!=='invite')||(mode==='reset'&&!token)}>{busy?'Traitement…':title}</button>
+      {mode==='verify'&&!token&&!message&&<p className="notice">Ouvrez le lien reçu par e-mail. Il expire et ne peut être utilisé qu’une fois.</p>}
+      <button className="button primary" disabled={busy||!secure||(mode==='register'&&!canRegister)||(['reset','verify'].includes(mode)&&!token)}>{busy?'Traitement…':title}</button>
     </form>
     {error!=null&&<ErrorState error={error}/>} {message&&<p role="status" className="notice">{message}</p>}
-    <nav className="settings-actions"><Link to="/login">Connexion</Link><Link to="/register">Inscription</Link><Link to="/forgot-password">Mot de passe oublié</Link></nav>
+    <nav className="settings-actions"><Link to="/login">Connexion</Link><Link to="/register">Inscription</Link><Link to="/forgot-password">Mot de passe oublié</Link><Link to="/resend-verification">Renvoyer la vérification</Link><Link to="/legal">Informations et confidentialité</Link></nav>
     <p>Vos identifiants DocuMind restent indépendants de votre clé OpenAI.</p>
+  </section></main>
+}
+
+function LegalLink({url,children}:{url?:string;children:React.ReactNode}){
+  try{const parsed=new URL(url||'');if(parsed.protocol==='https:'&&!parsed.username&&!parsed.password)return <a href={parsed.href} rel="noreferrer">{children}</a>}catch{/* No unvalidated URL */}
+  return <span>{children} (document non configuré)</span>
+}
+
+export function PublicInformationPage(){
+  const options=useQuery({queryKey:['account-options'],queryFn:account.options,retry:false,enabled:location.protocol==='https:'})
+  return <main className="page account-access"><section className="panel settings-card"><h1>Informations sur la bêta DocuMind AI</h1><p>Cette application analyse des documents privés. Une session personnelle est nécessaire pour consulter vos contenus.</p>
+    <p>Exploitant : {options.data?.operator_name||'à renseigner avant ouverture publique'}. Contact : {options.data?.contact_email||'à renseigner avant ouverture publique'}.</p>
+    <ul><li><LegalLink url={options.data?.legal_notice_url}>Mentions de l’exploitant</LegalLink></li><li><LegalLink url={options.data?.privacy_url}>Politique de confidentialité</LegalLink></li><li><LegalLink url={options.data?.terms_url}>Conditions d’utilisation</LegalLink></li></ul>
+    <p>La création publique exige la vérification de l’e-mail. Les fonctions IA restent facultatives et nécessitent une clé personnelle et un consentement explicite ; les estimations ne garantissent pas un plafond de facturation du fournisseur.</p>
+    <p>Une suppression de compte le désactive immédiatement. L’effacement final est traité par l’administrateur ; les copies de sauvegarde suivent la conservation approuvée. Les durées et coordonnées applicables doivent être précisées dans les documents de l’exploitant avant ouverture.</p><Link to="/login">Revenir à la connexion</Link>
   </section></main>
 }
 

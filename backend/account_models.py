@@ -2,7 +2,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, String, Uuid
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, String, Uuid, false
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base
@@ -31,6 +31,13 @@ class AccountToken(Base):
     email: Mapped[str] = mapped_column(String(254), index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class PublicRegistrationQuota(Base):
+    __tablename__ = 'public_registration_quota'
+    id: Mapped[str] = mapped_column(String(16), primary_key=True)
+    issued_count: Mapped[int] = mapped_column(BigInteger, nullable=False, server_default='0')
+    closed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
 
 
 class DeletionRequest(Base):

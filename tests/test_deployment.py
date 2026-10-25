@@ -30,7 +30,7 @@ def test_release_rejects_unreviewed_or_mutable_references(change):
 
 
 def test_release_supports_only_tested_schema_and_real_head(tmp_path,monkeypatch):
-    assert validate_release(release())['schema_revision']==schema_head(Path('.'))
+    assert validate_release(release(schema_head(Path('.'))))['schema_revision']==schema_head(Path('.'))
     assert deploy.can_rollback(release(),'0006')
     assert not deploy.can_rollback(release(),'0007')
     assert ':latest' not in deploy.images_env(release())

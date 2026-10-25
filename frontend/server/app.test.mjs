@@ -71,6 +71,30 @@ const config = {
   apiKey: key, upstream: 'http://backend:8000', maxUploadBytes: 32, workerTimeoutMs: 1000,
   allowedHosts: ['127.0.0.1', 'localhost'], dist: './nonexistent-test-dist',
 }
+
+test('public registration endpoints require HTTPS and CSRF but no existing session',async t=>{
+  const calls=[]
+  const base=await serve(t,async(url,options)=>{
+    calls.push({url,options})
+    if(url.endsWith('/auth/registration-challenge'))return Response.json({challenge:'fictitious'})
+    await new Response(options.body).text()
+    return Response.json({verified:true})
+  },{requireLogin:true,csrfProtection:true,gatewayToken:'gateway'})
+  const headers={'x-forwarded-proto':'https','x-documind-gateway':'gateway'}
+  assert.equal((await fetch(base+'/bff/auth/registration-challenge')).status,403)
+  assert.equal((await fetch(base+'/bff/auth/registration-challenge',{headers})).status,200)
+  for(const path of ['/bff/auth/verify-email','/bff/auth/resend-verification']){
+    assert.equal((await fetch(base+path,{method:'POST',headers:{...headers,'content-type':'application/json'},body:'{}'})).status,403)
+    const csrf=await fetch(base+'/bff/auth/csrf',{headers})
+    const {csrf_token}=await csrf.json()
+    const cookie=csrf.headers.get('set-cookie').split(';')[0]
+    const response=await fetch(base+path,{method:'POST',headers:{...headers,cookie,'x-csrf-token':csrf_token,'content-type':'application/json'},body:'{}'})
+    assert.equal(response.status,200)
+  }
+  assert.equal(calls.length,3)
+  assert.ok(calls.every(call=>call.options.headers['X-API-Key']===key&&call.options.headers['x-documind-secure']==='1'))
+  assert.equal((await fetch(base+'/bff/account',{headers})).status,401)
+})
 async function serve(t, upstream, overrides = {}) {
   const server = createApp({ ...config, ...overrides }, upstream).listen(0, '127.0.0.1')
   await once(server, 'listening')

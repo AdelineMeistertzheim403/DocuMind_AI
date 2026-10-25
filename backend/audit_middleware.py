@@ -15,6 +15,8 @@ def operation(path, method):
         '/api/v1/auth/reset-password': 'reset_complete', '/api/v1/account/password': 'password_change',
         '/api/v1/account/deletion-request': 'deletion_request',
         '/api/v1/internal/upload-admission': 'upload_preflight'}
+    if path in {'/api/v1/auth/verify-email','/api/v1/auth/resend-verification','/api/v1/auth/registration-challenge'}:
+        return 'account'
     if path in fixed:
         return fixed[path]
     if path.rstrip('/') == '/api/v1/documents' and method == 'POST':
@@ -54,6 +56,8 @@ def result(context, status, disconnected):
                 503: ('upload.capacity.exceeded', 'capacity')}.get(status, ('upload.admission.denied', 'denied'))
     if context.operation == 'login' and status in {400, 401, 422}:
         return 'auth.login.failure', 'invalid_identity'
+    if context.operation=='register' and status>=400:
+        return 'account.registration.denied','invalid_request'
     if context.operation in {'password_change', 'deletion_request'} and status == 401:
         return 'access.denied', 'invalid_identity'
     if status == 401:
