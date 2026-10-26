@@ -81,7 +81,7 @@ def test_pending_account_email_and_password_proof_atomic_workspace_and_one_use(b
     client,app,sent=beta;token=enroll(beta)
     assert client.post('/api/v1/auth/login',json={'email':'alice@example.test','password':PASSWORD}).status_code==401
     with app.state.sessions() as db:
-        user=db.scalar(select(User));assert user.disabled_at and user.email_verified_at is None
+        user=db.scalar(select(User));assert user.disabled_at is None and user.email_verified_at is None
         assert db.get(Workspace,user.owner_id) and db.get(WorkspaceMembership,user.id)
         owner=user.owner_id
         manufactured=app.state.session_vault.create(user)

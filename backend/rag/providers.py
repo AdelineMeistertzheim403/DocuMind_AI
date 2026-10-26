@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Protocol
 
-from ..ai.providers import ProviderError, ProviderResult
+from ..ai.providers import ProviderError, ProviderResult, ensure_ai_enabled
 from ..ai.settings_api import settings_for_request
 from ..ai.retrieval import terms
 
@@ -21,6 +21,7 @@ class EmbeddingProvider(Protocol):
 
 
 def runtime_settings(app, session, context):
+    ensure_ai_enabled(app.state.settings)
     if context is not None and context.expires_at <= time.time():
         raise ProviderError('byok_disconnected', 403, False, 0)
     settings = settings_for_request(SimpleNamespace(app=app, state=SimpleNamespace(user_session=context)), session)
@@ -31,14 +32,18 @@ def runtime_settings(app, session, context):
 
 class OpenAIEmbeddingProvider:
     def __init__(self, settings, client=None):
+        ensure_ai_enabled(settings)
         from openai import OpenAI
         import logging
         logging.getLogger('openai').setLevel(logging.WARNING)
         self.settings = settings
+        self.enabled_check = None
         self.client = client or OpenAI(api_key=settings.openai_api_key.get_secret_value(), max_retries=0,
             timeout=settings.ai_timeout_seconds, base_url='https://api.openai.com/v1')
 
     def embed(self, texts, request_id):
+        ensure_ai_enabled(self.settings)
+        if self.enabled_check is not None:self.enabled_check()
         import openai
         try:
             response = self.client.embeddings.create(model=self.settings.embedding_model,
@@ -85,12 +90,17 @@ def validate_vectors(result, count, dimensions):
 
 
 def embed(app, settings, texts, request_id):
+    def check_enabled():
+        ensure_ai_enabled(app.state.settings)
+        ensure_ai_enabled(settings)
+    check_enabled()
     if any(not text.strip() or len(text.encode()) > 8000 for text in texts):
         raise ProviderError('context_limit', 413, False, 0)
     provider = app.state.embedding_provider
     if provider is not None:
         return provider.embed(texts, request_id)
     provider = MockEmbeddingProvider(settings.embedding_dimensions) if settings.ai_provider == 'mock' else OpenAIEmbeddingProvider(settings)
+    provider.enabled_check = check_enabled
     try:
         return provider.embed(texts, request_id)
     finally:

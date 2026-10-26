@@ -25,6 +25,28 @@ afterEach(()=>vi.unstubAllGlobals())
 function mount(element:React.ReactNode,path='/library'){
   return render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false},mutations:{retry:false}}})}><MemoryRouter initialEntries={[path]}><Routes><Route path="/library" element={element}/><Route path="/comparisons/:id" element={element}/></Routes></MemoryRouter></QueryClientProvider>)
 }
+it('IA fermée : interdit indexation, vecteurs et questions, conserve la recherche lexicale',async()=>{
+  vi.mocked(ai.status).mockResolvedValue({...status,enabled:false,available:false,reason:'disabled'})
+  const search=vi.spyOn(rag,'search').mockResolvedValue({passages:[source],strategy:'lexical',notice:'Local',cached:false})
+  const index=vi.spyOn(rag,'index'),ask=vi.spyOn(rag,'ask')
+  const user=userEvent.setup();mount(<IntelligentLibrary/>)
+  await user.click(await screen.findByRole('checkbox',{name:document.filename}))
+  await user.type(screen.getByLabelText('Recherche en langage naturel'),'budget Atlas')
+  expect(screen.getByRole('checkbox',{name:/Utiliser les vecteurs/})).toBeDisabled()
+  expect(screen.getByRole('button',{name:'Indexer / reprendre les passages manquants'})).toBeDisabled()
+  expect(screen.getByRole('button',{name:'Demander une réponse sourcée'})).toBeDisabled()
+  await user.click(screen.getByRole('button',{name:'Rechercher les passages'}))
+  await waitFor(()=>expect(search).toHaveBeenCalledWith([document.id],'budget Atlas',false,false,expect.any(String)))
+  expect(index).not.toHaveBeenCalled();expect(ask).not.toHaveBeenCalled()
+})
+it('IA fermée : conserve la comparaison locale et refuse sa synthèse fournisseur',async()=>{
+  vi.mocked(ai.status).mockResolvedValue({...status,enabled:false,available:false,reason:'disabled'})
+  const summarize=vi.spyOn(rag,'summarize')
+  mount(<CompareDocuments/>,'/comparisons/comparison')
+  expect(await screen.findByText('Budget 120 euros.')).toBeVisible()
+  expect(screen.getByRole('button',{name:'Générer la synthèse des différences'})).toBeDisabled()
+  expect(summarize).not.toHaveBeenCalled()
+})
 it('recherche lexicale explicite, sans indexation ni question automatique, et lien précis vers la source',async()=>{
   const search=vi.spyOn(rag,'search').mockResolvedValue({passages:[source],strategy:'lexical',notice:'Score de pertinence, pas une probabilité.',cached:false})
   const index=vi.spyOn(rag,'index'),ask=vi.spyOn(rag,'ask')

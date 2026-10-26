@@ -21,15 +21,40 @@ from http.cookies import SimpleCookie
 try:
     from .backup_local import create_backup
     from .release_manifest import COMPONENTS,validate_release
+    from .public_beta_policy import validate_registration_config, PublicBetaPolicyError, SETTINGS_PROBE
+    from . import release_security as security
 except ImportError:  # Flat, reviewed CI release bundle on the VPS.
     from backup_local import create_backup
     from release_manifest import COMPONENTS,validate_release
+    from public_beta_policy import validate_registration_config, PublicBetaPolicyError, SETTINGS_PROBE
+    import release_security as security
 
 HOST='documind.adelinemeistertzheim.fr'
 PROJECT='documind-prod'
 
 
 class DeploymentError(Exception):pass
+
+
+def registration_policy(environment,revision,approved=False):
+    try:
+        return validate_registration_config(environment,revision,approved)
+    except PublicBetaPolicyError as error:
+        raise DeploymentError(str(error)) from None
+
+
+def check_public_quota(stack):
+    """Read only. Operators must close explicitly; deployment never changes admissions."""
+    raw=stack.sql("SELECT json_build_object('closed',closed,'issued_count',issued_count)::text "
+                  "FROM public_registration_quota WHERE id='public'")
+    try:
+        quota=json.loads(raw)
+    except (ValueError,TypeError):
+        raise DeploymentError('Public beta requires an unambiguous closed SQL quota') from None
+    if (not isinstance(quota,dict) or quota.get('closed') is not True
+            or type(quota.get('issued_count')) is not int or not 0<=quota['issued_count']<=5):
+        raise DeploymentError('Public beta requires a closed SQL quota with a valid cumulative counter')
+    return {'closed':True,'issued_count':quota['issued_count']}
 
 
 def run(command,env=None):
@@ -44,8 +69,69 @@ def images_env(release):
     return ''.join(f'{variable}={release["images"][name]}\n' for name,variable in COMPONENTS.items())
 
 
-def can_rollback(release,revision):
+def schema_compatible(release,revision):
     return revision in release['supported_schema_revisions']
+
+
+def can_rollback(release,revision,*,security_verified=False,require_security=True):
+    return schema_compatible(release,revision) and (security_verified is True or not require_security)
+
+
+def public_history(stack,revision):
+    if revision!='0007':return False
+    raw=stack.sql("SELECT json_build_object('has_public_users',EXISTS(SELECT 1 FROM users WHERE registration_kind='public'), "
+                  "'issued_count',issued_count,'closed',closed)::text FROM public_registration_quota WHERE id='public'")
+    try:data=security.strict_json(raw)
+    except security.SecurityError:raise DeploymentError('Cannot establish public account history') from None
+    if (not isinstance(data,dict) or type(data.get('has_public_users')) is not bool
+            or type(data.get('issued_count')) is not int or not 0<=data['issued_count']<=5
+            or type(data.get('closed')) is not bool):
+        raise DeploymentError('Missing or incoherent public account history; manual review required')
+    return data['has_public_users'] or data['issued_count']>0
+
+
+def authorize_start(stack,revision,*,required=False,closed=False):
+    history=public_history(stack,revision)
+    if closed or history:check_public_quota(stack)
+    required=required or history or 'security_profile' in stack.release
+    if required:
+        if not schema_compatible(stack.release,revision):raise DeploymentError('Incompatible secure application schema')
+        try:evidence=security.authorize(stack.bundle,stack.release)
+        except security.SecurityError as error:raise DeploymentError(str(error)) from None
+        return evidence
+    return {'profile':None,'independently_approved':False,'legacy_history_free':True}
+
+
+def check_backup_guard(root,bundle):
+    try:
+        for name in ('backup_production.py','release_security.py'):
+            actual=security.read_admin_file(root/'ops'/name)
+            expected=security.read_file(bundle/name)
+            if hashlib.sha256(actual).digest()!=hashlib.sha256(expected).digest():
+                raise security.SecurityError('Installed backup restart guard differs from the approved release')
+    except security.SecurityError as error:raise DeploymentError(str(error)) from None
+
+
+def maintenance(root,release):
+    path=root/'var/security-maintenance.json'
+    path.parent.mkdir(parents=True,exist_ok=True)
+    if not os.path.lexists(path):
+        with path.open('x',encoding='utf-8') as output:
+            output.write(json.dumps({'format':1,'kind':'secure-release-maintenance','candidate_sha':release['git_sha']}))
+        path.chmod(0o600)
+    raw=security.read_file(path)
+    data=security.strict_json(raw)
+    if not isinstance(data,dict) or data.get('kind')!='secure-release-maintenance' or data.get('format')!=1:
+        raise DeploymentError('Ambiguous security maintenance state')
+    return path,hashlib.sha256(raw).hexdigest()
+
+
+def finish_maintenance(marker):
+    if marker:
+        path,digest=marker
+        if hashlib.sha256(security.read_file(path)).hexdigest()!=digest:
+            raise DeploymentError('Security maintenance changed; manual inspection required')
+        path.unlink()
 
 
 class Stack:
@@ -92,7 +178,7 @@ def resolve_proxy(stack):
     return values
 
 
-def check_config(stack):
+def check_config(stack,approve_public_beta=False):
     config=json.loads(stack.call('config','--format','json'))
     services=config['services']
     for service,component in (('api','backend'),('web','frontend'),('db','postgres')):
@@ -102,8 +188,7 @@ def check_config(stack):
     for name in services:
         if services[name].get('ports') or services[name].get('build'):
             raise DeploymentError('Production must not publish ports or build images')
-    if services['api']['environment'].get('REGISTRATION_MODE') not in ('disabled','invite'):
-        raise DeploymentError('Public registration is forbidden')
+    registration_policy(services['api']['environment'],stack.release['schema_revision'],approve_public_beta)
     if services['api']['environment'].get('ACCOUNT_BASE_URL')!=f'https://{HOST}':
         raise DeploymentError('Unexpected account HTTPS origin')
     if set(services['web']['networks'])!={'application','web'}:
@@ -157,6 +242,8 @@ def verify_images(stack):
         labels=json.loads(run(['docker','image','inspect',image,'--format','{{json .Config.Labels}}'])) or {}
         if labels.get('org.opencontainers.image.revision')!=stack.release['git_sha']:
             raise DeploymentError('Image revision does not match the reviewed release')
+        if stack.release.get('security_profile') and labels.get(security.LABEL)!=security.PROFILE:
+            raise DeploymentError('Image security profile does not match approved evidence')
 
 
 class HTTPSProbeError(DeploymentError):pass
@@ -276,7 +363,7 @@ def recovery_source(root,bundle,path,release,proxy):
     check_config(source_stack)
     verify_recovery_containers(source_stack)
     revision=source_stack.revision()
-    if revision!=original['schema_revision'] or not can_rollback(release,revision):
+    if revision!=original['schema_revision'] or not schema_compatible(release,revision):
         raise DeploymentError('Recovery requires the exact compatible live schema revision')
     return source_stack,revision
 
@@ -341,7 +428,7 @@ def recovery_after_https(root,bundle,path,release,proxy):
     check_config(stack);check_config(stack.database_source)
     verify_recovery_containers(stack)
     revision=stack.revision()
-    if revision!=release['schema_revision'] or not can_rollback(release,revision):
+    if revision!=release['schema_revision'] or not schema_compatible(release,revision):
         raise DeploymentError('Recovery requires the exact compatible live schema revision')
     return stack,revision
 
@@ -379,7 +466,7 @@ def verify_recovery_containers(stack):
 
 def execute(args,report):
     import fcntl
-    root=args.root.resolve();bundle=Path(__file__).resolve().parent
+    root=args.root.resolve();bundle=(getattr(args,'bundle',None) or Path(__file__).resolve().parent).resolve()
     if bundle.parent!=root/'releases':raise DeploymentError('Release must be staged under the deployment releases directory')
     secret=root/'.env.production'
     if not secret.is_file() or (os.name=='posix' and secret.stat().st_mode & 0o077):
@@ -399,7 +486,9 @@ def execute(args,report):
     if recovery and (args.initialize or args.rollback or args.allow_migration):
         raise DeploymentError('Recovery cannot be combined with initialization, rollback or migration approval')
     values=resolve_proxy(stack)
-    check_config(stack)
+    approval=getattr(args,'approve_public_beta',False)
+    config=check_config(stack,approval)
+    mode=config['services']['api']['environment'].get('REGISTRATION_MODE','disabled')
     minimum=int(values.get('DEPLOY_MIN_FREE_GIB','8'))*(1024**3)
     if minimum<4*(1024**3):raise DeploymentError('Deployment disk threshold must be at least 4 GiB')
     disk_check(root,minimum)
@@ -414,23 +503,50 @@ def execute(args,report):
         report['retained_database_image']=getattr(source,'database_source',source).release['images']['postgres']
     if previous:
         report['previous_sha']=previous.release['git_sha']
+    if mode=='public' and (args.initialize or recovery or previous is None):
+        raise DeploymentError('Public beta requires an existing closed schema 0007 installation')
     if not args.initialize and previous is None and not recovery:
         raise DeploymentError('Existing deployment must be adopted explicitly before automated updates')
     if args.initialize and previous is not None:raise DeploymentError('Initialization refuses an existing release')
     if args.rollback and args.initialize:raise DeploymentError('Cannot initialize a rollback')
     if not recovery:before=previous.revision() if previous else None
-    if args.rollback and not can_rollback(release,before):
+    if args.rollback and not schema_compatible(release,before):
         raise DeploymentError('Rollback application does not support the current database schema')
     if before and before!=release['schema_revision'] and not (args.allow_migration or args.rollback):
         raise DeploymentError('A schema change requires explicit migration approval')
     report['schema_before']=before
+    previous_mode='disabled'
+    if previous:
+        previous_mode=check_config(previous,approval)['services']['api']['environment'].get('REGISTRATION_MODE','disabled')
+    if mode=='public':
+        if before!='0007':raise DeploymentError('Public beta requires an existing closed schema 0007 installation')
+        report['public_beta']={'approved':True,'preparation_only':True,'limit':5,
+                               'quota_before':check_public_quota(previous)}
+    history=public_history(source or previous,before) if source or previous else False
+    strict=bool(args.rollback or mode=='public' or previous_mode=='public' or history or os.path.lexists(root/'var/security-maintenance.json') or 'security_profile' in release
+                or (previous and 'security_profile' in previous.release))
+    closed=mode=='public' or previous_mode=='public' or history
+    report['release_security']={'required':strict,'public_history':history}
+    # Authenticate immutable metadata before pulling, quiescing services or migrations.
+    # Initial installs/approved upgrades check the target schema here and the live schema again below.
+    if strict:
+        try:report['release_security']['candidate']=security.authorize(bundle,release)
+        except security.SecurityError as error:raise DeploymentError(str(error)) from None
+        check_backup_guard(root,bundle)
+    if closed:check_public_quota(source or previous)
     report['phase']='pull'
     stack.call('pull','db','api','web')
     verify_images(stack)
     report['phase']='settings'
-    stack.call('run','--rm','--no-deps','-T','--entrypoint','python','api','-c',
-        "from backend.config import Settings; s=Settings(); assert s.registration_mode in ('disabled','invite'); assert not s.legacy_api_enabled")
+    effective=stack.call('run','--rm','--no-deps','-T','--entrypoint','python','api','-c',SETTINGS_PROBE)
+    try:effective=json.loads(effective)
+    except (ValueError,TypeError):raise DeploymentError('Invalid effective registration settings probe') from None
+    if (not isinstance(effective,dict) or effective.get('LEGACY_API_ENABLED') is not False
+            or registration_policy(effective,release['schema_revision'],approval)!=mode):
+        raise DeploymentError('Effective registration mode differs from resolved configuration')
+    marker=None
     try:
+        if strict:marker=maintenance(root,release)
         snapshot=source or previous
         if snapshot:
             report['phase']='backup'
@@ -446,48 +562,77 @@ def execute(args,report):
             destination=root/'var/backups'/('deploy-'+datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S'))
             create_backup(snapshot.command,destination,env=snapshot.env)
             report['backup']=str(destination.relative_to(root))
+        if mode=='public' and check_public_quota(stack)!=report['public_beta']['quota_before']:
+            raise DeploymentError('Public quota changed during preparation; operator review required')
         if not args.rollback and not recovery:
             report['phase']='database'
             stack.call('up','-d','--no-deps','--wait','--wait-timeout','120','db')
             report['phase']='migration'
             stack.call('run','--rm','--no-deps','-T','--entrypoint','alembic','api','upgrade','head')
         report['schema_after']=stack.revision()
-        if not can_rollback(release,report['schema_after']):raise DeploymentError('Unexpected database revision')
+        if not schema_compatible(release,report['schema_after']):raise DeploymentError('Unexpected database revision')
+        if mode=='public' and check_public_quota(stack)!=report['public_beta']['quota_before']:
+            raise DeploymentError('Public quota changed before application startup')
         report['phase']='start'
+        authorize_start(stack,report['schema_after'],required=strict,closed=closed)
+        if strict:check_backup_guard(root,bundle)
+        verify_images(stack)
         stack.call('up','-d','--no-deps','--wait','--wait-timeout','180','--scale','api=1','--scale','web=1','api','web')
         stack.check_health('db','api','web')
         report['phase']='https'
         https_check(report)
+        if mode=='public':
+            report['public_beta']['quota_after']=check_public_quota(stack)
+            if report['public_beta']['quota_after']!=report['public_beta']['quota_before']:
+                raise DeploymentError('Public quota changed before release activation')
+        authorize_start(stack,report['schema_after'],required=strict,closed=closed)
         if previous:point_to(root,'previous',previous.bundle)
         point_to(root,'current',bundle)
+        finish_maintenance(marker)
         report['phase']='complete';report['status']='success'
     except Exception:
         # Never downgrade/restore the database automatically. Reopen the previous application only
         # when its declared, tested schema is still compatible; otherwise leave HTTP closed.
         try:stack.call('stop','--timeout','150','web','api')
         except Exception:pass
+        report['previous_application_restarted']=False
         if previous:
             try:
                 actual=previous.revision()
-                if can_rollback(previous.release,actual):
+                previous_mode=check_config(previous,approval)['services']['api']['environment'].get('REGISTRATION_MODE','disabled')
+                required_previous=strict or previous_mode=='public' or public_history(previous,actual)
+                if required_previous and marker is None:marker=maintenance(root,release)
+                previous_evidence=authorize_start(previous,actual,required=required_previous,closed=closed or previous_mode=='public')
+                if can_rollback(previous.release,actual,security_verified=previous_evidence['independently_approved'],require_security=required_previous):
+                    if required_previous:check_backup_guard(root,previous.bundle)
+                    verify_images(previous)
                     previous.call('up','-d','--no-deps','--wait','--wait-timeout','180','api','web')
+                    previous.check_health('db','api','web')
                     report['previous_application_restarted']=True
-            except Exception:report['previous_application_restarted']=False
+                    finish_maintenance(marker)
+            except Exception:
+                report['release_security']['previous_refused']=True
         raise
 
 
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('--root',required=True,type=Path)
+    parser.add_argument('--bundle',type=Path,help='Candidate data bundle; execute the trusted controller, never an old candidate script')
     parser.add_argument('--initialize',action='store_true')
     parser.add_argument('--allow-migration',action='store_true')
+    parser.add_argument('--approve-public-beta',action='store_true',help='Approve public/5 preparation with an already closed SQL gate; never opens admissions')
     parser.add_argument('--rollback',action='store_true')
     parser.add_argument('--recover-from',type=Path,help='Explicit source bundle of a failed first installation at start; no migrations')
     parser.add_argument('--recover-after-https',type=Path,help='Explicit failed HTTPS recovery source; verify original DB and replaced apps; no migrations')
     parser.add_argument('--registry-login',action='store_true',help='Read ephemeral registry credentials from SSH stdin')
     args=parser.parse_args()
     os.umask(0o077)
-    report_path=Path(__file__).resolve().parent/'deployment-report.json'
+    bundle=(args.bundle or Path(__file__).resolve().parent).resolve()
+    if bundle.parent!=args.root.resolve()/'releases':
+        print('Candidate bundle must be staged directly under releases')
+        return 1
+    report_path=bundle/'deployment-report.json'
     if os.path.lexists(report_path):
         print('Existing deployment report preserved; stage a new reviewed bundle for this attempt')
         return 1

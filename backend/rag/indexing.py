@@ -124,6 +124,6 @@ def run_job(app, job_id, context, admitted_settings):
                 settle(session, reservation_id, code, getattr(exc, 'status', 503), uncertain)
             job = session.get(IndexJob, job_id)
             if job:
-                job.status = 'paused' if code in ['byok_disconnected', 'session_required', 'budget_exhausted', 'quota_reached', 'rate_limit', 'busy'] else 'failed'
+                job.status = 'paused' if code in ['disabled', 'byok_disconnected', 'session_required', 'budget_exhausted', 'quota_reached', 'rate_limit', 'busy'] else 'failed'
                 job.error_code, job.updated_at = code, now()
                 session.commit()

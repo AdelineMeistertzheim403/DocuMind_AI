@@ -24,6 +24,10 @@ on:
         description: Approve an upgrade when the database revision changes
         type: boolean
         default: false
+      approve_public_beta:
+        description: Approve public/5 preparation ONLY with an already closed SQL gate; never opens admissions
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -80,15 +84,30 @@ jobs:
       - name: Validate the immutable release
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
+          APPROVE_PUBLIC_BETA: ${{ inputs.approve_public_beta }}
+          CI_RUN_ID: ${{ inputs.ci_run_id }}
+          OPERATION: ${{ inputs.operation }}
         run: |
           python - <<'PY'
           import json,os
           from pathlib import Path
           from tools.release_manifest import validate_release
+          from tools.release_security import validate_statement,BUNDLE_FILES,STATEMENT
           data=validate_release(json.loads(Path('release-bundle/release.json').read_text()))
           assert data['git_sha']==os.environ['RELEASE_SHA']
           expected={'release.json','compose.production.yaml','deploy_production.py','backup_local.py','release_manifest.py'}
-          assert {p.name for p in Path('release-bundle').iterdir()}==expected
+          actual={p.name for p in Path('release-bundle').iterdir()}
+          secure=set(BUNDLE_FILES)|{STATEMENT}
+          assert actual in (expected,expected|{'public_beta_policy.py'},secure)
+          if actual==secure or 'security_profile' in data:
+              assert actual==secure
+              statement,_=validate_statement(Path('release-bundle'),data)
+              assert statement['producer']['repository']==os.environ['GITHUB_REPOSITORY']
+              assert statement['producer']['run_id']==os.environ['CI_RUN_ID']
+          if os.environ['APPROVE_PUBLIC_BETA']=='true':
+              assert actual==secure, 'Public beta requires an attested bundle and independent host approval'
+          if os.environ['OPERATION']=='rollback':
+              assert actual==secure, 'Rollback requires an attested bundle'
           PY
       - name: Configure verified SSH
         env:
@@ -123,8 +142,13 @@ jobs:
         run: |
           SSH=(-F /dev/null -i "$RUNNER_TEMP/documind-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$RUNNER_TEMP/documind-ssh/known_hosts" -o ConnectTimeout=15)
           TARGET="$VPS_DEPLOY_PATH/releases/$RELEASE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          CONTROL="$VPS_DEPLOY_PATH/deploy-controls/$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          mkdir deploy-control
+          cp tools/deploy_production.py tools/backup_local.py tools/release_manifest.py tools/public_beta_policy.py tools/release_security.py deploy-control/
           ssh "${SSH[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "umask 077; mkdir -p '$TARGET'"
+          ssh "${SSH[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "umask 077; mkdir -p '$CONTROL'"
           scp "${SSH[@]}" -P "$VPS_PORT" release-bundle/* "$VPS_USER@$VPS_HOST:$TARGET/"
+          scp "${SSH[@]}" -P "$VPS_PORT" deploy-control/* "$VPS_USER@$VPS_HOST:$CONTROL/"
       - name: Backup, pull, migrate and verify the approved deployment
         id: rollout
         env:
@@ -137,17 +161,20 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_sha }}
           INITIALIZE: ${{ inputs.initialize }}
           ALLOW_MIGRATION: ${{ inputs.allow_migration }}
+          APPROVE_PUBLIC_BETA: ${{ inputs.approve_public_beta }}
           OPERATION: ${{ inputs.operation }}
         run: |
           SSH=(-F /dev/null -i "$RUNNER_TEMP/documind-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$RUNNER_TEMP/documind-ssh/known_hosts" -o ConnectTimeout=15 -o ServerAliveInterval=30)
           TARGET="$VPS_DEPLOY_PATH/releases/$RELEASE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          CONTROL="$VPS_DEPLOY_PATH/deploy-controls/$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           FLAGS=''
           if [ "$INITIALIZE" = true ]; then FLAGS="$FLAGS --initialize"; fi
           if [ "$ALLOW_MIGRATION" = true ]; then FLAGS="$FLAGS --allow-migration"; fi
+          if [ "$APPROVE_PUBLIC_BETA" = true ]; then FLAGS="$FLAGS --approve-public-beta"; fi
           if [ "$OPERATION" = rollback ]; then FLAGS="$FLAGS --rollback"; fi
           python -c 'import json,os; print(json.dumps({"username":os.environ["REGISTRY_PULL_USERNAME"],"password":os.environ["REGISTRY_PULL_PASSWORD"]}))' |
             ssh "${SSH[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
-              "python3 '$TARGET/deploy_production.py' --root '$VPS_DEPLOY_PATH' --registry-login $FLAGS"
+              "python3 '$CONTROL/deploy_production.py' --bundle '$TARGET' --root '$VPS_DEPLOY_PATH' --registry-login $FLAGS"
       - name: Collect deployment report
         if: always() && (steps.rollout.outcome == 'success' || steps.rollout.outcome == 'failure')
         env:

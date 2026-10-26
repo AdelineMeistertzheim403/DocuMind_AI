@@ -40,6 +40,12 @@ class ProviderError(Exception):
         super().__init__(code)
 
 
+def ensure_ai_enabled(settings, attempts=0):
+    """Last-mile guard; a BYOK key never overrides the application switch."""
+    if not settings.ai_enabled:
+        raise ProviderError('disabled', 403, False, attempts)
+
+
 class AIProvider(Protocol):
     def generate(self, payload: dict, schema: type[BaseModel], request_id: str) -> ProviderResult: ...
 
@@ -62,10 +68,12 @@ def input_bound(payload, schema):
 
 class OpenAIProvider:
     def __init__(self, settings, client=None):
+        ensure_ai_enabled(settings)
         import logging
         from openai import OpenAI
         logging.getLogger('openai').setLevel(logging.WARNING)
         self.settings = settings
+        self.enabled_check = None
         self.client = client or OpenAI(api_key=settings.openai_api_key.get_secret_value(),
                                       timeout=settings.ai_timeout_seconds, max_retries=0,
                                       base_url='https://api.openai.com/v1')
@@ -76,6 +84,13 @@ class OpenAIProvider:
     def generate(self, payload, schema, request_id):
         import openai
         for attempt in range(2):
+            ensure_ai_enabled(self.settings, attempt)
+            if self.enabled_check is not None:
+                try:
+                    self.enabled_check()
+                except ProviderError as error:
+                    if error.code=='disabled':error.attempts=attempt
+                    raise
             try:
                 response = self.client.responses.create(
                     model=self.settings.openai_model, instructions=SYSTEM,

@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     max_storage_bytes_total: int = Field(5 * 1024 * 1024 * 1024, ge=1024)
     ai_max_concurrent_per_owner: int = Field(1, ge=1, le=4)
     storage_dir: Path = Path("var/documents")
+    # Safety backpressure for crash/uncertain-commit leftovers; never automatic purge.
+    document_retention_max_files: int = Field(100, ge=1)
+    document_retention_max_bytes: int = Field(64 * 1024 * 1024, ge=1024)
     extraction_mode: Literal['sandbox', 'development'] = 'sandbox'
     max_upload_bytes: int = Field(10 * 1024 * 1024, gt=0)
     upload_max_concurrent: int = Field(2, ge=1, le=8)

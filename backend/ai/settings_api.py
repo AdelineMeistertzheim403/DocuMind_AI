@@ -99,6 +99,9 @@ def set_preferences(body: Preferences, request: Request, owner_id: Owner, sessio
 @router.post('/ai/key', dependencies=[Depends(secure_gateway)])
 def connect_key(body: KeyInput, request: Request, owner_id: Owner, session: Session):
     context = user_session(request, owner_id)
+    if not request.app.state.settings.ai_enabled:
+        from .service import fail
+        fail('disabled',403)
     key = body.api_key.get_secret_value()
     if any(character.isspace() for character in key):
         raise HTTPException(422, 'Format de clé non valide')
@@ -120,6 +123,9 @@ def disconnect_key(request: Request, owner_id: Owner, session: Session):
 @router.post('/ai/key/validate', dependencies=[Depends(secure_gateway)])
 def validate_key(request: Request, owner_id: Owner, session: Session):
     context = user_session(request, owner_id)
+    if not request.app.state.settings.ai_enabled:
+        from .service import fail
+        fail('disabled',403)
     with request.app.state.session_vault.lock:
         key = context.key
         request.app.state.session_vault.login_limit(f'validate:{owner_id}')

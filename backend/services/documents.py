@@ -1,4 +1,5 @@
 import hashlib
+import os
 from pathlib import Path
 from uuid import uuid4
 
@@ -8,6 +9,8 @@ from sqlalchemy import select, delete, func
 from ..models import Analysis, Document, DocumentChunk, DocumentPage
 from ..schemas import AnalysisResult
 from .worker import run_worker
+from .document_integrity import (cleanup_file, discard_session, durable_document_state,
+                                 identity_of, retained_storage_admission)
 
 from ..security_audit import emit, mark
 
@@ -38,16 +41,21 @@ def import_document(session, settings, upload, owner_id, slots, before_commit=No
     token = uuid4().hex
     temporary = root / f"{token}.part"
     final = root / f"{token}{extension}"
+    commit_attempted = False
+    identity = None
+    bind = session.get_bind()
     try:
         size = 0
         digest = hashlib.sha256()
-        with temporary.open("xb") as stream:
+        with os.fdopen(os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_BINARY', 0), 0o600), 'wb') as stream:
             while data := upload.file.read(64 * 1024):
                 size += len(data)
                 if size > settings.max_upload_bytes:
                     raise HTTPException(413, "Fichier trop volumineux")
                 digest.update(data)
                 stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
         if size == 0:
             raise HTTPException(422, "Fichier vide")
         pages = run_worker(settings, "extract", str(temporary), extension, settings.max_pdf_pages, settings.max_text_chars)
@@ -55,6 +63,7 @@ def import_document(session, settings, upload, owner_id, slots, before_commit=No
             before_commit()
         from ..resource_limits import lock_workspace
         lock_workspace(session, owner_id)
+        retained_storage_admission(session, settings, size)
         count, used = session.execute(select(func.count(), func.coalesce(func.sum(Document.size_bytes),0)).where(Document.owner_id==owner_id)).one()
         if count >= settings.max_documents_per_owner or used + size > settings.max_storage_bytes_per_owner:
             mark('quota.exceeded', 'quota')
@@ -79,14 +88,38 @@ def import_document(session, settings, upload, owner_id, slots, before_commit=No
                                           start_char=start, end_char=start + len(fragment), text=fragment))
                 index += 1
         temporary.replace(final)
+        # Make the rename durable before SQL can expose the source (Linux production).
+        if os.name == 'posix':
+            directory = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
+        identity = identity_of(document)
+        commit_attempted = True
         session.commit()
         return document
     except BaseException:
-        session.rollback()
-        final.unlink(missing_ok=True)
+        if commit_attempted:
+            # A failed COMMIT does not establish rollback. Discard the suspect
+            # connection before querying through an independent physical connection.
+            try:
+                discard_session(session)
+                state = durable_document_state(bind, identity)
+            except Exception:
+                state = 'unknown'
+            if state == 'absent':
+                cleanup_file(final)
+            else:
+                emit('system.file_cleanup.failed', reason_code='cleanup_failed')
+        else:
+            try:
+                session.rollback()
+            finally:
+                cleanup_file(final)
         raise
     finally:
-        temporary.unlink(missing_ok=True)
+        cleanup_file(temporary)
         slots.release()
 
 
@@ -103,25 +136,35 @@ def delete_document(session, settings, document):
     if session.scalar(select(AIReservation.id).where(AIReservation.document_id == document.id, AIReservation.status == 'reserved').limit(1)):
         raise HTTPException(409, 'Un traitement IA est en cours. Attendez sa fin avant de supprimer le document.')
     path = settings.storage_dir.resolve() / document.storage_name
-    tombstone = path.with_suffix(path.suffix + ".deleted")
-    moved = False
+    # Keep the live source until deletion is durably confirmed. Renaming it to
+    # a tombstone before COMMIT leaves an active row without a file after a crash.
+    bind = session.get_bind()
+    identity = identity_of(document)
+    commit_attempted = False
     try:
-        if path.exists():
-            path.replace(tombstone)
-            moved = True
+        from ..resource_limits import lock_workspace
+        lock_workspace(session, document.owner_id)
         linked = select(RAGDocument.result_id).where(RAGDocument.document_id == document.id)
         session.execute(delete(RAGResult).where(RAGResult.id.in_(linked)))
         session.delete(document)
+        session.flush()
+        commit_attempted = True
         session.commit()
     except BaseException:
-        session.rollback()
-        if moved:
-            tombstone.replace(path)
+        if commit_attempted:
+            try:
+                discard_session(session)
+                state = durable_document_state(bind, identity)
+            except Exception:
+                state = 'unknown'
+            if state == 'absent':
+                cleanup_file(path)
+            else:
+                emit('system.file_cleanup.failed', reason_code='cleanup_failed')
+        else:
+            session.rollback()
         raise
-    try:
-        tombstone.unlink(missing_ok=True)
-    except OSError:
-        emit('system.file_cleanup.failed', reason_code='cleanup_failed')
+    cleanup_file(path)
 
 
 def analyze_document(session, settings, document, options, slots):

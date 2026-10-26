@@ -172,8 +172,10 @@ def test_missing_or_incoherent_current_refused(tmp_path, state, monkeypatch):
     with pytest.raises(backup.BackupError): backup.ActiveRelease(root)
 
 
-def test_restart_command_cannot_modify_database_or_pull_images(monkeypatch):
+def test_restart_command_cannot_modify_database_or_pull_images(monkeypatch,tmp_path):
     active = object.__new__(backup.ActiveRelease); events = []
+    active.root = tmp_path
+    active.preflight = lambda **kwargs: None
     active.call = lambda *args: events.append(args)
     active.healthy = lambda: events.append(('healthy',))
     monkeypatch.setattr(backup, 'https_health', lambda: events.append(('https',)))

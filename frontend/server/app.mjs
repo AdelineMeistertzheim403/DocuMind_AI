@@ -28,7 +28,7 @@ const aiCodes = {
     'invalid_schema': 'La réponse IA ne respecte pas le format demandé. Les étapes validées sont conservées.',
     'invalid_references': 'La réponse IA cite une source absente du contexte. Les étapes validées sont conservées.',
 
-  disabled: 'L’IA est désactivée côté serveur.', budget_exhausted: 'Le budget disponible ne permet pas cette opération.',
+  disabled: 'Les fonctionnalités IA seront disponibles ultérieurement. Les fonctions documentaires locales restent accessibles.', budget_exhausted: 'Le budget disponible ne permet pas cette opération.',
   quota_reached: 'Votre quota est atteint.', rate_limit: 'Trop de requêtes IA. Attendez une minute.', busy: 'Des traitements IA sont déjà en cours.',
   request_in_progress: 'Cette demande est en cours ou sa consommation nécessite une réconciliation.', idempotency_conflict: 'Cette demande ne peut pas réutiliser cet identifiant.',
   invalid_output: 'Le fournisseur a refusé la demande ou retourné une réponse ou des sources invalides.',

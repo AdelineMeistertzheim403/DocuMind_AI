@@ -16,6 +16,8 @@ PERSONAL = 'test-personal-key-not-a-real-secret-12345'
 
 @pytest.fixture
 def accounts(gateway_client, app):
+    # BYOK positive scenarios explicitly use the enabled feature, with a fake validator.
+    app.state.settings.ai_enabled = True
     client = gateway_client
     with app.state.sessions() as db:
         for number, name in [(101, 'alice'), (202, 'bob')]:

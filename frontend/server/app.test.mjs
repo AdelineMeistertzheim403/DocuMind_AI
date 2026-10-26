@@ -102,6 +102,35 @@ async function serve(t, upstream, overrides = {}) {
   return `http://127.0.0.1:${server.address().port}`
 }
 
+test('disabled AI refusal is sanitized while key deletion and local routes keep HTTPS and CSRF', async t => {
+  const calls = []
+  const base = await serve(t, async (url, options) => {
+    calls.push({url, options})
+    if (options.method === 'POST') return Response.json({detail:{code:'disabled',message:`private ${key}`}},{status:403})
+    return Response.json({key_connected:false})
+  }, {requireLogin:true,csrfProtection:true,gatewayToken:'fictitious-gateway'})
+  const secure = {'x-forwarded-proto':'https','x-documind-gateway':'fictitious-gateway'}
+  const session = 'A'.repeat(43), cookie = '__Host-documind=' + session
+  const protection = await fetch(base + '/bff/auth/csrf',{headers:{...secure,cookie}})
+  const {csrf_token} = await protection.json()
+  const headers = {...secure,cookie:cookie+'; '+protection.headers.get('set-cookie').split(';')[0],
+    'x-csrf-token':csrf_token,'content-type':'application/json'}
+  for (const path of ['/ai/key','/ai/key/validate',`/documents/${id}/summarize`]) {
+    const response = await fetch(base+'/bff'+path,{method:'POST',headers,body:'{}'})
+    assert.equal(response.status,403)
+    const data = await response.json()
+    assert.equal(data.code,'disabled')
+    assert.match(data.detail,/disponibles ultérieurement/)
+    assert.ok(!JSON.stringify(data).includes(key))
+    assert.equal(calls.at(-1).options.headers.authorization,'Bearer '+session)
+  }
+  assert.equal((await fetch(base+'/bff/ai/key',{method:'DELETE',headers})).status,200)
+  assert.equal((await fetch(base+'/bff/documents',{headers})).status,200)
+  const count = calls.length
+  assert.equal((await fetch(base+'/bff/ai/key',{method:'DELETE',headers:{...headers,'x-csrf-token':'wrong'}})).status,403)
+  assert.equal(calls.length,count)
+})
+
 test('clé ajoutée côté serveur seulement et pagination transmise', async t => {
   let forwarded
   const base = await serve(t, async (url, options) => {
