@@ -37,11 +37,11 @@ export function AccountAccess({mode}:{mode:'login'|'register'|'forgot'|'reset'|'
         const code=invitation;setInvitation('')
         const body=isPublic?{email,password:entered,website,terms_accepted:terms,terms_version:options.data?.terms_version,...await registrationProof()}:{email,password:entered,invitation:code}
         await accountPost('/auth/register',body)
-        setMessage(isPublic?'Si cette demande peut aboutir, un lien de vérification sera envoyé. Vérifiez aussi les courriers indésirables.':'Compte créé. Vous pouvez vous connecter.')
+        setMessage(isPublic?'Demande reçue. Cette réponse ne confirme ni l’admission ni l’envoi d’un e-mail. Vérifiez vos courriers indésirables ; vous pouvez demander un nouveau lien.':'Compte créé. Vous pouvez vous connecter.')
       }
       if(mode==='resend'){
         await accountPost('/auth/resend-verification',{email,password:entered,website,...await registrationProof()})
-        setMessage('Si cette demande peut aboutir, un lien de vérification sera envoyé.')
+        setMessage('Demande reçue. Si elle est éligible, un nouveau lien pourra être envoyé. Cette réponse ne confirme pas l’envoi. Seul le dernier lien émis reste valable.')
       }
       if(mode==='verify'){
         await accountPost('/auth/verify-email',{token,password:entered});setToken('')
@@ -49,7 +49,7 @@ export function AccountAccess({mode}:{mode:'login'|'register'|'forgot'|'reset'|'
       }
       if(mode==='forgot'){
         await accountPost('/auth/forgot-password',{email})
-        setMessage('Si ce compte est éligible, un message de récupération sera envoyé.')
+        setMessage('Demande reçue. Un compte éligible peut recevoir un lien de récupération. Cette réponse ne confirme pas l’envoi d’un e-mail.')
       }
       if(mode==='reset'){
         await accountPost('/auth/reset-password',{token,password:entered});setToken('')
@@ -59,9 +59,12 @@ export function AccountAccess({mode}:{mode:'login'|'register'|'forgot'|'reset'|'
   }
   return <main className="page account-access"><section className="panel settings-card"><Link className="brand" to="/login">DocuMind AI</Link><SectionTitle eyebrow="VOTRE ESPACE PERSONNEL" title={title}/>
     {!secure&&<p className="notice">Une connexion HTTPS est nécessaire. <a href="https://localhost:8443/login">Ouvrir la connexion locale sécurisée</a>.</p>}
-    {mode==='register'&&<p className="notice">{options.data?.registration_mode==='invite'?'Inscription sur invitation personnelle, valable 24 heures.':canRegister?'Bêta publique limitée : un e-mail doit être vérifié avant la première connexion.':'Les nouvelles inscriptions sont fermées. Les comptes existants restent accessibles.'}</p>}
+    {options.error&&<ErrorState error={options.error}/>}
+    {mode==='register'&&<p className="notice" role="status">{options.isPending?'Vérification de la disponibilité des inscriptions…':options.error?'La disponibilité des inscriptions ne peut pas être confirmée. Réessayez ultérieurement.':options.data?.registration_mode==='invite'?'Inscription sur invitation personnelle, valable 24 heures.':canRegister?'Bêta limitée à cinq admissions cumulatives. Une admission consomme une place avant la vérification de l’e-mail.':options.data?.public_registration_availability==='full'?'Le plafond d’admissions de cette bêta est atteint. Les comptes existants restent accessibles.':'Les nouvelles inscriptions sont fermées. Les comptes existants restent accessibles.'}</p>}
+    {['register','login'].includes(mode)&&<p>Les fonctionnalités IA seront disponibles ultérieurement. Les comptes vérifiés conservent les fonctions documentaires classiques.</p>}
+    {mode==='resend'&&<p className="notice">Utilisez le mot de passe choisi à l’inscription. Le renvoi reste possible après fermeture des nouvelles inscriptions, selon les limites de sécurité. Attendez avant une nouvelle demande, notamment sur un réseau partagé.</p>}
     {mode==='verify'&&<p className="notice">Saisissez le mot de passe choisi lors de votre inscription. N’activez pas une inscription que vous n’avez pas demandée.</p>}
-    <form onSubmit={submit}>
+    <form onSubmit={submit} aria-busy={busy}>
       {!['reset','verify'].includes(mode)&&<><label className="field-label" htmlFor="account-email">{mode==='login'?'Email ou identifiant historique':'Email'}</label><input id="account-email" className="text-input" type={mode==='login'?'text':'email'} autoComplete="username" required maxLength={254} value={email} onChange={e=>setEmail(e.target.value)} disabled={busy||!secure}/></>}
       {mode!=='forgot'&&<><label className="field-label" htmlFor="account-password">Mot de passe</label><input id="account-password" className="text-input" type="password" autoComplete={mode==='login'?'current-password':'new-password'} required minLength={mode==='login'?1:12} maxLength={256} value={password} onChange={e=>setPassword(e.target.value)} disabled={busy||!secure}/></>}
       {mode==='register'&&options.data?.registration_mode==='invite'&&<><label className="field-label" htmlFor="account-invitation">Invitation</label><input id="account-invitation" type="password" className="text-input" autoComplete="off" required value={invitation} onChange={e=>setInvitation(e.target.value)} disabled={busy||!secure}/></>}
@@ -72,6 +75,7 @@ export function AccountAccess({mode}:{mode:'login'|'register'|'forgot'|'reset'|'
       <button className="button primary" disabled={busy||!secure||(mode==='register'&&!canRegister)||(['reset','verify'].includes(mode)&&!token)}>{busy?'Traitement…':title}</button>
     </form>
     {error!=null&&<ErrorState error={error}/>} {message&&<p role="status" className="notice">{message}</p>}
+    {error instanceof ApiError&&error.status===400&&['verify','reset'].includes(mode)&&<p>Le lien peut être invalide, expiré ou déjà utilisé, ou la vérification incorrecte. Demandez un nouveau lien et utilisez uniquement le plus récent.</p>}
     <nav className="settings-actions"><Link to="/login">Connexion</Link><Link to="/register">Inscription</Link><Link to="/forgot-password">Mot de passe oublié</Link><Link to="/resend-verification">Renvoyer la vérification</Link><Link to="/legal">Informations et confidentialité</Link></nav>
     <p>Vos identifiants DocuMind restent indépendants de votre clé OpenAI.</p>
   </section></main>
@@ -87,7 +91,7 @@ export function PublicInformationPage(){
   return <main className="page account-access"><section className="panel settings-card"><h1>Informations sur la bêta DocuMind AI</h1><p>Cette application analyse des documents privés. Une session personnelle est nécessaire pour consulter vos contenus.</p>
     <p>Exploitant : {options.data?.operator_name||'à renseigner avant ouverture publique'}. Contact : {options.data?.contact_email||'à renseigner avant ouverture publique'}.</p>
     <ul><li><LegalLink url={options.data?.legal_notice_url}>Mentions de l’exploitant</LegalLink></li><li><LegalLink url={options.data?.privacy_url}>Politique de confidentialité</LegalLink></li><li><LegalLink url={options.data?.terms_url}>Conditions d’utilisation</LegalLink></li></ul>
-    <p>La création publique exige la vérification de l’e-mail. Les fonctions IA restent facultatives et nécessitent une clé personnelle et un consentement explicite ; les estimations ne garantissent pas un plafond de facturation du fournisseur.</p>
+    <p>La création publique exige la vérification de l’e-mail. La première bêta est limitée à cinq admissions cumulatives, y compris les comptes en attente de vérification. Les fonctionnalités IA seront disponibles ultérieurement. Les comptes vérifiés peuvent utiliser les fonctions documentaires classiques.</p>
     <p>Une suppression de compte le désactive immédiatement. L’effacement final est traité par l’administrateur ; les copies de sauvegarde suivent la conservation approuvée. Les durées et coordonnées applicables doivent être précisées dans les documents de l’exploitant avant ouverture.</p><Link to="/login">Revenir à la connexion</Link>
   </section></main>
 }

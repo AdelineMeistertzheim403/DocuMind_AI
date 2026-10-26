@@ -152,6 +152,7 @@ class ActiveRelease:
         return command(self.compose + list(args), self.env)
 
     def preflight(self, require_healthy=True):
+        check_security_maintenance(self.root)
         config = json.loads(self.call('config', '--format', 'json'))
         services = config['services']
         if set(services) != {'db', 'api', 'web'} or config['name'] != PROJECT:
@@ -206,6 +207,35 @@ class ActiveRelease:
             'exec psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -c "SELECT version_num FROM alembic_version"').strip()
         if revision != self.release['schema_revision']:
             raise BackupError('live_schema_mismatch')
+        self.authorize_restart(config,revision)
+
+    def authorize_restart(self,config,revision):
+        mode=config['services']['api'].get('environment',{}).get('REGISTRATION_MODE','disabled')
+        history=False
+        state=None
+        if revision=='0007':
+            raw=self.call('exec','-T','db','sh','-c',
+                'exec psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -c "$1"','security-history',
+                "SELECT json_build_object('has_public_users',EXISTS(SELECT 1 FROM users WHERE registration_kind='public'), "
+                "'issued_count',issued_count,'closed',closed)::text FROM public_registration_quota WHERE id='public'")
+            try:
+                state=json.loads(raw)
+                if (type(state.get('has_public_users')) is not bool or type(state.get('issued_count')) is not int
+                        or not 0<=state['issued_count']<=5 or type(state.get('closed')) is not bool):raise ValueError()
+                history=state['has_public_users'] or state['issued_count']>0
+            except (ValueError,TypeError,AttributeError):raise BackupError('public_history_unavailable') from None
+        if mode=='public' or history or 'security_profile' in self.release:
+            # Routine backup resumes the SAME certified app and preserves the SQL gate.
+            # A failed deployment is different: its security-maintenance latch forbids resume.
+            try:
+                # Installed trusted sibling, NEVER code loaded from the candidate/current bundle.
+                policy=load_helper(Path(__file__).resolve().parent,'release_security')
+                policy.authorize(self.bundle,self.release)
+                for image in self.release['images'].values():
+                    labels=json.loads(command(['docker','image','inspect',image,'--format','{{json .Config.Labels}}'],self.env)) or {}
+                    if labels.get(policy.LABEL)!=policy.PROFILE or labels.get('org.opencontainers.image.revision')!=self.release['git_sha']:
+                        raise ValueError()
+            except Exception:raise BackupError('secure_release_approval_required') from None
 
     def healthy(self, services=('db', 'api', 'web')):
         for service in services:
@@ -217,6 +247,8 @@ class ActiveRelease:
                 raise BackupError('service_not_healthy')
 
     def restart(self):
+        check_security_maintenance(self.root)
+        self.preflight(require_healthy=False)
         # Existing containers only. Never apply a new config, pull images or start dependencies.
         self.call('up', '-d', '--no-deps', '--no-recreate', '--pull', 'never', '--wait', '--wait-timeout', '180', 'api', 'web')
         self.healthy()
@@ -309,8 +341,14 @@ def marker_path(root):
     return root / 'var/backup-maintenance.json'
 
 
+def check_security_maintenance(root):
+    if os.path.lexists(root/'var/security-maintenance.json'):
+        raise BackupError('secure_release_recovery_required')
+
+
 def resume(root, report):
     with deployment_lock(root):
+        check_security_maintenance(root)
         marker = marker_path(root)
         if not marker.exists():
             report.update(status='success', phase='no_maintenance')
@@ -326,6 +364,7 @@ def resume(root, report):
 
 def execute(root, report):
     with deployment_lock(root):
+        check_security_maintenance(root)
         marker = marker_path(root)
         if marker.exists():
             raise BackupError('pending_maintenance_run_resume_first')

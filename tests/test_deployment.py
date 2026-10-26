@@ -31,7 +31,8 @@ def test_release_rejects_unreviewed_or_mutable_references(change):
 
 def test_release_supports_only_tested_schema_and_real_head(tmp_path,monkeypatch):
     assert validate_release(release(schema_head(Path('.'))))['schema_revision']==schema_head(Path('.'))
-    assert deploy.can_rollback(release(),'0006')
+    assert deploy.schema_compatible(release(),'0006')
+    assert not deploy.can_rollback(release(),'0006')
     assert not deploy.can_rollback(release(),'0007')
     assert ':latest' not in deploy.images_env(release())
     monkeypatch.setenv('BACKEND_IMAGE','unapproved:latest')
@@ -137,6 +138,8 @@ def simulation(tmp_path,monkeypatch):
         def call(self,*args):
             events.append((self.bundle.name,args))
             if args[0]=='config':return '{}'
+            if args[0]=='run' and args[-2]=='-c':
+                return json.dumps({'REGISTRATION_MODE':'disabled','LEGACY_API_ENABLED':False})
             if args[0]=='run' and 'du' in args:return '1000 /app/var/documents'
             if args[0]=='run' and 'alembic' in args:
                 state['revision']=self.release['schema_revision']
@@ -145,15 +148,20 @@ def simulation(tmp_path,monkeypatch):
                 raise deploy.DeploymentError('Simulated startup failure')
             return ''
         def revision(self):return state['revision']
-        def sql(self,sql):return '1000'
+        def sql(self,sql):
+            if 'has_public_users' in sql:
+                return json.dumps({'has_public_users':state.get('public_users',False),
+                    'issued_count':state.get('issued_count',0),'closed':state.get('closed',False)})
+            return '1000'
         def check_health(self,*args):events.append(('healthy',args))
     old=FakeStack(root,root/'releases'/'prior',release(sha='b'*40))
     monkeypatch.setattr(deploy,'__file__',str(bundle/'deploy_production.py'))
     monkeypatch.setitem(sys.modules,'fcntl',SimpleNamespace(flock=lambda *args:None,LOCK_EX=1,LOCK_NB=2))
     monkeypatch.setattr(deploy,'Stack',FakeStack)
     monkeypatch.setattr(deploy,'current_stack',lambda *args:old)
-    for function in ('check_config','disk_check','check_volume_state','verify_images'):
+    for function in ('check_config','disk_check','check_volume_state','verify_images','check_backup_guard'):
         monkeypatch.setattr(deploy,function,lambda *args:None)
+    monkeypatch.setattr(deploy,'check_config',lambda *args:{'services':{'api':{'environment':{'REGISTRATION_MODE':'disabled'}}}})
     monkeypatch.setattr(deploy,'resolve_proxy',lambda *args:{'DEPLOY_MIN_FREE_GIB':'8'})
     monkeypatch.setattr(deploy,'create_backup',lambda *args,**kwargs:events.append(('backup',())))
     monkeypatch.setattr(deploy,'https_check',lambda *args:events.append(('https',())))

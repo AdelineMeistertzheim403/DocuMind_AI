@@ -5,7 +5,7 @@ from sqlalchemy import select, func
 from .models import AIUsage, AIReservation
 
 from ..api import Owner, Session
-from .providers import MockAIProvider, OpenAIProvider, ProviderError
+from .providers import MockAIProvider, OpenAIProvider, ProviderError, ensure_ai_enabled
 from .schemas import AIHistory, AIResultOut, AIStatus, AskRequest, SummaryRequest
 from .service import execute, history, status
 from .settings_api import settings_for_request
@@ -24,7 +24,12 @@ class ConfiguredProvider:
     def __init__(self, request, settings):
         self.request, self.settings = request, settings
 
+    def check_enabled(self):
+        ensure_ai_enabled(self.request.app.state.settings)
+        ensure_ai_enabled(self.settings)
+
     def generate(self, payload, schema, request_id):
+        self.check_enabled()
         context = getattr(self.request.state, 'user_session', None)
         if self.settings.ai_mode == 'USER_BYOK':
             import time
@@ -35,6 +40,8 @@ class ConfiguredProvider:
         if provider is None:
             settings = self.settings
             provider = MockAIProvider() if settings.ai_provider == 'mock' else OpenAIProvider(settings)
+            # Owned providers recheck the live switch before every SDK attempt, including retries.
+            provider.enabled_check = self.check_enabled
             try:
                 return provider.generate(payload, schema, request_id)
             finally:

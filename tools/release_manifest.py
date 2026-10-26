@@ -34,6 +34,8 @@ def validate_release(data):
     revision=data.get('schema_revision')
     if not isinstance(revision,str) or not re.fullmatch(r'[a-zA-Z0-9_]+',revision):raise ValueError('Invalid schema revision')
     if data.get('supported_schema_revisions')!=[revision]:raise ValueError('Only the tested schema revision is supported')
+    if 'security_profile' in data and (data['security_profile']!='public-beta-2026-10-v1' or revision!='0007'):
+        raise ValueError('Unrecognized release security profile')
     return data
 
 
@@ -44,10 +46,13 @@ def main():
     parser.add_argument('--frontend',required=True)
     parser.add_argument('--postgres',required=True)
     parser.add_argument('--output',type=Path,required=True)
+    parser.add_argument('--security-profile',choices=['public-beta-2026-10-v1'])
     args=parser.parse_args()
     head=schema_head(Path('.'))
-    data=validate_release({'format':1,'git_sha':args.sha,'schema_revision':head,'supported_schema_revisions':[head],
-        'images':{name:f'{REGISTRY}/documind-ai/{name}@{getattr(args,name)}' for name in COMPONENTS}})
+    data={'format':1,'git_sha':args.sha,'schema_revision':head,'supported_schema_revisions':[head],
+        'images':{name:f'{REGISTRY}/documind-ai/{name}@{getattr(args,name)}' for name in COMPONENTS}}
+    if args.security_profile:data['security_profile']=args.security_profile
+    data=validate_release(data)
     args.output.write_text(json.dumps(data,indent=2)+'\n',encoding='utf-8')
 
 

@@ -39,7 +39,7 @@ def create_backup(compose, destination, env=None):
     existing=subprocess.check_output(compose+['exec','-T','db','sh','-c',
         'exec psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -c "SELECT tablename FROM pg_tables WHERE schemaname=\'public\'"'],text=True,env=env,stderr=subprocess.PIPE).splitlines()
     tables += [name for name in ['chunk_embeddings','index_jobs','rag_results','rag_documents',
-        'ai_operation_documents','long_summary_jobs','summary_steps','workspaces','workspace_memberships','account_tokens','account_deletion_requests'] if name in existing]
+        'ai_operation_documents','long_summary_jobs','summary_steps','workspaces','workspace_memberships','account_tokens','account_deletion_requests','public_registration_quota'] if name in existing]
     integrity = {}
     for table in tables:
         columns_sql=f"SELECT column_name FROM information_schema.columns WHERE table_name='{table}' AND table_schema='public' ORDER BY ordinal_position"
@@ -53,12 +53,14 @@ def create_backup(compose, destination, env=None):
     (destination / 'integrity.json').write_text(json.dumps(integrity, indent=2), encoding='utf-8')
     revision=subprocess.check_output(compose+['exec','-T','db','sh','-c',
         'exec psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -c "SELECT version_num FROM alembic_version"'],text=True,env=env,stderr=subprocess.PIPE).strip()
+    if revision=='0007' and 'public_registration_quota' not in integrity:
+        raise ValueError('Schema 0007 requires the public registration quota inventory')
     checksums={}
     for name in commands:
         with (destination/name).open('rb') as source:
             checksums[name]=hashlib.file_digest(source,'sha256').hexdigest()
     (destination / 'manifest.json').write_text(json.dumps({'created_at': datetime.now(timezone.utc).isoformat(),
-        'database_major': 17, 'migration': revision, 'files': list(commands), 'sha256':checksums}, indent=2), encoding='utf-8')
+        'database_major': 17, 'migration': revision, 'integrity_version':2, 'files': list(commands), 'sha256':checksums}, indent=2), encoding='utf-8')
     return destination
 
 

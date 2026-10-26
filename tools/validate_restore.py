@@ -15,6 +15,21 @@ from sqlalchemy.engine import make_url
 from backend.config import Settings
 
 
+def seal_restored_registration(engine):
+    """After exact snapshot verification, keep a restored COPY closed without changing its count."""
+    with engine.begin() as connection:
+        exists=connection.scalar(text("SELECT to_regclass('public.public_registration_quota')"))
+        if exists is None:return {'quota_present':False,'closed':None,'requires_review':True}
+        row=connection.execute(text("SELECT issued_count,closed FROM public_registration_quota WHERE id='public' FOR UPDATE")).one_or_none()
+        if row is None or type(row.issued_count) is not int or row.issued_count<0:
+            raise ValueError('Restored public quota is missing or incoherent; keep the copy offline')
+        connection.execute(text("UPDATE public_registration_quota SET closed=true WHERE id='public'"))
+        checked=connection.execute(text("SELECT issued_count,closed FROM public_registration_quota WHERE id='public'")).one()
+        if checked.issued_count!=row.issued_count or checked.closed is not True:
+            raise ValueError('Restored admission closure could not be verified')
+        return {'quota_present':True,'closed':True,'issued_count':checked.issued_count,'requires_review':True}
+
+
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('snapshot',type=Path)
@@ -57,6 +72,9 @@ def main():
             if path.stat().st_size!=size or hashlib.sha256(path.read_bytes()).hexdigest()!=digest:
                 raise SystemExit('Restored document checksum mismatch')
             count+=1
+    # The copy never has an API/BFF attached. Verify original fingerprints FIRST,
+    # then deliberately close admissions before any possible reuse; never rewrite the archive.
+    seal_restored_registration(restored)
     restored.dispose()
     with admin.connect() as connection:
         connection.execute(text(f'DROP DATABASE {args.database}'))

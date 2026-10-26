@@ -16,7 +16,7 @@ def test_official_sdk_payload_store_false_and_reasoning_accounted():
     def create(**kwargs):
         calls.append(kwargs)
         return SimpleNamespace(status='completed', output_text=json.dumps(content), usage=SimpleNamespace(input_tokens=100, output_tokens=80, output_tokens_details=SimpleNamespace(reasoning_tokens=20)))
-    provider = OpenAIProvider(Settings(_env_file=None), SimpleNamespace(responses=SimpleNamespace(create=create)))
+    provider = OpenAIProvider(Settings(_env_file=None, ai_enabled=True), SimpleNamespace(responses=SimpleNamespace(create=create)))
     result = provider.generate({'operation':'question', 'question':'Test', 'passages':[]}, AnswerContent, 'request-id')
     assert result.output_tokens == 80 and result.reasoning_tokens == 20
     assert calls[0]['store'] is False and calls[0]['max_output_tokens'] == 1200
@@ -35,7 +35,7 @@ def test_retries_only_a_definitive_429(kind, expected_calls, uncertain):
         response=httpx.Response(int(kind), request=request)
         exception=openai.RateLimitError if kind=='429' else openai.InternalServerError
         raise exception('mock', response=response, body={})
-    provider=OpenAIProvider(Settings(_env_file=None), SimpleNamespace(responses=SimpleNamespace(create=create)))
+    provider=OpenAIProvider(Settings(_env_file=None, ai_enabled=True), SimpleNamespace(responses=SimpleNamespace(create=create)))
     with pytest.raises(ProviderError) as error:
         provider.generate({'operation':'question'}, AnswerContent, 'id')
     assert error.value.uncertain == uncertain and len(calls)==expected_calls
@@ -51,7 +51,7 @@ def test_invalid_response_has_safe_reason_and_keeps_billed_usage(status,reason,t
         incomplete_details=SimpleNamespace(reason=reason),
         output=[SimpleNamespace(content=[SimpleNamespace(type='refusal')])] if refusal else [],
         usage=SimpleNamespace(input_tokens=100,output_tokens=80,output_tokens_details=None))
-    provider=OpenAIProvider(Settings(_env_file=None),SimpleNamespace(responses=SimpleNamespace(create=lambda **kw:response)))
+    provider=OpenAIProvider(Settings(_env_file=None, ai_enabled=True),SimpleNamespace(responses=SimpleNamespace(create=lambda **kw:response)))
     result=provider.generate({'operation':'question'},AnswerContent,'id')
     from backend.ai.service import validate_content
     from fastapi import HTTPException

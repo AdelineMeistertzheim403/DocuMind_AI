@@ -82,7 +82,7 @@ def admit(request, session, body, *, resend=False):
         user=session.scalar(query.with_for_update() if resend else query)
         if resend:
             valid=verify_password(body.password.get_secret_value(),user.password_hash if user else DUMMY_HASH)
-            if (not user or not valid or user.registration_kind!='public' or user.email_verified_at is not None or
+            if (not user or not valid or user.registration_kind!='public' or user.email_verified_at is not None or user.disabled_at is not None or
                     session.scalar(select(DeletionRequest.id).where(DeletionRequest.user_id==user.id)) is not None):
                 return GENERIC
         else:
@@ -90,15 +90,17 @@ def admit(request, session, body, *, resend=False):
                 return GENERIC
             granted=session.execute(update(PublicRegistrationQuota).where(
                 PublicRegistrationQuota.id=='public',PublicRegistrationQuota.issued_count<settings.public_registration_limit,
+                PublicRegistrationQuota.issued_count>=0,
                 PublicRegistrationQuota.closed.is_(False)
             ).values(issued_count=PublicRegistrationQuota.issued_count+1).returning(PublicRegistrationQuota.issued_count)).scalar_one_or_none()
             if granted is None:
                 mark('account.registration.requested','quota')
                 return GENERIC
             owner=uuid4()
-            # Disabled pending accounts also stay disabled with the previous application version.
+            # Email verification already blocks login and authenticated requests in schema-0007 apps.
+            # disabled_at is reserved for operator/deletion blocks, never cleared by verification.
             user=User(owner_id=owner,email=body.email,username='user-'+uuid4().hex,password_hash=password_hash,
-                      registration_kind='public',disabled_at=now(),terms_version=body.terms_version,
+                      registration_kind='public',terms_version=body.terms_version,
                       terms_accepted_at=now(),ai_limit_usd=settings.public_ai_max_budget_usd)
             session.add(Workspace(owner_id=owner));session.flush()
             session.add(user);session.flush()
@@ -134,10 +136,10 @@ def verify(request, session, body):
     user=session.scalar(select(User).where(User.email==email).with_for_update())
     consume_token(session,body.token.get_secret_value(),'verify')
     valid=verify_password(body.password.get_secret_value(),user.password_hash if user else DUMMY_HASH)
-    if (not user or not valid or user.registration_kind!='public' or user.email_verified_at is not None or
+    if (not user or not valid or user.registration_kind!='public' or user.email_verified_at is not None or user.disabled_at is not None or
             session.scalar(select(DeletionRequest.id).where(DeletionRequest.user_id==user.id)) is not None):
         raise HTTPException(400,'Lien ou vérification invalide ou expiré')
-    user.email_verified_at=now();user.disabled_at=None
+    user.email_verified_at=now()
     session.commit()
     mark('account.email.verified','completed')
     return {'verified':True}

@@ -1,6 +1,7 @@
 """Local administrator only; deliberately not exposed as HTTP routes."""
 import argparse
 import json
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import select, delete,func,update
@@ -19,17 +20,72 @@ from .rag.models import IndexJob, RAGResult
 from .security_audit import emit
 
 
+def registration_control(session,settings,action,execute=False):
+    """Local operator decision; never alter the lifetime admission counter."""
+    if action not in ('status','close','reopen'):
+        raise ValueError('Action de contrôle inconnue')
+    query=select(PublicRegistrationQuota).where(PublicRegistrationQuota.id=='public')
+    if action!='status' and execute:query=query.with_for_update()
+    quota=session.scalar(query.execution_options(populate_existing=True))
+    if quota is None:raise ValueError('Migration 0007 requise')
+    before={'closed':quota.closed,'issued_count':quota.issued_count}
+    if action=='reopen' and execute:
+        if (settings.registration_mode!='public' or settings.public_registration_limit!=5 or settings.ai_enabled
+                or settings.owner_demo_enabled or settings.legacy_api_enabled):
+            raise ValueError('La réouverture exige public/5, IA, démonstration et clés historiques désactivées')
+        if not 0<=quota.issued_count<5:
+            raise ValueError('Aucune admission disponible ; ne pas réinitialiser le compteur')
+    if action!='status' and execute:
+        # The same row lock serializes with admission's conditional UPDATE.
+        session.execute(update(PublicRegistrationQuota).where(PublicRegistrationQuota.id=='public').values(closed=action=='close'))
+        session.commit()
+        session.expire_all()
+        quota=session.get(PublicRegistrationQuota,'public',populate_existing=True)
+        valid_counter=quota is not None and quota.issued_count==before['issued_count']
+        if action=='reopen' and quota is not None:
+            # A legitimate admission can commit immediately after reopening; never
+            # mistake a monotonic increment for a failed operator decision.
+            valid_counter=before['issued_count']<=quota.issued_count<=5
+        if quota is None or quota.closed!=(action=='close') or not valid_counter:
+            raise ValueError('Résultat du contrôle incohérent ; inspection opérateur requise')
+    result={'closed':quota.closed,'issued_count':quota.issued_count,'limit':settings.public_registration_limit,
+            'mode':settings.registration_mode,'simulation':action!='status' and not execute,
+            'action':action,'before':before,'verified':True,
+            'timestamp':datetime.now(timezone.utc).isoformat()}
+    return result
+
+
+def pending_account_control(session,identifier,action,execute=False):
+    """Explicit review of an unverified account; never reactivate or delete its history."""
+    if action not in ('block','release'):raise ValueError('Action inconnue')
+    user=session.get(User,identifier,populate_existing=True,with_for_update=execute)
+    if (user is None or user.registration_kind!='public' or user.email_verified_at is not None or
+            session.scalar(select(DeletionRequest.id).where(DeletionRequest.user_id==identifier)) is not None):
+        raise ValueError('Un compte public non vérifié sans demande de suppression est requis')
+    previous=user.disabled_at is not None
+    invalidated=0
+    if execute:
+        from .models import now
+        user.disabled_at=now() if action=='block' else None
+        invalidated=session.execute(update(AccountToken).where(AccountToken.email==user.email,
+            AccountToken.kind.in_(['verify','reset']),AccountToken.used_at.is_(None)).values(used_at=now())).rowcount
+        session.commit()
+    return {'action':action,'simulation':not execute,'blocked_before':previous,
+            'blocked':action=='block' if execute else previous,'tokens_invalidated':invalidated,
+            'timestamp':datetime.now(timezone.utc).isoformat()}
+
+
 def purge_pending(session, settings, hours=48, execute=False):
     """Local explicit cleanup only. Never free lifetime admission slots or touch active users."""
     from datetime import timedelta
     from .models import now
     if not 48<=hours<=720:raise ValueError('Choisir une ancienneté entre 48 et 720 heures')
-    candidates=session.scalars(select(User.id).where(User.registration_kind=='public',User.email_verified_at.is_(None),
+    candidates=session.scalars(select(User.id).where(User.registration_kind=='public',User.email_verified_at.is_(None),User.disabled_at.is_(None),
         User.created_at<now()-timedelta(hours=hours))).all()
     count=0
     for identifier in candidates:
         user=session.get(User,identifier,populate_existing=True,with_for_update=True)
-        if user is None or user.registration_kind!='public' or user.email_verified_at is not None:continue
+        if user is None or user.registration_kind!='public' or user.email_verified_at is not None or user.disabled_at is not None:continue
         if session.scalar(select(AccountToken.id).where(AccountToken.email==user.email,AccountToken.kind=='verify',
                 AccountToken.used_at.is_(None),AccountToken.expires_at>now()).limit(1)) is not None:continue
         if session.scalar(select(Document.id).where(Document.owner_id==user.owner_id).limit(1)) is not None:continue
@@ -77,17 +133,14 @@ def main():
     commands.add_parser('owners')
     pending=commands.add_parser('purge-pending');pending.add_argument('--older-than-hours',type=int,default=48);pending.add_argument('--execute',action='store_true')
     control=commands.add_parser('public-registration');control.add_argument('action',choices=['status','close','reopen']);control.add_argument('--execute',action='store_true')
+    pending_control=commands.add_parser('pending-account');pending_control.add_argument('action',choices=['block','release']);pending_control.add_argument('user_id',type=UUID);pending_control.add_argument('--execute',action='store_true')
     args=parser.parse_args();settings=Settings();engine=make_engine(settings.database_url)
     try:
         with make_sessions(engine)() as session:
             if args.command=='public-registration':
-                if args.action!='status' and args.execute:
-                    session.execute(update(PublicRegistrationQuota).where(PublicRegistrationQuota.id=='public').values(closed=args.action=='close'))
-                    session.commit()
-                quota=session.get(PublicRegistrationQuota,'public')
-                if quota is None:raise ValueError('Migration 0007 requise')
-                print(json.dumps({'closed':quota.closed,'issued_count':quota.issued_count,'limit':settings.public_registration_limit,
-                                  'mode':settings.registration_mode,'simulation':args.action!='status' and not args.execute}))
+                print(json.dumps(registration_control(session,settings,args.action,args.execute)))
+            elif args.command=='pending-account':
+                print(json.dumps(pending_account_control(session,args.user_id,args.action,args.execute)))
             elif args.command=='purge-pending':
                 count=purge_pending(session,settings,args.older_than_hours,args.execute)
                 print('Comptes en attente :',count,'; mode :','exécution' if args.execute else 'simulation')

@@ -28,6 +28,8 @@ jobs:
         with:
           python-version: '3.13'
       - run: python -m pip install -c requirements.lock '.[test]'
+      - name: Inventory runner dependencies and require exact constraint coverage
+        run: python tools/build_materials.py --require-pins --npm-lock frontend/package-lock.json > runner-materials-linux.json
       - name: Linux sandbox prerequisites
         run: sudo apt-get update && sudo apt-get install --yes --no-install-recommends libseccomp2
       - name: Native Linux Landlock and seccomp proofs (no skipped fallback)
@@ -57,6 +59,14 @@ jobs:
         env:
           TEST_DATABASE_URL: postgresql+psycopg://documind:ci-test-only@127.0.0.1:5432/documind_test
         run: python -m pytest -q
+      - name: Preserve runner materials separately from the security release bundle
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: documind-runner-materials-linux-${{ github.sha }}
+          path: runner-materials-linux.json
+          if-no-files-found: ignore
+          retention-days: 90
 
   windows:
     runs-on: windows-2022
@@ -83,11 +93,25 @@ jobs:
         run: python -m pip install -c requirements.lock '.[test]' tzdata
       - name: Verify Windows Python and Paris time zone
         run: python -c "import sys; from zoneinfo import ZoneInfo; assert sys.platform == 'win32' and sys.version_info[:2] == (3, 13); ZoneInfo('Europe/Paris')"
+      - name: Inventory runner dependencies and require exact constraint coverage
+        run: |
+          $report = python tools/build_materials.py --require-pins --npm-lock frontend/package-lock.json
+          $status = $LASTEXITCODE
+          $report | Set-Content -Encoding utf8 runner-materials-windows.json
+          if ($status -ne 0) { exit $status }
       # Provider behavior is exercised only by mocked fixtures; no real AI client is allowed.
       - name: Portable Windows suite with disposable SQLite databases
         run: |
           Remove-Item Env:TEST_DATABASE_URL -ErrorAction SilentlyContinue
           python -m pytest -q -p no:cacheprovider --ignore=tests/test_extraction_linux.py
+      - name: Preserve runner materials separately from the security release bundle
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: documind-runner-materials-windows-${{ github.sha }}
+          path: runner-materials-windows.json
+          if-no-files-found: ignore
+          retention-days: 90
 
   frontend:
     runs-on: ubuntu-24.04
@@ -143,7 +167,9 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: registry.adelinemeistertzheim.fr/documind-ai/backend:sha-${{ github.sha }}
-          labels: org.opencontainers.image.revision=${{ github.sha }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            io.documind.security-profile=public-beta-2026-10-v1
       - name: Frontend and BFF image
         id: frontend
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -152,7 +178,9 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: registry.adelinemeistertzheim.fr/documind-ai/frontend:sha-${{ github.sha }}
-          labels: org.opencontainers.image.revision=${{ github.sha }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            io.documind.security-profile=public-beta-2026-10-v1
       - name: Existing PostgreSQL pgvector image
         id: postgres
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -162,7 +190,9 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: registry.adelinemeistertzheim.fr/documind-ai/postgres:sha-${{ github.sha }}
-          labels: org.opencontainers.image.revision=${{ github.sha }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            io.documind.security-profile=public-beta-2026-10-v1
       - name: Create digest-pinned release bundle
         env:
           RELEASE_SHA: ${{ github.sha }}
@@ -173,8 +203,11 @@ jobs:
           mkdir release-bundle
           python tools/release_manifest.py --sha "$RELEASE_SHA" \
             --backend "$BACKEND_DIGEST" --frontend "$FRONTEND_DIGEST" \
-            --postgres "$POSTGRES_DIGEST" --output release-bundle/release.json
-          cp compose.production.yaml tools/deploy_production.py tools/backup_local.py tools/release_manifest.py release-bundle/
+            --postgres "$POSTGRES_DIGEST" --security-profile public-beta-2026-10-v1 --output release-bundle/release.json
+          cp compose.production.yaml tools/deploy_production.py tools/backup_local.py tools/release_manifest.py tools/public_beta_policy.py release-bundle/
+          cp tools/release_security.py release-bundle/
+          cp tools/backup_production.py release-bundle/
+          python tools/release_security.py create release-bundle
           cat release-bundle/release.json >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

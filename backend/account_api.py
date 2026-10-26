@@ -103,12 +103,16 @@ def profile(user):
 def options(request: Request, session: Session):
     settings=request.app.state.settings
     capacity=False
+    availability='closed'
     if settings.registration_mode=='public':
         from .account_models import PublicRegistrationQuota
         quota=session.get(PublicRegistrationQuota,'public')
-        capacity=bool(quota and not quota.closed and quota.issued_count<settings.public_registration_limit)
+        capacity=bool(quota and not quota.closed and 0<=quota.issued_count<settings.public_registration_limit)
+        if capacity:availability='available'
+        elif quota and not quota.closed and quota.issued_count>=settings.public_registration_limit:availability='full'
     return {'registration_mode':settings.registration_mode,
             'public_capacity_configured':capacity,
+            'public_registration_availability':availability,
             'terms_version':settings.public_terms_version,
             'legal_notice_url':settings.public_legal_notice_url,'privacy_url':settings.public_privacy_url,
             'terms_url':settings.public_terms_url,'operator_name':settings.public_operator_name,
@@ -198,7 +202,7 @@ def send_verification(settings,email,token):
 def forgot(body: EmailInput, request: Request, session: Session):
     request.app.state.rate_limiter.check(f'reset-ip:{client_ip(request)}', 5, 900)
     request.app.state.rate_limiter.check(f'reset-email:{body.email}', 3, 900)
-    recoverable=(User.disabled_at.is_(None)) | ((User.registration_kind=='public') & User.email_verified_at.is_(None))
+    recoverable=User.disabled_at.is_(None)
     user = session.scalar(select(User).where(User.email==body.email, recoverable,
         ~select(DeletionRequest.id).where(DeletionRequest.user_id==User.id).exists()))
     # Do the same token derivation and minimum work for unknown addresses.
@@ -210,7 +214,8 @@ def forgot(body: EmailInput, request: Request, session: Session):
         try:
             request.app.state.mail_queue.put_nowait((body.email,token))
         except queue.Full:
-            pass
+            from .security_audit import emit
+            emit('system.mail.failed',reason_code='mail_failed')
     return {'message':'Si ce compte est éligible, un message de récupération sera envoyé.'}
 
 
@@ -220,7 +225,7 @@ def reset(body: Reset, request: Request, session: Session):
     email=session.scalar(select(AccountToken.email).where(AccountToken.digest==SessionVault.digest(body.token.get_secret_value()),
                                                          AccountToken.kind=='reset'))
     if email is None:raise HTTPException(400,'Lien invalide ou expiré')
-    recoverable=(User.disabled_at.is_(None)) | ((User.registration_kind=='public') & User.email_verified_at.is_(None))
+    recoverable=User.disabled_at.is_(None)
     user = session.scalar(select(User).where(User.email==email,recoverable,
         ~select(DeletionRequest.id).where(DeletionRequest.user_id==User.id).exists()).with_for_update())
     consume_token(session,body.token.get_secret_value(),'reset')
