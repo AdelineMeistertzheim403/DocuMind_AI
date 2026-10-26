@@ -153,7 +153,9 @@ def main(argv=None):
         report['python_dependencies'] = python_materials(
             tomllib.loads(args.project.read_text(encoding='utf-8')), constraint_pins(args.constraints))
         sources = ('Dockerfile', 'Dockerfile.db', 'frontend/Dockerfile', '.github/workflows/ci.yml',
-                   '.github/workflows/deploy.yml', 'frontend/package-lock.json')
+                   '.github/workflows/deploy.yml', 'frontend/package-lock.json',
+                   'requirements.runtime.lock', 'requirements.build.lock', 'requirements.test.lock',
+                   'build-materials/pgvector.json', 'tools/fetch_build_materials.py')
         report['source_sha256'] = {name: hashlib.sha256(Path(name).read_bytes()).hexdigest()
                                    if Path(name).is_file() else None for name in sources}
         if args.artifacts:

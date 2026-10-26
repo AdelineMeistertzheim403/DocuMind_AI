@@ -106,7 +106,11 @@ def test_windows_ci_runs_portable_suite_without_production_services_or_secrets()
     setup=next(step for step in job['steps'] if step.get('uses','').startswith('actions/setup-python@'))
     assert setup['with']=={'python-version':'3.13','architecture':'x64'}
     commands=[step['run'] for step in job['steps'] if 'run' in step]
-    assert any('pip install -c requirements.lock' in command and 'tzdata' in command for command in commands)
+    tools=next(command for command in commands if 'python -m venv .ci-venv' in command)
+    assert '--require-hashes -r requirements.build.lock' in tools
+    assert 'GITHUB_PATH' in tools and tools.count('if ($LASTEXITCODE -ne 0)')==2
+    install=next(command for command in commands if 'tzdata' in command)
+    assert '-c requirements.lock' in install and '--no-build-isolation --check-build-dependencies' in install
     suite=next(command for command in commands if 'python -m pytest' in command)
     assert 'Remove-Item Env:TEST_DATABASE_URL -ErrorAction SilentlyContinue' in suite
     assert '--ignore=tests/test_extraction_linux.py' in suite

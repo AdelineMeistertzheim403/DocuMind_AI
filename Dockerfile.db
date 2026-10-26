@@ -1,9 +1,17 @@
-FROM postgres:17-alpine
+FROM python:3.13-slim@sha256:d879ed88565a7a3c614b980b369d4a5025a9d057b71f93d09fc6d0b2ca823a18 AS materials
+WORKDIR /build
+COPY build-materials/pgvector.json ./pgvector.json
+COPY tools/fetch_build_materials.py ./fetch_build_materials.py
+RUN python fetch_build_materials.py --manifest pgvector.json --output /materials
+
+FROM postgres:17-alpine@sha256:e4cb93687b062cd25a0e8f672d85a7708235009d70d31f8a7698d9370092a9c4
 # Keep the same PostgreSQL major, libc, data path and volume as Sprints 1–3.
-ARG PGVECTOR_VERSION=0.8.7
-RUN apk add --no-cache --virtual .vector-build build-base git \
-    && git clone --depth 1 --branch v${PGVECTOR_VERSION} https://github.com/pgvector/pgvector.git /tmp/pgvector \
-    && make -C /tmp/pgvector with_llvm=no \
-    && make -C /tmp/pgvector install with_llvm=no \
+RUN --mount=type=bind,from=materials,source=/materials,target=/materials,readonly \
+    apk --network=no verify /materials/apk/*.apk \
+    && apk --network=no --repositories-file /dev/null add --virtual .vector-build /materials/apk/*.apk \
+    && mkdir /tmp/pgvector \
+    && tar -xzf /materials/pgvector.tar.gz -C /tmp/pgvector --strip-components=1 \
+    && make -C /tmp/pgvector OPTFLAGS="" with_llvm=no \
+    && make -C /tmp/pgvector install OPTFLAGS="" with_llvm=no \
     && rm -rf /tmp/pgvector \
-    && apk del .vector-build
+    && apk --network=no --repositories-file /dev/null del .vector-build

@@ -27,7 +27,12 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.13'
-      - run: python -m pip install -c requirements.lock '.[test]'
+      - name: Prepare isolated and hash-pinned build tools
+        run: |
+          python -m venv .ci-venv
+          .ci-venv/bin/python -m pip install --index-url https://pypi.org/simple --only-binary=:all: --require-hashes -r requirements.build.lock
+          echo "$GITHUB_WORKSPACE/.ci-venv/bin" >> "$GITHUB_PATH"
+      - run: python -m pip install --index-url https://pypi.org/simple --no-build-isolation --check-build-dependencies -c requirements.lock '.[test]'
       - name: Inventory runner dependencies and require exact constraint coverage
         run: python tools/build_materials.py --require-pins --npm-lock frontend/package-lock.json > runner-materials-linux.json
       - name: Linux sandbox prerequisites
@@ -51,7 +56,8 @@ jobs:
             --env POSTGRES_USER=documind --env POSTGRES_PASSWORD=ci-test-only \
             --env POSTGRES_DB=documind_test documind-ci-postgres
           for attempt in $(seq 1 60); do
-            if docker exec documind-ci-postgres pg_isready -U documind -d documind_test; then exit 0; fi
+            # initdb's temporary server listens only on a Unix socket; require final TCP readiness.
+            if docker exec documind-ci-postgres pg_isready -h 127.0.0.1 -U documind -d documind_test; then exit 0; fi
             sleep 1
           done
           exit 1
@@ -89,8 +95,15 @@ jobs:
         with:
           python-version: '3.13'
           architecture: x64
+      - name: Prepare isolated and hash-pinned build tools
+        run: |
+          python -m venv .ci-venv
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & .\.ci-venv\Scripts\python.exe -m pip install --index-url https://pypi.org/simple --only-binary=:all: --require-hashes -r requirements.build.lock
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "$env:GITHUB_WORKSPACE\.ci-venv\Scripts" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       - name: Install portable test dependencies and IANA time zones
-        run: python -m pip install -c requirements.lock '.[test]' tzdata
+        run: python -m pip install --index-url https://pypi.org/simple --no-build-isolation --check-build-dependencies -c requirements.lock '.[test]' tzdata
       - name: Verify Windows Python and Paris time zone
         run: python -c "import sys; from zoneinfo import ZoneInfo; assert sys.platform == 'win32' and sys.version_info[:2] == (3, 13); ZoneInfo('Europe/Paris')"
       - name: Inventory runner dependencies and require exact constraint coverage
@@ -149,6 +162,11 @@ jobs:
         with:
           python-version: '3.13'
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Record the actual Docker builder before registry authentication
+        run: |
+          docker version
+          docker buildx version
+          docker buildx inspect
       - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: registry.adelinemeistertzheim.fr
