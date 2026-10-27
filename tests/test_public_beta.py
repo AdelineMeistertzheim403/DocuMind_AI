@@ -19,7 +19,7 @@ from tests.conftest import BFF_KEY, KEY
 from tests.test_upload_admission import raw_request, multipart, completed
 
 PASSWORD='Fictitious-public-password-123!'
-PUBLIC={'registration_mode':'public','legacy_api_enabled':False,'owner_demo_enabled':False,
+PUBLIC={'registration_mode':'public','legacy_api_enabled':False,'owner_demo_enabled':False,'ai_enabled':False,
     'public_registration_limit':4,'public_registration_per_hour':10,'public_challenge_difficulty':10,
     'public_legal_ready':True,'public_operator_name':'Fictitious operator','public_contact_email':'contact@example.test',
     'public_legal_notice_url':'https://documind.example.test/legal','public_privacy_url':'https://documind.example.test/privacy',
@@ -229,7 +229,7 @@ def test_pending_cleanup_dry_run_expiry_and_counter_preserved(beta):
     from backend.account_admin import purge_pending
     client,app,sent=beta;enroll(beta)
     with app.state.sessions() as db:
-        db.scalar(select(User)).created_at=now()-timedelta(days=3);db.commit()
+        db.scalar(select(User)).created_at=now()-timedelta(days=8);db.commit()
         assert purge_pending(db,app.state.settings)==0  # active mail link protects the account
         db.scalar(select(AccountToken).where(AccountToken.kind=='verify')).expires_at=now()-timedelta(seconds=1);db.commit()
         assert purge_pending(db,app.state.settings)==1

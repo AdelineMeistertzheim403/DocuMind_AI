@@ -85,11 +85,29 @@ def test_policy_is_union_of_occupied_paris_days_iso_weeks_months():
     policy=retention.remote_policy(snapshots)
     assert sum('daily' in reasons for reasons in policy.values())==7
     assert sum('weekly' in reasons for reasons in policy.values())==4
-    assert sum('monthly' in reasons for reasons in policy.values())==6
+    assert sum('monthly' in reasons for reasons in policy.values())==3
     assert 'latest-valid' in policy['0']
     # Multiple runs on the same day do not consume daily buckets.
     policy=retention.remote_policy([{'id':'new','time':NOW+60},*snapshots])
     assert 'daily' in policy['new'] and 'daily' not in policy['0']
+
+
+@pytest.mark.parametrize('limits', [
+    {'daily': 0, 'weekly': 4, 'monthly': 3},
+    {'daily': 7, 'weekly': True, 'monthly': 3},
+    {'daily': 7, 'weekly': 4, 'monthly': 366},
+])
+def test_policy_rejects_invalid_retention_limits(limits):
+    with pytest.raises(retention.RetentionError, match='invalid_.*_retention'):
+        retention.remote_policy([], **limits)
+
+
+def test_plan_records_configured_retention_policy(inventory):
+    root,repo,_,_=inventory
+    plan=retention.build_plan(root,repo,'0006',NOW,daily=5,weekly=2,monthly=1)
+    assert plan['retention_policy']=={'daily':5,'weekly':2,'monthly':1}
+    assert all(item['reason'] != 'outside-7d-4w-3m' for item in plan['remote']['would_remove'])
+    assert all(item['reason'] == 'outside-5d-2w-1m' for item in plan['remote']['would_remove'])
 
 
 @pytest.mark.parametrize('change',['missing_file','unknown_file','checksum','integrity','migration','postgres','remote_archive','remote_metadata','remote_missing'])
@@ -389,7 +407,24 @@ def test_default_cli_selects_simulation_only(monkeypatch, capsys):
         return {'status':'simulated','alerts':[],'plan_sha256':'a'*64}, 'safe-report.json', 0
     monkeypatch.setattr(retention, 'run', run)
     assert retention.main() == 0 and len(calls) == 1
+    assert calls[0][2:] == (None, 7, 4, 3)
     assert json.loads(capsys.readouterr().out)['mode'] == 'simulation'
+
+
+def test_cli_passes_retention_policy_to_simulation(monkeypatch):
+    monkeypatch.setattr(sys, 'argv', ['retention_production.py', '--daily-retention', '5',
+                                      '--weekly-retention', '2', '--monthly-retention', '1'])
+    monkeypatch.setattr(retention.os, 'name', 'posix')
+    monkeypatch.setattr(retention.os, 'umask', lambda *a: 0o077)
+    calls = []
+
+    def run(*args):
+        calls.append(args)
+        return {'status':'simulated','alerts':[],'plan_sha256':'a'*64}, 'safe-report.json', 0
+
+    monkeypatch.setattr(retention, 'run', run)
+    assert retention.main() == 0
+    assert calls[0][2:] == (None, 5, 2, 1)
 
 
 def test_empty_archive_even_with_matching_hash_is_refused(inventory):

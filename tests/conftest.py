@@ -41,7 +41,7 @@ def app(tmp_path, monkeypatch):
     command.upgrade(config, "head")
     settings = Settings(_env_file=None, database_url=url, storage_dir=tmp_path / "private",
                         api_keys={KEY: UUID(int=1), OTHER_KEY: UUID(int=2)}, bff_service_key=SecretStr(BFF_KEY), requests_per_minute=10000,
-                        extraction_mode='development')  # Explicitly unconfined portable regression suite.
+                        extraction_mode='development', ai_enabled=False)  # Explicitly unconfined portable regression suite.
     application = create_app(settings)
     yield application
     # Only this fixture's empty-at-entry disposable DB: release the production downgrade

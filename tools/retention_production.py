@@ -218,11 +218,20 @@ def verify_remote(repo, snapshot, revision, now, local=None):
     return {'hashes': hashes, 'sizes': sizes}
 
 
-def remote_policy(snapshots):
+def retention_limits(daily=7, weekly=4, monthly=3):
+    limits = {'daily': daily, 'weekly': weekly, 'monthly': monthly}
+    for label, limit in limits.items():
+        if type(limit) is not int or not 1 <= limit <= 365:
+            raise RetentionError(f'invalid_{label}_retention')
+    return limits
+
+
+def remote_policy(snapshots, daily=7, weekly=4, monthly=3):
     """One global DocuMind group: union of latest occupied Paris days/ISO weeks/months."""
+    limits = retention_limits(daily, weekly, monthly)
     reasons = {item['id']: [] for item in snapshots}
     ordered = sorted(snapshots, key=lambda item: (item['time'], item['id']), reverse=True)
-    for label, limit in (('daily', 7), ('weekly', 4), ('monthly', 6)):
+    for label, limit in limits.items():
         buckets = set()
         for item in ordered:
             date = datetime.fromtimestamp(item['time'], timezone.utc).astimezone(PARIS)
@@ -233,7 +242,8 @@ def remote_policy(snapshots):
     return reasons
 
 
-def build_plan(root, repo, revision, now):
+def build_plan(root, repo, revision, now, daily=7, weekly=4, monthly=3):
+    limits = retention_limits(daily, weekly, monthly)
     parent = root / 'var/backups'
     if not parent.is_dir() or parent.is_symlink() or parent.resolve() != parent:
         raise RetentionError('unexpected_backup_directory')
@@ -279,7 +289,7 @@ def build_plan(root, repo, revision, now):
             reason = str(error) if isinstance(error, RetentionError) else 'local_archive_unverified'
             local_exclusions.append({'ref': ref, 'reason': reason})
             alerts.append('archive-inconsistency')
-    policy = remote_policy(snapshots)
+    policy = remote_policy(snapshots, **limits)
     remote_remove = []; remote_keep = []
     for item in snapshots:
         identifier = item['id']
@@ -288,7 +298,8 @@ def build_plan(root, repo, revision, now):
             continue
         try:
             if identifier not in verified: verified[identifier] = verify_remote(repo, item, revision, now)
-            remote_remove.append({'snapshot': identifier, 'name': item['name'], 'reason': 'outside-7d-4w-6m'})
+            remote_remove.append({'snapshot': identifier, 'name': item['name'],
+                                  'reason': f"outside-{limits['daily']}d-{limits['weekly']}w-{limits['monthly']}m"})
         except Exception:
             remote_keep.append({'snapshot': identifier, 'reasons': ['unverified-remote-preserved']})
             alerts.append('snapshot-inconsistency')
@@ -296,8 +307,8 @@ def build_plan(root, repo, revision, now):
     local_keep = []; local_remove = []
     for index, item in enumerate(sorted(local, key=lambda item: (item['time'], item['name']), reverse=True)):
         public = {key: item[key] for key in ('name', 'snapshot', 'bytes')}
-        if index < 7:
-            public['reason'] = 'latest-local' if index == 0 else 'last-seven-local'; local_keep.append(public)
+        if index < limits['daily']:
+            public['reason'] = 'latest-local' if index == 0 else f"last-{limits['daily']}-local"; local_keep.append(public)
         elif item['snapshot'] in removed_ids:
             public['reason'] = 'paired-remote-also-selected'; local_keep.append(public)
         else:
@@ -321,6 +332,7 @@ def build_plan(root, repo, revision, now):
     return {'format': 1, 'mode': 'simulation', 'real_execution_enabled': False,
         'created_at': datetime.fromtimestamp(now, timezone.utc).isoformat(), 'expected_schema': revision, 'postgres_major': 17,
         'repository_fingerprint': repository, 'inventory_sha256': initial_inventory,
+        'retention_policy': limits,
         'status': 'attention-required' if alerts else 'simulated', 'alerts': sorted(set(alerts)),
         'local': {'examined': len(entries), 'eligible': len(local), 'keep': local_keep, 'would_remove': local_remove,
                   'potential_bytes': sum(item['bytes'] for item in local_remove), 'excluded': local_exclusions},
@@ -364,7 +376,7 @@ def persist_report(directory, report):
     return name
 
 
-def run(root, directory, now=None):
+def run(root, directory, now=None, daily=7, weekly=4, monthly=3):
     now = time.time() if now is None else now
     report = {'format': 1, 'mode': 'simulation', 'real_execution_enabled': False,
               'status': 'simulation-impossible', 'alerts': [], 'created_at': datetime.fromtimestamp(now, timezone.utc).isoformat(),
@@ -377,7 +389,7 @@ def run(root, directory, now=None):
             with planning_lock(root, directory):
                 if (root / 'var/backup-maintenance.json').exists(): raise RetentionError('backup_maintenance_pending')
                 repo = Repository(backup.restic_environment())
-                report = build_plan(root, repo, expected_schema(root), now)
+                report = build_plan(root, repo, expected_schema(root), now, daily=daily, weekly=weekly, monthly=monthly)
         except Exception as error:
             report['alerts'] = [str(error) if isinstance(error, RetentionError) else 'simulation_failed']
         # Alerts reuse Sprint 8 delivery tracking, in a separate private state directory.
@@ -414,6 +426,9 @@ def main():
     modes.add_argument('--execute', action='store_true')
     parser.add_argument('--approved-plan', type=Path)
     parser.add_argument('--plan-sha256')
+    parser.add_argument('--daily-retention', type=int, default=7)
+    parser.add_argument('--weekly-retention', type=int, default=4)
+    parser.add_argument('--monthly-retention', type=int, default=3)
     args = parser.parse_args()
     if args.execute:
         print('{"status":"execution-disabled","real_execution_enabled":false}')
@@ -421,7 +436,8 @@ def main():
     os.umask(0o077)
     try:
         if os.name != 'posix' or args.approved_plan or args.plan_sha256: raise RetentionError('invalid_simulation_runtime')
-        report, name, code = run(ROOT, STATE)
+        report, name, code = run(ROOT, STATE, None, args.daily_retention,
+                                 args.weekly_retention, args.monthly_retention)
         print(json.dumps({'status': report['status'], 'mode': 'simulation', 'report': name,
                           'plan_sha256': report['plan_sha256'], 'alerts': report['alerts']}))
         return code

@@ -1,14 +1,16 @@
 from typing import Annotated
+from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, Response, Security
 from fastapi.security import APIKeyHeader
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from .models import Analysis, Document
 from .schemas import AnalysisOut, AnalyzeOptions, DocumentDetail, DocumentList, DocumentOut, ErrorOut, HealthOut
-from .services.documents import analyze_document, delete_document, import_document, owned_document
+from .services.documents import analyze_document, delete_document, import_document, open_document_source, owned_document
 
 router = APIRouter(prefix="/api/v1")
 key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
@@ -73,6 +75,28 @@ def list_documents(owner_id: Owner, session: Session, offset: int = Query(0, ge=
 @protected.get("/{document_id}", response_model=DocumentDetail, summary="Consulter le document et son texte par page")
 def get_document(document_id: UUID, owner_id: Owner, session: Session):
     return owned_document(session, document_id, owner_id)
+
+
+@protected.get("/{document_id}/download", summary="Télécharger le fichier original")
+def download_document(document_id: UUID, request: Request, owner_id: Owner, session: Session):
+    document = owned_document(session, document_id, owner_id)
+    stream = open_document_source(request.app.state.settings, document)
+
+    def content():
+        try:
+            while data := stream.read(64 * 1024):
+                yield data
+        finally:
+            stream.close()
+
+    extension = '.pdf' if document.media_type == 'application/pdf' else '.txt'
+    fallback = f'document-{document.id}{extension}'
+    original = quote(document.filename, safe='')
+    return StreamingResponse(content(), media_type=document.media_type, headers={
+        'Content-Disposition': f'attachment; filename="{fallback}"; filename*=UTF-8\'\'{original}',
+        'Content-Length': str(document.size_bytes),
+        'Cache-Control': 'no-store',
+    })
 
 
 @protected.delete("/{document_id}", status_code=204, summary="Supprimer le fichier et toutes ses données")

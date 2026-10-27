@@ -1,7 +1,7 @@
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
-from pydantic import ValidationError
+from pydantic import SecretStr, ValidationError
 import pytest
 
 from backend.config import Settings
@@ -12,12 +12,22 @@ def test_migration_matches_models(app):
     command.check(Config("alembic.ini"))
 
 
-def test_no_keys_rejects_startup(tmp_path):
-    app = create_app(Settings(_env_file=None, api_keys={}, database_url="sqlite://", storage_dir=tmp_path))
-    with pytest.raises(RuntimeError, match="API_KEYS"):
-        with TestClient(app):
-            pass
-    app.state.engine.dispose()
+def test_no_keys_rejects_startup(tmp_path, monkeypatch):
+    database_url = f"sqlite:///{(tmp_path / 'no-keys.db').as_posix()}"
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    config = Config("alembic.ini")
+    command.upgrade(config, "head")
+    settings = Settings(_env_file=None, database_url=database_url, storage_dir=tmp_path,
+                        extraction_mode='development', bff_service_key=SecretStr(''))
+    settings.api_keys = {}
+    app = create_app(settings)
+    try:
+        with pytest.raises(RuntimeError, match="API_KEYS"):
+            with TestClient(app):
+                pass
+    finally:
+        app.state.engine.dispose()
+        command.downgrade(config, "base")
 
 
 def test_configuration_rejects_unsafe_values():
