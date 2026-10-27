@@ -1,4 +1,4 @@
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import fitz
 import pytest
@@ -115,8 +115,48 @@ def test_authentication_and_owner_isolation(client):
     assert client.get(f"/api/v1/documents/{identifier}").status_code == 401
     client.headers["X-API-Key"] = OTHER_KEY
     assert client.get("/api/v1/documents").json()["total"] == 0
-    for method, suffix in [("get", ""), ("delete", ""), ("post", "/analyze"), ("get", "/analysis")]:
+    for method, suffix in [("get", ""), ("get", "/download"), ("delete", ""), ("post", "/analyze"), ("get", "/analysis")]:
         assert getattr(client, method)(f"/api/v1/documents/{identifier}{suffix}").status_code == 404
+
+
+def test_original_download_is_owned_verified_and_does_not_expose_storage(client, app):
+    source = b"Original document bytes.\n"
+    key = client.headers["X-API-Key"]
+    response = upload(client, source, "rapport final.txt")
+    identifier = response.json()["id"]
+    download = client.get(f"/api/v1/documents/{identifier}/download")
+    assert download.status_code == 200
+    assert download.content == source
+    assert download.headers["content-type"].startswith("text/plain")
+    assert download.headers["content-disposition"].endswith("filename*=UTF-8''rapport%20final.txt")
+    assert "storage_name" not in download.text
+    client.headers.pop("X-API-Key")
+    assert client.get(f"/api/v1/documents/{identifier}/download").status_code == 401
+    client.headers["X-API-Key"] = "invalid"
+    assert client.get(f"/api/v1/documents/{identifier}/download").status_code == 401
+    client.headers["X-API-Key"] = key
+    path = next(app.state.settings.storage_dir.iterdir())
+    path.unlink()
+    unavailable = client.get(f"/api/v1/documents/{identifier}/download")
+    assert unavailable.status_code == 409
+    assert str(path) not in unavailable.text
+
+
+def test_original_download_rejects_corrupted_source(client, app):
+    response = upload(client, b"Original document bytes.", "source.txt")
+    identifier = response.json()["id"]
+    path = next(app.state.settings.storage_dir.iterdir())
+    path.write_bytes(b"Modified source.")
+    assert client.get(f"/api/v1/documents/{identifier}/download").status_code == 409
+
+
+def test_original_download_rejects_unsafe_storage_identity(client, app):
+    response = upload(client, b"Original document bytes.", "source.txt")
+    identifier = response.json()["id"]
+    with app.state.sessions() as db:
+        db.get(Document, UUID(identifier)).storage_name = "../../outside.txt"
+        db.commit()
+    assert client.get(f"/api/v1/documents/{identifier}/download").status_code == 409
 
 
 def test_http_validation_and_health(client):

@@ -75,7 +75,7 @@ def pending_account_control(session,identifier,action,execute=False):
             'timestamp':datetime.now(timezone.utc).isoformat()}
 
 
-def purge_pending(session, settings, hours=48, execute=False):
+def purge_pending(session, settings, hours=168, execute=False):
     """Local explicit cleanup only. Never free lifetime admission slots or touch active users."""
     from datetime import timedelta
     from .models import now
@@ -131,7 +131,7 @@ def main():
     attach=commands.add_parser('attach-email');attach.add_argument('username');attach.add_argument('email')
     purge=commands.add_parser('purge');purge.add_argument('user_id',type=UUID)
     commands.add_parser('owners')
-    pending=commands.add_parser('purge-pending');pending.add_argument('--older-than-hours',type=int,default=48);pending.add_argument('--execute',action='store_true')
+    pending=commands.add_parser('purge-pending');pending.add_argument('--older-than-hours',type=int,default=168);pending.add_argument('--execute',action='store_true')
     control=commands.add_parser('public-registration');control.add_argument('action',choices=['status','close','reopen']);control.add_argument('--execute',action='store_true')
     pending_control=commands.add_parser('pending-account');pending_control.add_argument('action',choices=['block','release']);pending_control.add_argument('user_id',type=UUID);pending_control.add_argument('--execute',action='store_true')
     args=parser.parse_args();settings=Settings();engine=make_engine(settings.database_url)

@@ -1,5 +1,6 @@
 import hashlib
 import os
+import stat
 from pathlib import Path
 from uuid import uuid4
 
@@ -10,7 +11,7 @@ from ..models import Analysis, Document, DocumentChunk, DocumentPage
 from ..schemas import AnalysisResult
 from .worker import run_worker
 from .document_integrity import (cleanup_file, discard_session, durable_document_state,
-                                 identity_of, retained_storage_admission)
+                                 identity_of, retained_storage_admission, STORAGE_NAME)
 
 from ..security_audit import emit, mark
 
@@ -26,6 +27,35 @@ def owned_document(session, document_id, owner_id, lock=False):
              'not_owner' if exists is not None else 'not_found')
         raise HTTPException(404, "Document introuvable")
     return document
+
+
+def open_document_source(settings, document):
+    """Open one verified source through its opaque storage name, never a client path."""
+    root = Path(settings.storage_dir)
+    if root.is_symlink() or not root.is_dir() or not STORAGE_NAME.fullmatch(document.storage_name):
+        raise HTTPException(409, 'Le fichier original est indisponible ou son intégrité ne peut pas être vérifiée.')
+    descriptor = None
+    stream = None
+    try:
+        descriptor = os.open(root / document.storage_name, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_BINARY', 0))
+        stream = os.fdopen(descriptor, 'rb')
+        descriptor = None
+        info = os.fstat(stream.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_size != document.size_bytes:
+            raise OSError('document source mismatch')
+        actual = hashlib.sha256()
+        while data := stream.read(64 * 1024):
+            actual.update(data)
+        if actual.hexdigest() != document.sha256:
+            raise OSError('document source mismatch')
+        stream.seek(0)
+        return stream
+    except (FileNotFoundError, OSError):
+        if stream is not None:
+            stream.close()
+        elif descriptor is not None:
+            os.close(descriptor)
+        raise HTTPException(409, 'Le fichier original est indisponible ou son intégrité ne peut pas être vérifiée.') from None
 
 
 def import_document(session, settings, upload, owner_id, slots, before_commit=None):

@@ -145,6 +145,53 @@ test('clé ajoutée côté serveur seulement et pagination transmise', async t =
   assert.equal(result.headers.get('cache-control'), 'no-store')
   assert.ok(!(await result.text()).includes(key))
 })
+
+test('download routes require the personal session and stream only validated upstream metadata', async t => {
+  const calls = []
+  const base = await serve(t, async (url, options) => {
+    calls.push({url, options})
+    return new Response(Readable.toWeb(Readable.from(['original bytes'])), {
+      headers: {
+        'content-length': '14',
+        'content-type': 'text/plain; charset=utf-8',
+        'content-disposition': `attachment; filename="document-${id}.txt"; filename*=UTF-8''rapport%20final.txt`,
+      },
+    })
+  }, {requireLogin:true, gatewayToken:'gateway'})
+  const path = `/bff/documents/${id}/download`
+  assert.equal((await fetch(base + path)).status, 401)
+  const response = await fetch(base + path, {headers:{
+    'x-forwarded-proto':'https', 'x-documind-gateway':'gateway', cookie:'__Host-documind='+'A'.repeat(43),
+  }})
+  assert.equal(response.status, 200)
+  assert.equal(await response.text(), 'original bytes')
+  assert.equal(response.headers.get('content-disposition'), `attachment; filename="document-${id}.txt"; filename*=UTF-8''rapport%20final.txt`)
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].options.headers.authorization, 'Bearer ' + 'A'.repeat(43))
+  assert.equal(calls[0].options.headers.accept, 'application/octet-stream')
+})
+
+test('expired download session is rejected and cleared by the BFF', async t => {
+  const base = await serve(t, async () => Response.json({detail:'expired'}, {status:401}),
+    {requireLogin:true, gatewayToken:'gateway'})
+  const response = await fetch(base + `/bff/documents/${id}/download`, {headers:{
+    'x-forwarded-proto':'https', 'x-documind-gateway':'gateway', cookie:'__Host-documind='+'A'.repeat(43),
+  }})
+  assert.equal(response.status, 401)
+  assert.match(response.headers.get('set-cookie'), /__Host-documind=;/)
+})
+
+test('download BFF refuses an oversized or malformed upstream response', async t => {
+  const base = await serve(t, async () => new Response('unsafe', {headers:{
+    'content-length':'33', 'content-type':'text/plain',
+    'content-disposition':'attachment; filename="unsafe.txt"',
+  }}), {requireLogin:true, gatewayToken:'gateway'})
+  const response = await fetch(base + `/bff/documents/${id}/download`, {headers:{
+    'x-forwarded-proto':'https', 'x-documind-gateway':'gateway', cookie:'__Host-documind='+'A'.repeat(43),
+  }})
+  assert.equal(response.status, 502)
+  assert.match((await response.json()).detail, /récupéré en sécurité/)
+})
 test('configuration publique limitée à la taille autorisée', async t => {
   const base = await serve(t, () => assert.fail('No upstream call expected'))
   const result = await fetch(`${base}/bff/config`)

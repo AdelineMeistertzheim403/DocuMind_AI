@@ -8,6 +8,7 @@ import {isIP} from 'node:net'
 
 const uuid = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
 const detailRoute = new RegExp(`^/bff/documents/${uuid}$`)
+const downloadRoute = new RegExp(`^/bff/documents/${uuid}/download$`)
 const analyzeRoute = new RegExp(`^/bff/documents/${uuid}/analyze$`)
 const analysisRoute = new RegExp(`^/bff/documents/${uuid}/analysis$`)
 const aiPost = new RegExp(`^/bff/documents/${uuid}/(?:summarize|ask)$`)
@@ -66,6 +67,7 @@ function routeAllowed(method, path) {
   if (['/bff/account','/bff/account/sessions'].includes(path) && method === 'GET') return true
   if ((accountSession.test(path)||privateDelete.test(path)) && method === 'DELETE') return true
   return (path === '/bff/documents' && ['GET', 'POST'].includes(method)) ||
+    (downloadRoute.test(path) && method === 'GET') ||
     (detailRoute.test(path) && ['GET', 'DELETE'].includes(method)) ||
     (analyzeRoute.test(path) && method === 'POST') ||
     (analysisRoute.test(path) && method === 'GET') ||
@@ -174,7 +176,8 @@ export function createApp(config, upstreamFetch = fetch, {auditSink}={}) {
         (key !== 'limit' || (Number(value) >= 1 && Number(value) <= 100)) && url.searchParams.getAll(key).length === 1
       if (!allowed) return res.status(400).json({ detail: messages[400] })
     }
-    const headers = { accept: 'application/json', 'X-API-Key': config.apiKey, 'X-Request-ID':req.auditId }
+    const download = downloadRoute.test(req.path) && req.method === 'GET'
+    const headers = { accept: download ? 'application/octet-stream' : 'application/json', 'X-API-Key': config.apiKey, 'X-Request-ID':req.auditId }
     const gateway = req.headers['x-documind-gateway'] || ''
     const peer=(req.socket.remoteAddress||'').replace(/^::ffff:/,'')
     const trustedProxy=(config.trustedProxyIPs||[]).includes(peer) || Boolean(config.gatewayToken && typeof gateway === 'string' && Buffer.byteLength(gateway) === Buffer.byteLength(config.gatewayToken) && timingSafeEqual(Buffer.from(gateway), Buffer.from(config.gatewayToken)))
@@ -210,6 +213,7 @@ export function createApp(config, upstreamFetch = fetch, {auditSink}={}) {
     let exceeded = false
     let readTimedOut = false
     let uploadReserved = false
+    let streamingResponse = false
     let readDeadline, idleDeadline
     let limiter
     const onAborted = () => controller.abort()
@@ -287,6 +291,33 @@ export function createApp(config, upstreamFetch = fetch, {auditSink}={}) {
         if (response.status === 401 && token) res.set('Set-Cookie', '__Host-documind=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0')
         return res.status(status).json({ detail: response.status === 401 && (token || protectedSessionRoute) ? 'Connectez votre compte ; la session ou les identifiants sont invalides.' : code ? aiCodes[code] : messages[status] || 'Le service a renvoyé une réponse inattendue.', ...(code ? { code } : {}) })
       }
+      if (download) {
+        const length = Number(response.headers.get('content-length'))
+        const type = response.headers.get('content-type')?.split(';', 1)[0]
+        const disposition = response.headers.get('content-disposition')
+        if (!response.body || !Number.isSafeInteger(length) || length < 1 || length > config.maxUploadBytes ||
+            !['application/pdf', 'text/plain'].includes(type) ||
+            !/^attachment; filename="document-[a-f0-9-]+\.(?:pdf|txt)"; filename\*=UTF-8''[A-Za-z0-9%._~-]+$/.test(disposition || '')) {
+          await response.body?.cancel()
+          return res.status(502).json({detail:'Le fichier original ne peut pas être récupéré en sécurité.'})
+        }
+        req.auditHandledByAPI=true
+        streamingResponse=true
+        res.status(200).set({
+          'Cache-Control':'no-store',
+          'Content-Disposition':disposition,
+          'Content-Length':String(length),
+          'Content-Type':type,
+        })
+        const source = Readable.fromWeb(response.body)
+        await new Promise((resolve, reject) => {
+          source.once('error', reject)
+          res.once('finish', resolve)
+          res.once('close', resolve)
+          source.pipe(res)
+        })
+        return
+      }
       const data = await response.json()
       req.auditHandledByAPI=true
       if (req.path === '/bff/ai/status' && (!secure || !token)) { data.available = false; data.reason = data.enabled ? 'login_required' : 'disabled' }
@@ -303,6 +334,7 @@ export function createApp(config, upstreamFetch = fetch, {auditSink}={}) {
       // Never forward upstream headers, cookies, redirects, or a supplied client API key.
       return res.status(response.status).json(data)
     } catch {
+      if (streamingResponse) return res.destroy()
       const status = exceeded ? 413 : readTimedOut ? 408 : controller.signal.aborted ? 504 : 502
       return res.status(status).json({ detail: exceeded ? messages[413] : readTimedOut ? 'Délai de réception dépassé.' : status === 504 ? 'Le traitement a pris trop de temps.' : 'Impossible de joindre le service documentaire.' })
     } finally {
