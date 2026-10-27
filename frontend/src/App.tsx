@@ -1,3 +1,4 @@
+import {LegalPage} from './pages/Legal'
 import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { lazy, Suspense } from 'react'
@@ -30,6 +31,10 @@ export function AppRoutes() {
     <Route path="verify-email" element={<AccountAccess mode="verify"/>}/>
     <Route path="resend-verification" element={<AccountAccess mode="resend"/>}/>
     <Route path="legal" element={<PublicInformationPage/>}/>
+    <Route path="mentions-legales" element={<LegalPage kind="notice"/>}/>
+    <Route path="confidentialite" element={<LegalPage kind="privacy"/>}/>
+    <Route path="cgu" element={<LegalPage kind="terms"/>}/>
+    <Route path="cgu/versions/:version" element={<LegalPage kind="terms"/>}/>
     <Route element={<RequireAccount/>}><Route element={<Layout/>}>
     <Route index element={<Dashboard/>}/><Route path="documents" element={<Documents/>}/>
     <Route path="documents/:id" element={<DocumentDetailPage/>}/><Route path="documents/:id/analysis" element={<Suspense fallback={<Spinner label="Ouverture des résultats…"/>}><AnalysisPage/></Suspense>}/>
