@@ -26,7 +26,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     {children}
     {upload && <UploadDialog onClose={() => setUpload(false)} onSuccess={id => { setUpload(false); setToast('Document importé. Le texte est prêt à être analysé.'); navigate(`/documents/${id}`) }}/>}
     {target && <Modal title="Supprimer ce document ?" onClose={() => setTarget(null)} busy={remove.isPending}>
-      <span className="delete-symbol"><Trash2 size={25}/></span><p>Le document <strong className="break-word">{target.filename}</strong>, son texte et ses analyses seront supprimés définitivement.</p>
+      <span className="delete-symbol"><Trash2 size={25}/></span><p>Le document <strong className="break-word">{target.filename}</strong>, son texte et ses analyses seront retirés des données actives. Le nettoyage du fichier peut nécessiter une intervention en cas d’erreur ; les copies de sauvegarde sont traitées séparément.</p>
       {remove.error && <ErrorState error={remove.error}/>}{remove.isPending && <Spinner label="Suppression…"/>}
       <div className="modal-actions"><button className="button secondary" disabled={remove.isPending} onClick={() => setTarget(null)}>Conserver</button>
         <button className="button danger" disabled={remove.isPending} onClick={() => remove.mutate(target.id, { onSuccess: () => {

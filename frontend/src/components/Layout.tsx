@@ -1,3 +1,4 @@
+import {LegalNavigation} from '../pages/Legal'
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -47,15 +48,15 @@ export function Layout() {
         <NavLink to="/settings/profile" onClick={() => setMenu(false)}><ShieldCheck size={19}/>Mon profil</NavLink>
         <NavLink to="/settings/security" onClick={() => setMenu(false)}><ShieldCheck size={19}/>Sécurité</NavLink>
         <NavLink to="/settings/privacy" onClick={() => setMenu(false)}><ShieldCheck size={19}/>Confidentialité</NavLink></nav>
-      <div className="sidebar-bottom"><div className="local-card"><span className="local-card-icon"><ShieldCheck size={19}/></span><strong>Votre espace, vos données.</strong><p>Vos documents restent dans votre environnement local.</p><span className="local-label"><span/>Stockage privé</span></div>
+      <div className="sidebar-bottom"><div className="local-card"><span className="local-card-icon"><ShieldCheck size={19}/></span><strong>Votre espace, vos données.</strong><p>Vos documents sont conservés sur le serveur du service dans un espace privé.</p><span className="local-label"><span/>Stockage privé</span></div>
         <button className="help-link" onClick={() => { setMenu(false); setGuide(true) }}><CircleHelp size={18}/>Prise en main<ArrowUpRight size={15}/></button>
-        <div className="workspace-profile"><span className="avatar">DM</span><div><strong>Espace personnel</strong><small>Environnement local</small></div></div>
+        <div className="workspace-profile"><span className="avatar">DM</span><div><strong>Espace personnel</strong><small>Stockage serveur privé</small></div></div>
       </div>
     </aside>
     <div className="main-shell" inert={menu}><header className="topbar"><div className="topbar-path"><button className="icon-button mobile-menu" aria-label="Ouvrir le menu" aria-expanded={menu} onClick={() => setMenu(true)}><Menu size={22}/></button><FileStack size={17}/><span>Mon espace</span><ChevronRight size={14}/><strong>{location.pathname === '/' ? 'Vue d’ensemble' : 'Documents'}</strong></div>
       <div className={`connection-badge ${health.data ? 'online' : health.error ? 'offline' : ''}`} title={health.error ? 'Le service ne répond pas' : 'État de la connexion au backend'}><span/>{health.data ? 'Services connectés' : health.error ? 'Connexion indisponible' : 'Connexion…'}</div></header>
-      <main id="main-content" tabIndex={-1}><Outlet/></main><footer className="app-footer"><span>DocuMind AI <span className="footer-dot">·</span> L’essentiel de vos documents.</span><span>Sprint 04 <span className="footer-dot">·</span> IA optionnelle</span></footer>
+      <main id="main-content" tabIndex={-1}><Outlet/></main><footer className="app-footer"><span>DocuMind AI <span className="footer-dot">·</span> L’essentiel de vos documents.</span><span>Bêta en préparation <span className="footer-dot">·</span> IA indisponible pour la bêta</span><LegalNavigation/></footer>
     </div>
-    {guide && <Modal title="Votre premier document" onClose={() => setGuide(false)}><ol className="guide-steps"><li><strong>Importez un PDF ou un TXT.</strong><p>Le texte est extrait et conservé page par page.</p></li><li><strong>Lancez l’analyse locale.</strong><p>Ajustez les réglages depuis la fiche du document.</p></li><li><strong>Explorez les résultats.</strong><p>L’assistant IA optionnel est distinct du diagnostic qualité local et demande votre accord avant tout envoi externe.</p></li></ol><button className="button primary" onClick={() => { setGuide(false); openUpload() }}><Plus size={17}/>Importer mon document</button></Modal>}
+    {guide && <Modal title="Votre premier document" onClose={() => setGuide(false)}><ol className="guide-steps"><li><strong>Importez un PDF ou un TXT.</strong><p>Le texte est extrait et conservé page par page.</p></li><li><strong>Lancez l’analyse locale.</strong><p>Ajustez les réglages depuis la fiche du document.</p></li><li><strong>Explorez les résultats.</strong><p>Les fonctions IA sont indisponibles pour la bêta initiale. L’analyse classique est effectuée sur le serveur.</p></li></ol><button className="button primary" onClick={() => { setGuide(false); openUpload() }}><Plus size={17}/>Importer mon document</button></Modal>}
   </div>
 }
