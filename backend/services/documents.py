@@ -1,8 +1,9 @@
 import hashlib
 import os
+import sqlite3
 import stat
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import HTTPException
 from sqlalchemy import select, delete, func
@@ -58,6 +59,90 @@ def open_document_source(settings, document):
         raise HTTPException(409, 'Le fichier original est indisponible ou son intégrité ne peut pas être vérifiée.') from None
 
 
+def cleanup_failed_import(session, settings, owner_id, path, document_id=None):
+    if not os.path.lexists(path):
+        return True
+    if not getattr(settings, 'lifecycle_durable_receipts_required', True):
+        return cleanup_file(path)
+    from sqlalchemy.exc import SQLAlchemyError
+    from ..auth import User
+    from ..lifecycle_durability import configured_coordinator, require_synthetic_mutation
+    from ..lifecycle_holds import configured_hold_guard
+    from ..lifecycle_registry import configured_registry
+    try:
+        require_synthetic_mutation(settings)
+        coordinator = configured_coordinator(settings, configured_registry(settings))
+        account = session.scalar(select(User.id).where(User.owner_id == owner_id))
+        if account is None:
+            raise ValueError('Import account scope cannot be verified')
+        scopes = [('owner', owner_id), ('account', account)]
+        if document_id is not None:
+            scopes.append(('document', document_id))
+        with configured_hold_guard(settings, scopes, coordinator):
+            return cleanup_file(path)
+    except (OSError, ValueError, sqlite3.Error, SQLAlchemyError):
+        emit('system.file_cleanup.failed', reason_code='cleanup_failed')
+        return False
+
+
+def _owns_import_path(path, root, created_identity):
+    """A cleanup must never adopt a pre-existing, replaced or linked file."""
+    if created_identity is None or path.parent != root or root.is_symlink():
+        return False
+    try:
+        info = path.lstat()
+        return (stat.S_ISREG(info.st_mode) and info.st_nlink == 1
+                and (info.st_dev, info.st_ino) == created_identity)
+    except OSError:
+        return False
+
+
+def cleanup_failed_temporary(session, settings, owner_id, temporary, final,
+                             created_identity, document_identity, bind):
+    """Remove only our unpublished source, with verified SQL absence and holds.
+
+    No receipt or mutation authorization is needed for an unpublished temporary,
+    but an account/owner/document hold or unavailable authority still forbids it.
+    """
+    from sqlalchemy.exc import SQLAlchemyError
+    from ..auth import User
+    from ..lifecycle_durability import configured_coordinator
+    from ..lifecycle_holds import configured_hold_guard
+    from ..lifecycle_registry import configured_registry
+    if not os.path.lexists(temporary):
+        return True
+    try:
+        if not _owns_import_path(temporary, final.parent, created_identity):
+            raise ValueError('Temporary identity cannot be verified')
+        # Check both possible durable storage names through fresh fenced connections.
+        identity = document_identity or (UUID(hex=temporary.stem), owner_id, final.name, 0, '')
+        if (durable_document_state(bind, identity) != 'absent'
+                or durable_document_state(bind, (*identity[:2], temporary.name, *identity[3:])) != 'absent'):
+            raise ValueError('Temporary publication cannot be excluded')
+        registry = configured_registry(settings)
+        if registry:
+            with registry.connection() as ledger:
+                if ledger.execute('SELECT 1 FROM document_erasures WHERE storage_name IN (?,?) LIMIT 1',
+                                  (temporary.name, final.name)).fetchone():
+                    raise ValueError('Temporary identity has a durable lifecycle history')
+        coordinator = configured_coordinator(settings, registry)
+        scopes = [('owner', owner_id)]
+        if getattr(settings, 'lifecycle_durable_receipts_required', True):
+            account = session.scalar(select(User.id).where(User.owner_id == owner_id))
+            if account is None:
+                raise ValueError('Temporary account scope cannot be verified')
+            scopes.append(('account', account))
+        if document_identity is not None:
+            scopes.append(('document', document_identity[0]))
+        with configured_hold_guard(settings, scopes, coordinator):
+            if not _owns_import_path(temporary, final.parent, created_identity):
+                raise ValueError('Temporary identity changed')
+            return cleanup_file(temporary)
+    except (OSError, ValueError, sqlite3.Error, SQLAlchemyError):
+        emit('system.file_cleanup.failed', reason_code='cleanup_failed')
+        return False
+
+
 def import_document(session, settings, upload, owner_id, slots, before_commit=None):
     filename = (upload.filename or "").replace("\\", "/").split("/")[-1]
     extension = Path(filename).suffix.lower()
@@ -73,11 +158,17 @@ def import_document(session, settings, upload, owner_id, slots, before_commit=No
     final = root / f"{token}{extension}"
     commit_attempted = False
     identity = None
+    created_identity = None
+    final_owned = False
     bind = session.get_bind()
     try:
+        if os.path.lexists(final):
+            raise HTTPException(503, 'Identité de stockage indisponible')
         size = 0
         digest = hashlib.sha256()
         with os.fdopen(os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_BINARY', 0), 0o600), 'wb') as stream:
+            info = os.fstat(stream.fileno())
+            created_identity = (info.st_dev, info.st_ino)
             while data := upload.file.read(64 * 1024):
                 size += len(data)
                 if size > settings.max_upload_bytes:
@@ -107,6 +198,7 @@ def import_document(session, settings, upload, owner_id, slots, before_commit=No
                             size_bytes=size, sha256=digest.hexdigest())
         session.add(document)
         session.flush()
+        identity = identity_of(document)
         index = 0
         for number, text in enumerate(pages, 1):
             page = DocumentPage(document_id=document.id, page_number=number, text=text)
@@ -117,7 +209,10 @@ def import_document(session, settings, upload, owner_id, slots, before_commit=No
                 session.add(DocumentChunk(document_id=document.id, page_id=page.id, chunk_index=index,
                                           start_char=start, end_char=start + len(fragment), text=fragment))
                 index += 1
+        if os.path.lexists(final):
+            raise HTTPException(503, 'Identité de stockage indisponible')
         temporary.replace(final)
+        final_owned = True
         # Make the rename durable before SQL can expose the source (Linux production).
         if os.name == 'posix':
             directory = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
@@ -125,7 +220,6 @@ def import_document(session, settings, upload, owner_id, slots, before_commit=No
                 os.fsync(directory)
             finally:
                 os.close(directory)
-        identity = identity_of(document)
         commit_attempted = True
         session.commit()
         return document
@@ -138,24 +232,44 @@ def import_document(session, settings, upload, owner_id, slots, before_commit=No
                 state = durable_document_state(bind, identity)
             except Exception:
                 state = 'unknown'
-            if state == 'absent':
-                cleanup_file(final)
+            if state == 'absent' and _owns_import_path(final, root, created_identity):
+                cleanup_failed_import(session, settings, owner_id, final, identity[0])
             else:
                 emit('system.file_cleanup.failed', reason_code='cleanup_failed')
         else:
+            rolled_back = False
             try:
                 session.rollback()
+                rolled_back = True
             finally:
-                cleanup_file(final)
+                if final_owned and rolled_back and _owns_import_path(final, root, created_identity):
+                    if durable_document_state(bind, identity) == 'absent':
+                        cleanup_failed_import(session, settings, owner_id, final, identity[0])
+                    else:
+                        emit('system.file_cleanup.failed', reason_code='cleanup_failed')
         raise
     finally:
-        cleanup_file(temporary)
-        slots.release()
+        try:
+            cleanup_failed_temporary(session, settings, owner_id, temporary, final,
+                                     created_identity, identity, bind)
+        finally:
+            slots.release()
 
 
 def delete_document(session, settings, document):
     from ..ai.models import AIReservation
+    from ..auth import User
+    from ..lifecycle_durability import configured_coordinator, require_synthetic_mutation
+    from ..lifecycle_holds import ActiveHoldError, configured_hold_guard
+    from ..lifecycle_registry import configured_registry
     from ..rag.models import IndexJob, OperationDocument, RAGDocument, RAGResult
+    from ..resource_limits import lock_workspace
+    try:
+        require_synthetic_mutation(settings)
+    except ValueError:
+        emit('system.security_config.invalid', reason_code='security_unavailable')
+        raise HTTPException(503,'Suppression indisponible ; une vérification administrative est nécessaire.') from None
+    lock_workspace(session, document.owner_id)
     active = session.scalar(select(OperationDocument.reservation_id).join(AIReservation,
         AIReservation.id == OperationDocument.reservation_id).where(OperationDocument.document_id == document.id,
             AIReservation.status == 'reserved').limit(1))
@@ -172,29 +286,53 @@ def delete_document(session, settings, document):
     identity = identity_of(document)
     commit_attempted = False
     try:
-        from ..resource_limits import lock_workspace
-        lock_workspace(session, document.owner_id)
-        linked = select(RAGDocument.result_id).where(RAGDocument.document_id == document.id)
-        session.execute(delete(RAGResult).where(RAGResult.id.in_(linked)))
-        session.delete(document)
-        session.flush()
-        commit_attempted = True
-        session.commit()
-    except BaseException:
-        if commit_attempted:
+        registry=configured_registry(settings)
+        coordinator=configured_coordinator(settings, registry)
+        scopes = [('owner', identity[1]), ('document', identity[0])]
+        account = session.scalar(select(User.id).where(User.owner_id == identity[1]))
+        if coordinator and account is None:
+            raise ValueError('Document account scope cannot be verified')
+        if account is not None:
+            scopes.append(('account', account))
+        with configured_hold_guard(settings, scopes, coordinator):
+            if registry:
+                registry.document_requested(identity[0],identity[1],identity[2])
+            if coordinator:
+                coordinator.confirm_document(identity[0])
+                coordinator.authorize_document(identity[0])
             try:
-                discard_session(session)
-                state = durable_document_state(bind, identity)
-            except Exception:
-                state = 'unknown'
-            if state == 'absent':
-                cleanup_file(path)
-            else:
-                emit('system.file_cleanup.failed', reason_code='cleanup_failed')
-        else:
-            session.rollback()
-        raise
-    cleanup_file(path)
+                linked = select(RAGDocument.result_id).where(RAGDocument.document_id == identity[0])
+                session.execute(delete(RAGResult).where(RAGResult.id.in_(linked)))
+                session.delete(document)
+                session.flush()
+                commit_attempted = True
+                session.commit()
+            except BaseException:
+                if commit_attempted:
+                    try:
+                        discard_session(session)
+                        state = durable_document_state(bind, identity)
+                    except Exception:
+                        state = 'unknown'
+                    if state == 'absent':
+                        cleanup_file(path)
+                    else:
+                        emit('system.file_cleanup.failed', reason_code='cleanup_failed')
+                else:
+                    session.rollback()
+                raise
+            cleaned=cleanup_file(path)
+            if registry:
+                registry.document_finished(identity[0],cleaned)
+            if coordinator:
+                if not cleaned:
+                    raise HTTPException(503,'Suppression incomplète ; une vérification administrative est nécessaire.')
+                coordinator.document_result(identity[0])
+    except ActiveHoldError:
+        raise HTTPException(409,'La suppression est suspendue par un gel de conservation actif.') from None
+    except (OSError, ValueError, sqlite3.Error):
+        emit('system.security_config.invalid', reason_code='security_unavailable')
+        raise HTTPException(503,'Suppression indisponible ; une vérification administrative est nécessaire.') from None
 
 
 def analyze_document(session, settings, document, options, slots):

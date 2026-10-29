@@ -1,0 +1,12 @@
+# Local validation overlay only. Never publish or deploy this image.
+ARG PROOFS_BASE=documind-s14-8-proofs:local
+FROM ${PROOFS_BASE}
+COPY backend /app/backend
+COPY tests /app/tests
+COPY tools /app/tools
+COPY migrations /app/migrations
+COPY ops/systemd /app/ops/systemd
+COPY ops/testing /app/ops/testing
+COPY .github/workflows /app/.github/workflows
+COPY pyproject.toml alembic.ini compose.production.yaml /app/
+LABEL documind.test="phase-15-2"

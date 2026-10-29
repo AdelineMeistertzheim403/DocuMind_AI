@@ -17,8 +17,10 @@ STORAGE_NAME = re.compile(r'[0-9a-f]{32}\.(?:pdf|txt)\Z')
 def cleanup_file(path):
     try:
         path.unlink(missing_ok=True)
+        return True
     except OSError:
         emit('system.file_cleanup.failed', reason_code='cleanup_failed')
+        return False
 
 
 def discard_session(session):

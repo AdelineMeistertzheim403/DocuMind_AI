@@ -51,9 +51,16 @@ def test_registry_tls_cannot_be_disabled_explicitly_or_by_cidr():
 def test_production_reuses_confirmed_proxy_and_preserves_volumes():
     data=yaml.safe_load(Path('compose.production.yaml').read_text(encoding='utf-8'))
     assert data['name']=='documind-prod' and set(data['services'])=={'api','web','db'}
-    assert set(data['volumes'])=={'production_database','production_documents'}
+    assert set(data['volumes'])=={'production_database','production_documents','production_lifecycle'}
     assert data['services']['db']['volumes']==['production_database:/var/lib/postgresql/data']
-    assert data['services']['api']['volumes']==['production_documents:/app/var']
+    assert data['services']['api']['volumes'][0]=='production_documents:/app/var'
+    assert data['services']['api']['volumes'][1]=='production_lifecycle:/app/lifecycle'
+    assert data['services']['api']['volumes'][2]=={
+        'type':'bind','source':'${RECOVERY_CONTROL_FILE:?Set the operator-managed recovery latch file}',
+        'target':'/run/documind/recovery-state.json','read_only':True,'bind':{'create_host_path':False}}
+    assert data['services']['api']['environment']['RECOVERY_STATE_PATH']=='/run/documind/recovery-state.json'
+    assert data['services']['api']['environment']['LIFECYCLE_DATA_ROOT']=='/app/lifecycle'
+    assert data['services']['api']['environment']['LIFECYCLE_BACKUP_LOCK_PATH']=='/app/lifecycle/.backup.lock'
     assert data['services']['api']['environment']['STORAGE_DIR']=='/app/var/documents'
     assert not data['services']['web'].get('volumes')
     assert data['networks']['web']=={'external':True,'name':'web'}
@@ -70,9 +77,97 @@ def test_production_reuses_confirmed_proxy_and_preserves_volumes():
     assert 'alembic' not in data['services']['api']['command']
     assert data['services']['api']['command'].count('--workers')==1
     assert data['services']['web']['healthcheck']['test']==['CMD','node','server/healthcheck.mjs']
-    assert data['services']['web']['environment']['BFF_ALLOWED_HOSTS']==deploy.HOST
+    host='${APP_HOST:?Set the production DNS hostname}'
+    assert data['services']['web']['environment']['BFF_ALLOWED_HOSTS']==host
+    assert data['services']['api']['environment']['ACCOUNT_BASE_URL']=='https://'+host
+    assert labels['traefik.http.routers.documind-ai.rule']=='Host(`'+host+'`)'
+    assert labels['traefik.http.routers.documind-ai-upload.rule'].startswith('Host(`'+host+'`) && ')
     assert data['services']['web']['environment']['BFF_PORT']==3000
     assert 'CMD node server/healthcheck.mjs' in Path('frontend/Dockerfile').read_text()
+
+
+def test_public_production_template_requires_explicit_operator_values():
+    values=dict(line.split('=',1) for line in Path('.env.production.example').read_text(encoding='utf-8').splitlines()
+                if line and not line.startswith('#') and '=' in line)
+    for key in ('APP_HOST','ACCOUNT_BASE_URL','TRAEFIK_CONTAINER','POSTGRES_PASSWORD','BFF_SERVICE_KEY',
+                'RECOVERY_CONTROL_FILE','SMTP_HOST','SMTP_USERNAME','SMTP_PASSWORD','SMTP_FROM'):
+        assert values[key]=='', key
+    assert values['AI_ENABLED']=='false' and values['REGISTRATION_MODE']=='disabled'
+    assert values['PUBLIC_LEGAL_READY']=='false' and values['PUBLIC_REGISTRATION_LIMIT']=='0'
+
+
+@pytest.mark.parametrize('host, origin, accepted', [
+    ('portal.fixture-company.fr','https://portal.fixture-company.fr',True),
+    ('','',False),
+    ('portal.fixture-company.fr','',False),
+    ('portal.fixture-company.fr','http://portal.fixture-company.fr',False),
+    ('portal.fixture-company.fr','https://other.fixture-company.fr',False),
+    ('portal.fixture-company.fr','https://portal.fixture-company.fr/path',False),
+    ('portal.example.test','https://portal.example.test',False),
+    ('bad`hostname.fr','https://bad`hostname.fr',False),
+])
+def test_public_workflow_origin_is_explicit_and_consistent(monkeypatch, host, origin, accepted):
+    workflow=yaml.load(Path('.github/workflows/deploy.yml').read_text(encoding='utf-8'),Loader=yaml.BaseLoader)
+    job=workflow['jobs']['deploy']
+    assert job['environment']['url']=='${{ vars.ACCOUNT_BASE_URL }}'
+    step=next(s for s in job['steps'] if s.get('name')=='Verify approval configuration and exact source CI run')
+    assert step['env']['APP_HOST']=='${{ vars.APP_HOST }}'
+    assert step['env']['ACCOUNT_BASE_URL']=='${{ vars.ACCOUNT_BASE_URL }}'
+    code=step['run'].split("<<'PY'\n",1)[1].rsplit('\nPY',1)[0]
+    for key,value in {'APP_HOST':host,'ACCOUNT_BASE_URL':origin,'GITHUB_REPOSITORY':'fixture/project',
+                      'RELEASE_SHA':'a'*40,'CI_RUN_ID':'123'}.items(): monkeypatch.setenv(key,value)
+    calls=[]
+    def api(command, **kwargs):
+        assert command[:2]==['gh','api']
+        calls.append(command[-1])
+        if '/environments/' in command[-1]:
+            return json.dumps({'protection_rules':[{'type':'required_reviewers','reviewers':[{'id':1}]}]})
+        if '/runs/' in command[-1]:
+            return json.dumps({'workflow_id':7,'head_repository':{'full_name':'fixture/project'},
+                               'status':'completed','conclusion':'success','head_sha':'a'*40,
+                               'head_branch':'main','event':'push'})
+        return json.dumps({'id':7})
+    import subprocess
+    monkeypatch.setattr(subprocess,'check_output',api)
+    if accepted:
+        exec(compile(code,'public-workflow-origin-check','exec'),{})
+        assert len(calls)==3
+    else:
+        with pytest.raises(AssertionError):exec(compile(code,'public-workflow-origin-check','exec'),{})
+        assert not calls  # Configuration fails before any external API request.
+
+
+def test_recovery_control_mount_must_be_readonly_outside_the_deployment_root(tmp_path,monkeypatch):
+    monkeypatch.setattr(deploy,'run',lambda *_:str(tmp_path/'docker-data'))
+    root=tmp_path/'vps';root.mkdir()
+    control=tmp_path/'recovery-state.json'
+    control.write_text('{"format":1,"state":"quarantined"}\n',encoding='utf-8')
+    stack=SimpleNamespace(root=root)
+    config={'services':{'api':{'volumes':[
+        {'type':'volume','source':'production_documents','target':'/app/var'},
+        {'type':'bind','source':str(control),'target':'/run/documind/recovery-state.json','read_only':True},
+        {'type':'volume','source':'production_lifecycle','target':'/app/lifecycle'}]}},
+        'volumes':{name:{'name':deploy.PROJECT+'_'+name} for name in ('production_documents','production_lifecycle')}}
+    deploy.validate_recovery_control_config(stack,config)
+    assert stack.recovery_control_path==control.resolve()
+
+    invalid=copy.deepcopy(config)
+    invalid['services']['api']['volumes'][1]['read_only']=False
+    with pytest.raises(deploy.DeploymentError):deploy.validate_recovery_control_config(stack,invalid)
+    invalid=copy.deepcopy(config)
+    invalid['services']['api']['volumes'][1]['source']=str(root/'recovery-state.json')
+    (root/'recovery-state.json').write_text('{"format":1,"state":"quarantined"}\n',encoding='utf-8')
+    with pytest.raises(deploy.DeploymentError):deploy.validate_recovery_control_config(stack,invalid)
+
+
+def test_development_compose_requires_a_readonly_recovery_latch():
+    data=yaml.safe_load(Path('compose.yaml').read_text(encoding='utf-8'))
+    api=data['services']['api']
+    assert api['environment']['RECOVERY_STATE_PATH']=='/run/documind/recovery-state.json'
+    assert api['volumes'][2]=={
+        'type':'bind','source':'${RECOVERY_CONTROL_FILE:?Create the local recovery latch file}',
+        'target':'/run/documind/recovery-state.json','read_only':True,'bind':{'create_host_path':False}}
+    assert api['volumes'][1]=='lifecycle:/app/lifecycle'
 
 
 def test_workflows_are_pinned_gated_and_never_deploy_on_push():
@@ -113,8 +208,10 @@ def test_windows_ci_runs_portable_suite_without_production_services_or_secrets()
     assert '-c requirements.lock' in install and '--no-build-isolation --check-build-dependencies' in install
     suite=next(command for command in commands if 'python -m pytest' in command)
     assert 'Remove-Item Env:TEST_DATABASE_URL -ErrorAction SilentlyContinue' in suite
-    assert '--ignore=tests/test_extraction_linux.py' in suite
-    assert suite.count('--ignore=')==1 and ' -k ' not in suite and ' -m ' not in suite.replace('python -m pytest','pytest')
+    assert '-m "not posix"' in suite and '--ignore' not in suite and ' -k ' not in suite
+    linux_commands=[step['run'] for step in ci['jobs']['python']['steps'] if 'run' in step]
+    assert sum(command.strip()=='python -m pytest -q' for command in linux_commands)==2
+    assert all('not posix' not in command for command in linux_commands)
     for name in ('python','windows','frontend'):
         required=ci['jobs'][name]
         assert required.get('continue-on-error','false')=='false'
@@ -133,6 +230,8 @@ def test_new_registry_images_are_limited_to_certified_amd64():
 @pytest.fixture
 def simulation(tmp_path,monkeypatch):
     root=tmp_path/'vps';bundle=root/'releases'/'candidate';bundle.mkdir(parents=True)
+    control_file=tmp_path/'recovery-state.json'
+    control_file.write_text('{"format":1,"state":"ready"}\n',encoding='utf-8')
     (root/'.env.production').write_text('TEST_ONLY=true');(root/'.env.production').chmod(0o600)
     (bundle/'release.json').write_text(json.dumps(release()))
     events=[];state={'revision':'0006','fail_migration':False,'fail_start':False}
@@ -156,16 +255,26 @@ def simulation(tmp_path,monkeypatch):
             if 'has_public_users' in sql:
                 return json.dumps({'has_public_users':state.get('public_users',False),
                     'issued_count':state.get('issued_count',0),'closed':state.get('closed',False)})
+            if 'public_registration_quota' in sql:
+                return json.dumps({'closed':state.get('closed',False),
+                    'issued_count':state.get('issued_count',0)})
             return '1000'
         def check_health(self,*args):events.append(('healthy',args))
     old=FakeStack(root,root/'releases'/'prior',release(sha='b'*40))
     monkeypatch.setattr(deploy,'__file__',str(bundle/'deploy_production.py'))
     monkeypatch.setitem(sys.modules,'fcntl',SimpleNamespace(flock=lambda *args:None,LOCK_EX=1,LOCK_NB=2))
     monkeypatch.setattr(deploy,'Stack',FakeStack)
+    monkeypatch.setattr(deploy,'run',lambda *_:str(tmp_path/'docker-data'))
     monkeypatch.setattr(deploy,'current_stack',lambda *args:old)
     for function in ('check_config','disk_check','check_volume_state','verify_images','check_backup_guard'):
         monkeypatch.setattr(deploy,function,lambda *args:None)
-    monkeypatch.setattr(deploy,'check_config',lambda *args:{'services':{'api':{'environment':{'REGISTRATION_MODE':'disabled'}}}})
+    def resolved_config(*args):
+        return {'services':{'api':{'environment':{'REGISTRATION_MODE':'disabled'},'volumes':[
+            {'type':'volume','source':'production_documents','target':'/app/var'},
+            {'type':'bind','source':str(control_file),'target':'/run/documind/recovery-state.json','read_only':True},
+        {'type':'volume','source':'production_lifecycle','target':'/app/lifecycle'}]}},
+        'volumes':{name:{'name':deploy.PROJECT+'_'+name} for name in ('production_documents','production_lifecycle')}}
+    monkeypatch.setattr(deploy,'check_config',resolved_config)
     monkeypatch.setattr(deploy,'resolve_proxy',lambda *args:{'DEPLOY_MIN_FREE_GIB':'8'})
     monkeypatch.setattr(deploy,'create_backup',lambda *args,**kwargs:events.append(('backup',())))
     monkeypatch.setattr(deploy,'https_check',lambda *args:events.append(('https',())))
@@ -227,6 +336,9 @@ def recovery(simulation,monkeypatch):
 
 def test_recovery_backs_up_then_starts_without_migration_or_database_replacement(recovery):
     args,events,state,bundle,evidence=recovery;report={}
+    latch=args.root.parent/'recovery-state.json'
+    closed_latch='{"format":1,"state":"quarantined"}\n'
+    latch.write_text(closed_latch,encoding='utf-8')
     deploy.execute(args,report)
     assert report['status']=='success' and report['schema_before']==report['schema_after']=='0006'
     assert report['source_sha']==evidence['git_sha'] and report['backup']
@@ -236,6 +348,44 @@ def test_recovery_backs_up_then_starts_without_migration_or_database_replacement
     assert backup<next(i for i,(_,command) in enumerate(events) if command and command[0]=='up')
     assert next(i for i,event in enumerate(events) if event[0]=='https')<next(i for i,event in enumerate(events) if event[0]=='activate')
     assert json.loads((args.recover_from/'deployment-report.json').read_text())==evidence
+    assert latch.read_text(encoding='utf-8')==closed_latch
+
+
+def test_runtime_state_is_external_exclusive_and_bundle_remains_immutable(tmp_path):
+    root=tmp_path/'vps'
+    bundle=root/'releases'/'candidate'
+    bundle.mkdir(parents=True)
+    original=b'candidate bundle bytes'
+    (bundle/'release.json').write_bytes(original)
+    release_data=release()
+    deploy.persist_runtime_state(root,bundle,release_data,'192.0.2.10')
+    state=root/'var'/'deployment-runtime'/'candidate.json'
+    assert json.loads(state.read_text())=={
+        'format':1,'git_sha':release_data['git_sha'],'proxy_ip':'192.0.2.10'}
+    assert (bundle/'release.json').read_bytes()==original
+    with pytest.raises(deploy.DeploymentError,match='already exists'):
+        deploy.persist_runtime_state(root,bundle,release_data,'192.0.2.10')
+
+
+def test_deployment_report_evidence_is_external_with_readonly_legacy_fallback(tmp_path):
+    root=tmp_path/'vps'
+    bundle=root/'releases'/'candidate'
+    bundle.mkdir(parents=True)
+    (bundle/'release.json').write_text(json.dumps(release()))
+    external=deploy.deployment_report_path(root,bundle)
+    assert external==root/'var'/'deployment-reports'/'candidate.json'
+    external.parent.mkdir(parents=True)
+    external.write_text('{"status":"failed"}')
+    external.chmod(0o600)
+    legacy=bundle/'deployment-report.json'
+    legacy.write_text('{"status":"success"}')
+    assert deploy.deployment_evidence_path(root,bundle)==external
+    external.unlink()
+    assert deploy.deployment_evidence_path(root,bundle)==legacy
+    attested={**release('0007'),'security_profile':deploy.security.PROFILE}
+    (bundle/'release.json').write_text(json.dumps(attested))
+    with pytest.raises(deploy.DeploymentError,match='must remain outside'):
+        deploy.deployment_evidence_path(root,bundle)
 
 
 @pytest.mark.parametrize('invalid',['schema','source_schema','phase','sha','images','previous','missing_report','missing_before','same_bundle','outside','current','previous_pointer','initialize','rollback','allow_migration'])
@@ -282,18 +432,27 @@ def test_recovery_failure_never_activates_or_reopens_failed_source(recovery,monk
 @pytest.mark.parametrize('invalid',[pytest.param(None,id='vps-observed-mounts'),
     'owner','duplicate','image','mount','unhealthy','source','oneoff',
     'documents_subdirectory','unauthorized_path','bind','extra_volume','duplicate_mount','web_volume',
-    'database_volume','database_path','missing_mount'])
+    'database_volume','database_path','missing_mount','recovery_writable','recovery_source',
+    'lifecycle_missing','lifecycle_path','lifecycle_name','lifecycle_bind','latch_in_volume'])
 def test_recovery_inspects_actual_project_images_mounts_and_database(monkeypatch,tmp_path,invalid):
-    stack=deploy.Stack(tmp_path,tmp_path,release())
+    root=tmp_path/'vps';root.mkdir()
+    control_file=tmp_path/'recovery-state.json'
+    control_file.write_text('{"format":1,"state":"quarantined"}\n',encoding='utf-8')
+    stack=deploy.Stack(root,root,release())
+    stack.recovery_control_path=control_file.resolve()
     containers=[]
     for name in ('db','api','web'):
         destination='/var/lib/postgresql/data' if name=='db' else '/app/var'
         volume='database' if name=='db' else 'documents'
         containers.append({'Config':{'Labels':{'com.docker.compose.project':deploy.PROJECT,
-            'com.docker.compose.service':name,'com.docker.compose.project.config_files':str(tmp_path/'compose.production.yaml')}},
+            'com.docker.compose.service':name,'com.docker.compose.project.config_files':str(root/'compose.production.yaml')}},
             'Image':'sha256:verified','State':{'Running':True,'Health':{'Status':'healthy'}},
             'Mounts':([{'Type':'volume','Destination':destination,'Name':f'{deploy.PROJECT}_production_{volume}'}]
                       if name!='web' else [])})
+        if name=='api':
+            containers[-1]['Mounts'].append({'Type':'bind','Source':str(control_file.resolve()),
+                'Destination':'/run/documind/recovery-state.json','RW':False})
+        if name=='api':containers[-1]['Mounts'].append({'Type':'volume','Name':deploy.PROJECT+'_production_lifecycle','Destination':'/app/lifecycle'})
         if name in ('api','web'):containers[-1]['Mounts'].append({'Type':'tmpfs','Destination':'/tmp'})
     if invalid=='owner':containers[0]['Config']['Labels']['com.docker.compose.project']='other-app'
     elif invalid=='duplicate':containers[1]['Config']['Labels']['com.docker.compose.service']='db'
@@ -311,7 +470,22 @@ def test_recovery_inspects_actual_project_images_mounts_and_database(monkeypatch
     elif invalid=='database_volume':containers[0]['Mounts'][0]['Name']='other-database'
     elif invalid=='database_path':containers[0]['Mounts'][0]['Destination']='/other-database'
     elif invalid=='missing_mount':containers[1]['Mounts']=[]
+    elif invalid=='recovery_writable':containers[1]['Mounts'][1]['RW']=True
+    elif invalid=='recovery_source':containers[1]['Mounts'][1]['Source']=str(tmp_path/'other-state.json')
+    elif invalid=='lifecycle_missing':containers[1]['Mounts'].pop(2)
+    elif invalid=='lifecycle_path':containers[1]['Mounts'][2]['Destination']='/wrong-lifecycle'
+    elif invalid=='lifecycle_name':containers[1]['Mounts'][2]['Name']='anonymous-or-other'
+    elif invalid=='lifecycle_bind':containers[1]['Mounts'][2]['Type']='bind'
+    for container in containers:
+        for mount in container['Mounts']:
+            if mount.get('Type')=='volume':mount['Source']=str(tmp_path/'docker-volumes'/mount.get('Name','unknown'))
+    if invalid=='latch_in_volume':
+        base=tmp_path/'docker-volumes'/f'{deploy.PROJECT}_production_lifecycle';base.mkdir(parents=True)
+        latch=base/'latch.json';latch.write_text('{}')
+        stack.recovery_control_path=latch
+        containers[1]['Mounts'][1]['Source']=str(latch)
     def run(command):
+        if command[:2]==['docker','info']:return str(tmp_path/'docker-data')
         if command[:3]==['docker','ps','-aq']:return '1\n2\n3'
         if command[:2]==['docker','inspect']:return json.dumps(containers)
         if command[:3]==['docker','image','inspect']:return 'sha256:verified'
@@ -319,18 +493,51 @@ def test_recovery_inspects_actual_project_images_mounts_and_database(monkeypatch
     monkeypatch.setattr(deploy,'run',run)
     if invalid:
         mount_errors={'mount','documents_subdirectory','unauthorized_path','bind','extra_volume',
-                      'duplicate_mount','web_volume','database_volume','database_path','missing_mount'}
+                      'duplicate_mount','web_volume','database_volume','database_path','missing_mount',
+                      'recovery_writable','recovery_source','lifecycle_missing','lifecycle_path',
+                      'lifecycle_name','lifecycle_bind','latch_in_volume'}
         with pytest.raises(deploy.DeploymentError,match='unexpected persistent mounts' if invalid in mount_errors else None):
             deploy.verify_recovery_containers(stack)
     else:deploy.verify_recovery_containers(stack)
 
 
-@pytest.mark.parametrize('initialize,states',[(True,[True,True]),(True,[True,False]),(False,[True,False]),(False,[False,False])])
+@pytest.mark.parametrize('initialize,states',[
+    (True,[True,True,True]),(True,[True,True,False]),
+    (False,[True,True,False]),(False,[False,False,False]),
+])
 def test_partial_volumes_never_enable_implicit_initialization(monkeypatch,initialize,states):
     results=iter(states)
     monkeypatch.setattr(deploy.subprocess,'run',lambda *args,**kwargs:SimpleNamespace(
         returncode=0 if next(results) else 1,stderr='no such volume'))
     with pytest.raises(deploy.DeploymentError):deploy.check_volume_state(initialize)
+
+
+@pytest.mark.parametrize('initialize,states',[
+    (True,[False,False,False]),
+    (False,[True,True,True]),
+])
+def test_complete_volume_set_requires_explicit_mode(monkeypatch,initialize,states):
+    results=iter(states)
+    monkeypatch.setattr(deploy.subprocess,'run',lambda *args,**kwargs:SimpleNamespace(
+        returncode=0 if next(results) else 1,stderr='no such volume'))
+    assert deploy.check_volume_state(initialize) is None
+
+
+def test_historical_database_and_documents_without_lifecycle_refuse_before_actions(monkeypatch):
+    observed=[]
+    states=iter([True,True,False])
+    def inspect(command,**kwargs):
+        observed.append(command[-1])
+        present=next(states)
+        return SimpleNamespace(returncode=0 if present else 1,stderr='no such volume')
+    monkeypatch.setattr(deploy.subprocess,'run',inspect)
+    with pytest.raises(deploy.DeploymentError,match='partial.*lifecycle history'):
+        deploy.check_volume_state(initialize=False)
+    assert observed==[
+        f'{deploy.PROJECT}_production_database',
+        f'{deploy.PROJECT}_production_documents',
+        f'{deploy.PROJECT}_production_lifecycle',
+    ]
 
 
 @pytest.fixture
@@ -454,24 +661,36 @@ def test_post_https_recovery_can_follow_a_second_failed_https_attempt(post_https
 
 @pytest.mark.parametrize('wrong',[None,'db_image','db_bundle','app_bundle'])
 def test_recovery_matches_split_database_and_application_owners(tmp_path,monkeypatch,wrong):
-    origin=tmp_path/'initial';candidate=tmp_path/'apps';origin.mkdir();candidate.mkdir()
+    deployment=tmp_path/'vps';deployment.mkdir()
+    origin=deployment/'initial';candidate=deployment/'apps';origin.mkdir();candidate.mkdir()
+    control_file=tmp_path/'recovery-state.json'
+    control_file.write_text('{"format":1,"state":"quarantined"}\n',encoding='utf-8')
     original=release(sha='b'*40);replaced=release()
     replaced['images']['postgres']=replaced['images']['postgres'].split('@')[0]+'@sha256:'+'9'*64
-    stack=deploy.Stack(tmp_path,candidate,replaced)
-    stack.database_source=deploy.Stack(tmp_path,origin,original)
+    stack=deploy.Stack(deployment,candidate,replaced)
+    stack.recovery_control_path=control_file.resolve()
+    stack.database_source=deploy.Stack(deployment,origin,original)
     containers=[]
     for service in ('db','api','web'):
         owner=origin if service=='db' else candidate
         mounts=[]
         if service!='web':mounts=[{'Type':'volume','Destination':'/app/var' if service=='api' else '/var/lib/postgresql/data',
             'Name':f'{deploy.PROJECT}_production_'+('documents' if service=='api' else 'database')}]
+        if service=='api':
+            mounts.append({'Type':'bind','Source':str(control_file.resolve()),
+                'Destination':'/run/documind/recovery-state.json','RW':False})
+        if service=='api':mounts.append({'Type':'volume','Name':deploy.PROJECT+'_production_lifecycle','Destination':'/app/lifecycle'})
         containers.append({'Config':{'Labels':{'com.docker.compose.project':deploy.PROJECT,'com.docker.compose.service':service,
             'com.docker.compose.project.config_files':str(owner/'compose.production.yaml')}},
             'Image':'original-db' if service=='db' else 'replaced-app','State':{'Running':True,'Health':{'Status':'healthy'}},'Mounts':mounts})
     if wrong=='db_image':containers[0]['Image']='replaced-app'
     elif wrong=='db_bundle':containers[0]['Config']['Labels']['com.docker.compose.project.config_files']=str(candidate/'compose.production.yaml')
     elif wrong=='app_bundle':containers[1]['Config']['Labels']['com.docker.compose.project.config_files']=str(origin/'compose.production.yaml')
+    for container in containers:
+        for mount in container['Mounts']:
+            if mount.get('Type')=='volume':mount['Source']=str(tmp_path/'docker-volumes'/mount.get('Name','unknown'))
     def run(command):
+        if command[:2]==['docker','info']:return str(tmp_path/'docker-data')
         if command[:3]==['docker','ps','-aq']:return '1\n2\n3'
         if command[:2]==['docker','inspect']:return json.dumps(containers)
         if command[:3]==['docker','image','inspect']:
@@ -485,9 +704,14 @@ def test_recovery_matches_split_database_and_application_owners(tmp_path,monkeyp
 
 
 def test_existing_report_is_never_overwritten_or_reused_as_candidate(tmp_path,monkeypatch):
-    report=tmp_path/'deployment-report.json';report.write_text('immutable prior failure')
+    bundle=tmp_path/'releases'/'candidate'
+    bundle.mkdir(parents=True)
+    report_directory=tmp_path/'var'/'deployment-reports'
+    report_directory.mkdir(parents=True)
+    report=report_directory/'candidate.json';report.write_text('immutable prior failure')
     monkeypatch.setattr(deploy,'__file__',str(tmp_path/'deploy_production.py'))
-    monkeypatch.setattr(sys,'argv',['deploy_production.py','--root',str(tmp_path),'--recover-after-https',str(tmp_path)])
+    monkeypatch.setattr(sys,'argv',['deploy_production.py','--root',str(tmp_path),
+        '--bundle',str(bundle),'--recover-after-https',str(tmp_path)])
     monkeypatch.setattr(deploy,'verify_registry_tls',lambda:pytest.fail('No network preflight before preserving old evidence'))
     assert deploy.main()==1
     assert report.read_text()=='immutable prior failure'

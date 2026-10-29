@@ -30,6 +30,9 @@ PUBLIC={'registration_mode':'public','legacy_api_enabled':False,'owner_demo_enab
 @pytest.fixture
 def beta(gateway_client,app):
     app.state.settings=Settings(_env_file=None,**{**app.state.settings.model_dump(),**PUBLIC})
+    with app.state.sessions() as session:
+        session.get(PublicRegistrationQuota, 'public').closed = False
+        session.commit()
     sent=queue.Queue()
     app.state.mail_sender=lambda email,token:sent.put((email,token))
     gateway_client.headers['X-Documind-Secure']='1'
@@ -169,6 +172,50 @@ def test_quota_update_is_atomic_even_without_process_local_semaphore(beta):
     with ThreadPoolExecutor(max_workers=2) as pool:assert sorted(pool.map(reserve,range(2)),key=lambda n:n is None)==[1,None]
 
 
+def test_legacy_accounts_are_unchanged_and_do_not_consume_public_admissions(beta):
+    from backend.account_models import PublicRegistrationQuota
+
+    client, app, _ = beta
+    legacy_ids = [UUID(int=101), UUID(int=102)]
+    with app.state.sessions() as session:
+        for index, identifier in enumerate(legacy_ids, 1):
+            session.add(User(
+                id=identifier, owner_id=UUID(int=200 + index),
+                username=f'legacy-test-{index}', email=f'legacy-{index}@example.test',
+                password_hash=f'synthetic-legacy-password-hash-{index}',
+            ))
+        session.commit()
+        before = {
+            user.id: (
+                user.owner_id, user.username, user.email, user.password_hash,
+                user.ai_limit_usd, user.created_at, user.disabled_at,
+                user.registration_kind, user.email_verified_at,
+                user.terms_version, user.terms_accepted_at,
+            )
+            for user in session.scalars(select(User).where(User.id.in_(legacy_ids)))
+        }
+        assert len(before) == 2
+        assert all(values[6] is None and values[7] == 'legacy' for values in before.values())
+        assert session.get(PublicRegistrationQuota, 'public').issued_count == 0
+
+    enroll(beta, 'new-public@example.test')
+
+    with app.state.sessions() as session:
+        after = {
+            user.id: (
+                user.owner_id, user.username, user.email, user.password_hash,
+                user.ai_limit_usd, user.created_at, user.disabled_at,
+                user.registration_kind, user.email_verified_at,
+                user.terms_version, user.terms_accepted_at,
+            )
+            for user in session.scalars(select(User).where(User.id.in_(legacy_ids)))
+        }
+        assert after == before
+        public_users = session.scalars(select(User).where(User.registration_kind == 'public')).all()
+        assert len(public_users) == 1 and public_users[0].email == 'new-public@example.test'
+        assert session.get(PublicRegistrationQuota, 'public').issued_count == 1
+
+
 def test_closed_reopened_resend_and_budgets_are_isolated(beta):
     client,app,sent=beta;first=enroll(beta)
     app.state.settings.registration_mode='disabled'
@@ -302,7 +349,7 @@ def test_public_registration_audit_never_contains_email_password_or_tokens(beta,
     for secret in ('alice@example.test',PASSWORD,token,BFF_KEY):assert secret not in serialized
 
 
-def test_migration_0007_preserves_0006_identity_and_disabled_state(tmp_path,monkeypatch):
+def test_migration_0007_preserves_active_legacy_identities_and_data(tmp_path,monkeypatch):
     from sqlalchemy import text
     from backend.db import make_engine
     url=f'sqlite:///{(tmp_path/"preserve.db").as_posix()}'
@@ -311,13 +358,34 @@ def test_migration_0007_preserves_0006_identity_and_disabled_state(tmp_path,monk
     engine=make_engine(url)
     try:
         with engine.begin() as connection:
-            connection.execute(text("INSERT INTO users(id,owner_id,username,password_hash,ai_limit_usd,created_at,email,disabled_at) VALUES (:id,:owner,'existing','original-hash',4,CURRENT_TIMESTAMP,'existing@example.test',CURRENT_TIMESTAMP)"),{'id':'1'*32,'owner':'2'*32})
-            before=tuple(connection.execute(text('SELECT * FROM users')).one())
+            connection.execute(text("""
+                INSERT INTO users(id,owner_id,username,password_hash,ai_limit_usd,created_at,email,disabled_at)
+                VALUES
+                    (:id1,:owner1,'legacy-one','original-hash-one',4,CURRENT_TIMESTAMP,'legacy-one@example.test',NULL),
+                    (:id2,:owner2,'legacy-two','original-hash-two',4,CURRENT_TIMESTAMP,'legacy-two@example.test',NULL)
+            """), {'id1':'1'*32,'owner1':'2'*32,'id2':'3'*32,'owner2':'4'*32})
+            before=[tuple(row) for row in connection.execute(text(
+                'SELECT id,owner_id,username,password_hash,ai_limit_usd,created_at,email,disabled_at '
+                'FROM users ORDER BY id')).all()]
         command.upgrade(config,'0007')
         with engine.connect() as connection:
-            assert tuple(connection.execute(text('SELECT id,owner_id,username,password_hash,ai_limit_usd,created_at,email,disabled_at FROM users')).one())==before
-            assert tuple(connection.execute(text('SELECT registration_kind,email_verified_at,terms_version,terms_accepted_at FROM users')).one())==('legacy',None,None,None)
-            assert tuple(connection.execute(text('SELECT id,issued_count,closed FROM public_registration_quota')).one())==('public',0,False)
+            after=[tuple(row) for row in connection.execute(text(
+                'SELECT id,owner_id,username,password_hash,ai_limit_usd,created_at,email,disabled_at '
+                'FROM users ORDER BY id')).all()]
+            assert after==before
+            assert connection.execute(text(
+                "SELECT count(*) FROM users WHERE registration_kind='legacy' AND disabled_at IS NULL"
+            )).scalar_one()==2
+            assert connection.execute(text(
+                'SELECT count(*) FROM users WHERE registration_kind<>\'legacy\''
+            )).scalar_one()==0
+            assert [tuple(row) for row in connection.execute(text(
+                'SELECT registration_kind,email_verified_at,terms_version,terms_accepted_at '
+                'FROM users ORDER BY id')).all()]==[('legacy',None,None,None)]*2
+            assert tuple(connection.execute(text('SELECT id,issued_count,closed FROM public_registration_quota')).one())==('public',0,True)
         command.downgrade(config,'0006')
-        with engine.connect() as connection:assert tuple(connection.execute(text('SELECT * FROM users')).one())==before
+        with engine.connect() as connection:
+            assert [tuple(row) for row in connection.execute(text(
+                'SELECT id,owner_id,username,password_hash,ai_limit_usd,created_at,email,disabled_at '
+                'FROM users ORDER BY id')).all()]==before
     finally:engine.dispose()

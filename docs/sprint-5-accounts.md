@@ -1,8 +1,10 @@
 # Sprint 5 — Comptes, isolation et préparation SaaS
 
-**Déploiement VPS :** la configuration de production autonome décrite à la fin de ce guide
-est remplacée par le [Sprint 6](sprint-6-cicd.md), qui réutilise votre Traefik existant et les
-images de votre Registry. Ne pas installer le proxy supplémentaire de l’ancienne préparation.
+**Document historique :** la préparation autonome de production décrite à la fin de ce
+guide n'est pas un modèle de déploiement actuel. Le [README](../README.md) distingue
+les environnements local, de recette et de production. Ne pas installer le proxy
+supplémentaire de l'ancienne préparation ; tout déploiement exige une configuration
+explicite et des approbations distinctes.
 
 ## Audit et stratégie des propriétaires
 

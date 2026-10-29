@@ -17,7 +17,7 @@ on:
         options: [deploy, rollback]
         default: deploy
       initialize:
-        description: Approve first installation ONLY when both persistent volumes are absent
+        description: Approve first installation ONLY when all three persistent volumes are absent
         type: boolean
         default: false
       allow_migration:
@@ -45,7 +45,7 @@ jobs:
     timeout-minutes: 40
     environment:
       name: production
-      url: https://documind.adelinemeistertzheim.fr
+      url: ${{ vars.ACCOUNT_BASE_URL }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -58,11 +58,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_SHA: ${{ inputs.release_sha }}
           CI_RUN_ID: ${{ inputs.ci_run_id }}
+          APP_HOST: ${{ vars.APP_HOST }}
+          ACCOUNT_BASE_URL: ${{ vars.ACCOUNT_BASE_URL }}
         run: |
           python - <<'PY'
           import json,os,re,subprocess
           def api(path):
               return json.loads(subprocess.check_output(['gh','api',path],text=True))
+          host=os.environ['APP_HOST']; origin=os.environ['ACCOUNT_BASE_URL']
+          assert re.fullmatch(r'(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}',host) and len(host)<=253, 'Configure a production DNS hostname'
+          reserved=('example.com','example.org','example.net','test','example','invalid','localhost')
+          assert not any(host.lower()==suffix or host.lower().endswith('.'+suffix) for suffix in reserved), 'Example or local hostname refused'
+          assert origin==f'https://{host}', 'ACCOUNT_BASE_URL must match the configured HTTPS APP_HOST'
           repo=os.environ['GITHUB_REPOSITORY']; sha=os.environ['RELEASE_SHA']; run_id=os.environ['CI_RUN_ID']
           assert re.fullmatch('[a-f0-9]{40}',sha),'Full release SHA required'
           assert re.fullmatch('[0-9]+',run_id),'Invalid CI run ID'
@@ -92,22 +99,25 @@ jobs:
           import json,os
           from pathlib import Path
           from tools.release_manifest import validate_release
-          from tools.release_security import validate_statement,BUNDLE_FILES,STATEMENT
+          from tools.release_security import validate_operational_bundle,BUNDLE_FILES,LEGACY_BUNDLE_FILES,STATEMENT
           data=validate_release(json.loads(Path('release-bundle/release.json').read_text()))
           assert data['git_sha']==os.environ['RELEASE_SHA']
-          expected={'release.json','compose.production.yaml','deploy_production.py','backup_local.py','release_manifest.py'}
           actual={p.name for p in Path('release-bundle').iterdir()}
           secure=set(BUNDLE_FILES)|{STATEMENT}
-          assert actual in (expected,expected|{'public_beta_policy.py'},secure)
-          if actual==secure or 'security_profile' in data:
-              assert actual==secure
-              statement,_=validate_statement(Path('release-bundle'),data)
-              assert statement['producer']['repository']==os.environ['GITHUB_REPOSITORY']
-              assert statement['producer']['run_id']==os.environ['CI_RUN_ID']
+          legacy_secure=set(LEGACY_BUNDLE_FILES)|{STATEMENT}
+          assert actual in (secure,legacy_secure), 'Deployment requires an attested operational bundle'
+          statement,_=validate_operational_bundle(
+              Path('release-bundle'),data,rollback=os.environ['OPERATION']=='rollback')
+          if actual==legacy_secure:
+              assert os.environ['OPERATION']=='rollback'
+              assert os.environ['APPROVE_PUBLIC_BETA']!='true'
+          assert statement['producer']['repository']==os.environ['GITHUB_REPOSITORY']
+          assert statement['producer']['run_id']==os.environ['CI_RUN_ID']
+          assert set(statement['bundle_sha256']) == actual-{STATEMENT}
           if os.environ['APPROVE_PUBLIC_BETA']=='true':
               assert actual==secure, 'Public beta requires an attested bundle and independent host approval'
           if os.environ['OPERATION']=='rollback':
-              assert actual==secure, 'Rollback requires an attested bundle'
+              assert actual in (secure,legacy_secure), 'Rollback requires an attested bundle'
           PY
       - name: Configure verified SSH
         env:
@@ -144,7 +154,9 @@ jobs:
           TARGET="$VPS_DEPLOY_PATH/releases/$RELEASE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           CONTROL="$VPS_DEPLOY_PATH/deploy-controls/$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           mkdir deploy-control
-          cp tools/deploy_production.py tools/backup_local.py tools/release_manifest.py tools/public_beta_policy.py tools/release_security.py deploy-control/
+          cp release-bundle/deploy_production.py release-bundle/backup_local.py \
+            release-bundle/release_manifest.py release-bundle/public_beta_policy.py \
+            release-bundle/release_security.py deploy-control/
           ssh "${SSH[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "umask 077; mkdir -p '$TARGET'"
           ssh "${SSH[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "umask 077; mkdir -p '$CONTROL'"
           scp "${SSH[@]}" -P "$VPS_PORT" release-bundle/* "$VPS_USER@$VPS_HOST:$TARGET/"
@@ -187,7 +199,7 @@ jobs:
           TARGET="$VPS_DEPLOY_PATH/releases/$RELEASE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           ssh -F /dev/null -i "$RUNNER_TEMP/documind-ssh/key" -p "$VPS_PORT" \
             -o BatchMode=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$RUNNER_TEMP/documind-ssh/known_hosts" \
-            "$VPS_USER@$VPS_HOST" "cat '$TARGET/deployment-report.json'" > deployment-report.json
+            "$VPS_USER@$VPS_HOST" "cat '$VPS_DEPLOY_PATH/var/deployment-reports/$RELEASE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json'" > deployment-report.json
           cat deployment-report.json >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()

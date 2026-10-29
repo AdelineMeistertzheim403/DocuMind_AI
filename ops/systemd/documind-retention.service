@@ -7,13 +7,13 @@ After=network-online.target
 Type=oneshot
 User=debian
 Group=debian
-WorkingDirectory=/srv/documind-ai/ops
+WorkingDirectory=/srv/documind-ai/current
 StateDirectory=documind-retention
 StateDirectoryMode=0700
 UMask=0077
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Environment=HOME=/home/debian
-ExecStart=/usr/bin/python3 /srv/documind-ai/ops/retention_production.py --simulate
+ExecStart=/usr/bin/python3 /srv/documind-ai/current/retention_production.py --simulate
 TimeoutStartSec=30min
 TimeoutStopSec=90
 NoNewPrivileges=yes

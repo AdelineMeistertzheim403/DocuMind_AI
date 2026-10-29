@@ -26,13 +26,25 @@ ROOT = Path('/srv/documind-ai')
 STATE = Path('/var/lib/documind-retention')
 FILES = {'manifest.json', 'integrity.json', 'database.dump', 'documents.tar.gz'}
 ARCHIVES = {'database.dump', 'documents.tar.gz'}
+V3_PAYLOADS = ARCHIVES | {'lifecycle.sqlite.tar.gz', 'integrity.json'}
+V3_FILES = V3_PAYLOADS | {'manifest.json'}
+STORE_VERSIONS = {'registry':1,'witness':1,'authenticated':2,'holds':2,'admission_anchor':2}
+STORE_TABLES = {
+    'registry': {'requests','admission_watermark','document_erasures'},
+    'witness': {'confirmations','admissions'},
+    'authenticated': {'confirmations','admissions','synthetic_transitions','hold_mirrors','authenticated_header'},
+    'holds': {'confirmations','admissions','holds_v2','hold_decisions_v2'},
+    'admission_anchor': {'confirmations','admissions','admission_anchor'},
+}
 PROTECTED = ('51ac3259', '3e6df673')
 DAILY = re.compile(r'daily-(\d{8}T\d{6}Z)-[a-f0-9]{32}')
 PARIS = ZoneInfo('Europe/Paris')
 
 
 class RetentionError(Exception):
-    pass
+    def __init__(self, code, checks=()):
+        super().__init__(code)
+        self.checks = tuple(checks)
 
 
 def digest(data):
@@ -49,6 +61,40 @@ def inventory_digest(rows):
 
 def full_id(value):
     return isinstance(value, str) and bool(re.fullmatch('[a-f0-9]{64}', value))
+
+
+def archive_layout(manifest):
+    version = manifest.get('backup_format_version', 1) if isinstance(manifest, dict) else None
+    if type(version) is not int or version not in (1, 2, 3):
+        raise RetentionError('unsupported_archive_format')
+    return (V3_FILES, V3_PAYLOADS) if version == 3 else (FILES, ARCHIVES)
+
+
+def validate_v3_declaration(manifest):
+    stores=manifest.get('lifecycle_stores'); hashes=manifest.get('lifecycle_store_sha256')
+    if (manifest.get('capture_complete') is not True or manifest.get('s2_recovery_authorized') is not False
+            or manifest.get('recovery_disposition')!='quarantine_pending_independent_freshness_and_operator_review'
+            or manifest.get('capture_scope')!=['postgresql','documents','lifecycle_sqlite']
+            or not isinstance(manifest.get('capture_id'),str)
+            or not re.fullmatch('[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}',manifest['capture_id'])
+            or not isinstance(stores,dict) or set(stores)!=set(STORE_VERSIONS)
+            or not isinstance(hashes,dict) or set(hashes)!=set(STORE_VERSIONS)):
+        raise ValueError()
+    for name,version in STORE_VERSIONS.items():
+        item=stores[name]
+        if (not isinstance(item,dict) or type(item.get('user_version')) is not int
+                or item['user_version']!=version or item.get('snapshot')!=f'stores/{name}.sqlite'
+                or not isinstance(item.get('tables'),list) or len(item['tables'])!=len(STORE_TABLES[name])
+                or set(item['tables'])!=STORE_TABLES[name]
+                or item.get('journal_mode') not in {'delete','truncate','persist','memory','wal','off'}
+                or not full_id(item.get('sha256')) or item['sha256']!=hashes[name]):
+            raise ValueError()
+    quiescence=manifest.get('quiescence')
+    if (not isinstance(quiescence,dict) or any(quiescence.get(name) is not True for name in (
+            'api_web_stopped','only_database_service_running','private_networks_exclusive',
+            'no_other_postgresql_clients','lifecycle_exclusive_lock_acquired'))
+            or quiescence.get('out_of_band_privileged_host_access')!='trusted_operator_boundary_not_machine_verifiable'):
+        raise ValueError()
 
 
 def run_time(name):
@@ -116,13 +162,67 @@ class Repository:
         except Exception: raise RetentionError('remote_metadata_not_verified') from None
 
 
-def validate_metadata(manifest, integrity, revision, timestamp, now):
+def metadata_diagnostics(manifest, integrity, revision, timestamp, now):
+    """Non-sensitive reason codes only. A historical schema is NOT corruption proof.
+
+    Diagnostics never authorize deletion or weaken validate_metadata(). Historical
+    copies require a separate restore using their original reviewed schema/tooling.
+    """
+    checks = []
+    if not isinstance(manifest, dict):
+        return ['manifest_format_invalid']
+    if type(manifest.get('database_major')) is not int or manifest.get('database_major') != 17:
+        checks.append('postgres_major_mismatch')
+    migration = manifest.get('migration')
+    if migration != revision:
+        checks.append('historical_schema_review_required' if isinstance(migration,str) and
+                      re.fullmatch(r'000[1-7]',migration) else 'schema_invalid_or_unknown')
     try:
+        _, payloads=archive_layout(manifest)
+        if (set(manifest['files']) != payloads or len(manifest['files']) != len(payloads) or
+                set(manifest['sha256']) != payloads or
+                not all(full_id(value) for value in manifest['sha256'].values())):
+            raise ValueError()
+    except Exception:
+        checks.append('archive_inventory_or_checksums_invalid')
+    if manifest.get('backup_format_version')==3:
+        try: validate_v3_declaration(manifest)
+        except Exception: checks.append('v3_declaration_invalid')
+    try:
+        if not timestamp <= monitor.epoch(manifest['created_at']) <= min(timestamp + 4*3600,now + 300):
+            raise ValueError()
+    except Exception:
+        checks.append('creation_time_invalid')
+    try:
+        if not isinstance(integrity,dict) or not {'documents','users'} <= integrity.keys():raise ValueError()
+        for name,data in integrity.items():
+            if (not isinstance(name,str) or not re.fullmatch('[a-z_][a-z0-9_]*',name) or
+                    not isinstance(data,dict) or type(data['count']) is not int or data['count'] < 0 or
+                    not re.fullmatch('[a-f0-9]{32}',data['digest']) or
+                    not isinstance(data['columns'],list) or not data['columns'] or
+                    not all(isinstance(column,str) and re.fullmatch('[a-z_][a-z0-9_]*',column) for column in data['columns'])):
+                raise ValueError()
+    except Exception:
+        checks.append('integrity_inventory_invalid')
+    return checks
+
+
+def validate_metadata(manifest, integrity, revision, timestamp, now):
+    if (isinstance(manifest,dict) and type(manifest.get('backup_format_version',1)) is int
+            and manifest.get('backup_format_version',1) in (1,2)
+            and isinstance(manifest.get('migration'),str) and re.fullmatch('000[1-7]',manifest['migration'])
+            and manifest['migration']!=revision):
+        raise RetentionError('historical_schema_review_required', ['historical_schema_review_required'])
+    try:
+        _,payloads=archive_layout(manifest)
         if (not isinstance(manifest, dict) or type(manifest['database_major']) is not int
                 or manifest['database_major'] != 17 or manifest['migration'] != revision
-                or set(manifest['files']) != ARCHIVES or len(manifest['files']) != 2
-                or set(manifest['sha256']) != ARCHIVES
+                or not isinstance(manifest['files'],list)
+                or set(manifest['files']) != payloads or len(manifest['files']) != len(payloads)
+                or not isinstance(manifest['sha256'],dict) or set(manifest['sha256']) != payloads
                 or not all(full_id(value) for value in manifest['sha256'].values())): raise ValueError()
+        if manifest.get('backup_format_version')==3:
+            validate_v3_declaration(manifest)
         created = monitor.epoch(manifest['created_at'])
         if not timestamp <= created <= min(timestamp + 4 * 3600, now + 300): raise ValueError()
         if not isinstance(integrity, dict) or not {'documents', 'users'} <= integrity.keys(): raise ValueError()
@@ -132,7 +232,9 @@ def validate_metadata(manifest, integrity, revision, timestamp, now):
                     or not isinstance(data['columns'], list) or not data['columns']
                     or not all(isinstance(column, str) and re.fullmatch('[a-z_][a-z0-9_]*', column) for column in data['columns'])):
                 raise ValueError()
-    except Exception: raise RetentionError('archive_metadata_inconsistent') from None
+    except Exception:
+        raise RetentionError('archive_metadata_inconsistent',
+                             metadata_diagnostics(manifest, integrity, revision, timestamp, now)) from None
 
 
 def local_archive(path, parent, revision, now):
@@ -140,24 +242,31 @@ def local_archive(path, parent, revision, now):
         raise RetentionError('unexpected_local_path')
     timestamp = run_time(path.name)
     if timestamp > now + 300: raise RetentionError('archive_time_inconsistent')
-    if {item.name for item in path.iterdir()} != FILES:
+    metadata_file=path/'manifest.json'
+    if (metadata_file.is_symlink() or not metadata_file.is_file()
+            or metadata_file.stat().st_nlink!=1 or metadata_file.stat().st_size>1024*1024):
+        raise RetentionError('local_manifest_unavailable')
+    manifest=backup.restic_json(metadata_file.read_bytes())
+    files,payloads=archive_layout(manifest)
+    if {item.name for item in path.iterdir()} != files:
         raise RetentionError('incomplete_or_unknown_local_files')
     hashes = {}; sizes = {}; data = {}
-    for name in sorted(FILES):
+    for name in sorted(files):
         file = path / name
         attributes = file.lstat()
         if not stat.S_ISREG(attributes.st_mode) or file.is_symlink() or attributes.st_nlink != 1:
             raise RetentionError('unexpected_local_file')
         with file.open('rb') as source: hashes[name] = hashlib.file_digest(source, 'sha256').hexdigest()
         sizes[name] = attributes.st_size
-        if name in ARCHIVES and not sizes[name]: raise RetentionError('empty_local_archive')
+        if name in payloads and not sizes[name]: raise RetentionError('empty_local_archive')
         if name.endswith('.json'):
             if attributes.st_size > 1024 * 1024: raise RetentionError('local_metadata_too_large')
             data[name] = backup.restic_json(file.read_bytes())
     validate_metadata(data['manifest.json'], data['integrity.json'], revision, timestamp, now)
-    if any(hashes[name] != data['manifest.json']['sha256'][name] for name in ARCHIVES):
+    if any(hashes[name] != data['manifest.json']['sha256'][name] for name in payloads):
         raise RetentionError('local_checksum_mismatch')
-    return {'name': path.name, 'time': timestamp, 'hashes': hashes, 'sizes': sizes, 'bytes': sum(sizes.values())}
+    return {'name': path.name, 'time': timestamp, 'hashes': hashes, 'sizes': sizes, 'bytes': sum(sizes.values()),
+            'classification':'v3-complete' if manifest.get('backup_format_version')==3 else 'legacy-preserved'}
 
 
 def snapshot_inventory(rows, now):
@@ -209,13 +318,17 @@ def verify_remote(repo, snapshot, revision, now, local=None):
         raw, parsed = repo.metadata(snapshot['id'], snapshot['path'] + '/' + name)
         hashes[name], sizes[name], metadata[name] = digest(raw), len(raw), parsed
     validate_metadata(metadata['manifest.json'], metadata['integrity.json'], revision, snapshot['run_time'], now)
-    for name in sorted(ARCHIVES):
+    _,payloads=archive_layout(metadata['manifest.json'])
+    if 'integrity.json' in payloads and hashes['integrity.json']!=metadata['manifest.json']['sha256']['integrity.json']:
+        raise RetentionError('remote_checksum_mismatch')
+    for name in sorted(payloads-{'integrity.json'}):
         hashes[name], sizes[name] = repo.file_hash(snapshot['id'], snapshot['path'] + '/' + name)
         if not sizes[name] or hashes[name] != metadata['manifest.json']['sha256'][name]:
             raise RetentionError('remote_checksum_mismatch')
     if local and (hashes != local['hashes'] or sizes != local['sizes']):
         raise RetentionError('local_remote_mismatch')
-    return {'hashes': hashes, 'sizes': sizes}
+    return {'hashes': hashes, 'sizes': sizes,
+            'classification':'v3-complete' if metadata['manifest.json'].get('backup_format_version')==3 else 'legacy-preserved'}
 
 
 def retention_limits(daily=7, weekly=4, monthly=3):
@@ -256,6 +369,8 @@ def build_plan(root, repo, revision, now, daily=7, weekly=4, monthly=3):
     # Require a complete current copy, beyond its name/date/tags, before proposing expiry.
     verified = {newest['id']: verify_remote(repo, newest, revision, now)}
     local = []; local_exclusions = []; alerts = []
+    if verified[newest['id']]['classification']=='legacy-preserved':
+        alerts.append('latest-snapshot-legacy-review-required')
     entries = sorted(parent.iterdir(), key=lambda path: path.name)
     by_run = {item['name']: item for item in snapshots}
     protected_runs = set()
@@ -276,11 +391,14 @@ def build_plan(root, repo, revision, now, daily=7, weekly=4, monthly=3):
             continue
         try:
             archive = local_archive(path, parent, revision, now)
+            if archive['classification']=='legacy-preserved':
+                local_exclusions.append({'ref':ref,'reason':'legacy-format-preserved','s2_complete':False})
+                continue
             snapshot = by_run.get(path.name)
             if snapshot is None: raise RetentionError('daily_snapshot_not_confirmed')
             # Compare all four files, including integrity.json not covered by the old manifest.
             if snapshot['id'] in verified:
-                if verified[snapshot['id']] != {'hashes': archive['hashes'], 'sizes': archive['sizes']}:
+                if verified[snapshot['id']] != {key:archive[key] for key in ('hashes','sizes','classification')}:
                     raise RetentionError('local_remote_mismatch')
             else:
                 verified[snapshot['id']] = verify_remote(repo, snapshot, revision, now, archive)
@@ -288,6 +406,8 @@ def build_plan(root, repo, revision, now, daily=7, weekly=4, monthly=3):
         except Exception as error:
             reason = str(error) if isinstance(error, RetentionError) else 'local_archive_unverified'
             local_exclusions.append({'ref': ref, 'reason': reason})
+            if isinstance(error, RetentionError) and error.checks:
+                local_exclusions[-1]['checks'] = list(error.checks)
             alerts.append('archive-inconsistency')
     policy = remote_policy(snapshots, **limits)
     remote_remove = []; remote_keep = []
@@ -298,10 +418,15 @@ def build_plan(root, repo, revision, now, daily=7, weekly=4, monthly=3):
             continue
         try:
             if identifier not in verified: verified[identifier] = verify_remote(repo, item, revision, now)
+            if verified[identifier]['classification']=='legacy-preserved':
+                remote_keep.append({'snapshot':identifier,'reasons':['legacy-format-preserved'],'s2_complete':False})
+                continue
             remote_remove.append({'snapshot': identifier, 'name': item['name'],
                                   'reason': f"outside-{limits['daily']}d-{limits['weekly']}w-{limits['monthly']}m"})
-        except Exception:
+        except Exception as error:
             remote_keep.append({'snapshot': identifier, 'reasons': ['unverified-remote-preserved']})
+            if isinstance(error, RetentionError) and error.checks:
+                remote_keep[-1]['checks'] = list(error.checks)
             alerts.append('snapshot-inconsistency')
     removed_ids = {item['snapshot'] for item in remote_remove}
     local_keep = []; local_remove = []

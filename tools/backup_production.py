@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
 import importlib.util
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -130,22 +131,56 @@ class ActiveRelease:
         self.bundle = pointer.resolve()
         if self.bundle.parent != root / 'releases':
             raise BackupError('current_release_outside_releases')
-        for name in ('compose.production.yaml', 'backup_local.py', 'release_manifest.py', 'release.json', 'images.env'):
+        for name in ('compose.production.yaml', 'backup_local.py', 'release_manifest.py', 'release.json'):
             path = self.bundle / name
             if not path.is_file() or path.is_symlink():
                 raise BackupError('incomplete_current_release')
         private_file(root / '.env.production')
         validator = load_helper(self.bundle, 'release_manifest')
         self.release = validator.validate_release(json.loads((self.bundle / 'release.json').read_text()))
-        pins = dict(line.split('=', 1) for line in (self.bundle / 'images.env').read_text().splitlines() if '=' in line)
-        for component, variable in validator.COMPONENTS.items():
-            if pins.get(variable) != self.release['images'][component]:
-                raise BackupError('current_image_pins_inconsistent')
-        self.env = {**base_environment(), **{key: pins[key] for key in validator.COMPONENTS.values()},
-                    'BFF_TRUSTED_PROXY_IPS': pins.get('BFF_TRUSTED_PROXY_IPS', ''),
+        runtime_directory = root / 'var' / 'deployment-runtime'
+        runtime_path = runtime_directory / (self.bundle.name + '.json')
+        for directory in (root / 'var', runtime_directory):
+            if os.path.lexists(directory) and (directory.is_symlink() or not directory.is_dir()):
+                raise BackupError('current_release_runtime_state_invalid')
+        if os.path.lexists(runtime_path):
+            try:
+                if runtime_path.is_symlink() or not runtime_path.is_file():
+                    raise ValueError()
+                if os.name == 'posix' and runtime_path.stat().st_mode & 0o077:
+                    raise ValueError()
+                runtime = json.loads(runtime_path.read_text(encoding='utf-8'))
+                if (not isinstance(runtime, dict) or set(runtime) != {'format', 'git_sha', 'proxy_ip'}
+                        or type(runtime['format']) is not int or runtime['format'] != 1
+                        or runtime['git_sha'] != self.release['git_sha']):
+                    raise ValueError()
+                proxy = str(ipaddress.ip_address(runtime['proxy_ip']))
+            except (OSError, ValueError, TypeError):
+                raise BackupError('current_release_runtime_state_invalid') from None
+        else:
+            if self.release.get('security_profile'):
+                raise BackupError('current_release_runtime_state_missing')
+            legacy_env = self.bundle / 'images.env'
+            if not legacy_env.is_file() or legacy_env.is_symlink():
+                raise BackupError('current_release_runtime_state_missing')
+            try:
+                pins = dict(line.split('=', 1) for line in legacy_env.read_text(encoding='utf-8').splitlines()
+                            if '=' in line)
+            except (OSError, ValueError):
+                raise BackupError('current_release_runtime_state_invalid') from None
+            for component, variable in validator.COMPONENTS.items():
+                if pins.get(variable) != self.release['images'][component]:
+                    raise BackupError('current_image_pins_inconsistent')
+            try:
+                proxy = str(ipaddress.ip_address(pins['BFF_TRUSTED_PROXY_IPS']))
+            except (KeyError, ValueError):
+                raise BackupError('current_release_runtime_state_invalid') from None
+        self.env = {**base_environment(),
+                    **{variable: self.release['images'][name] for name, variable in validator.COMPONENTS.items()},
+                    'BFF_TRUSTED_PROXY_IPS': proxy,
                     'PRODUCTION_ENV_FILE': str(root / '.env.production')}
         self.compose = ['docker', 'compose', '--project-directory', str(root), '-p', PROJECT,
-                        '--env-file', str(root / '.env.production'), '--env-file', str(self.bundle / 'images.env'),
+                        '--env-file', str(root / '.env.production'),
                         '-f', str(self.bundle / 'compose.production.yaml')]
 
     def call(self, *args):
@@ -160,8 +195,39 @@ class ActiveRelease:
         for service, component in (('db', 'postgres'), ('api', 'backend'), ('web', 'frontend')):
             if services[service]['image'] != self.release['images'][component] or services[service].get('ports') or services[service].get('build'):
                 raise BackupError('unexpected_compose_image_or_exposure')
-        for service, logical, target in (('api', 'production_documents', '/app/var'),
-                                         ('db', 'production_database', '/var/lib/postgresql/data')):
+        mounts = services['api'].get('volumes', [])
+        if len(mounts) != 3:
+            raise BackupError('unexpected_compose_mounts')
+        document_mounts = [mount for mount in mounts if mount.get('target') == '/app/var']
+        lifecycle_mounts = [mount for mount in mounts if mount.get('target') == '/app/lifecycle']
+        control_mounts = [mount for mount in mounts if mount.get('target') == '/run/documind/recovery-state.json']
+        if (len(document_mounts) != 1 or document_mounts[0].get('type') != 'volume'
+                or document_mounts[0].get('source') != 'production_documents'
+                or config['volumes']['production_documents']['name'] != PROJECT + '_production_documents'
+                or len(lifecycle_mounts) != 1 or lifecycle_mounts[0].get('type') != 'volume'
+                or lifecycle_mounts[0].get('source') != 'production_lifecycle'
+                or config['volumes']['production_lifecycle']['name'] != PROJECT + '_production_lifecycle'
+                or len(control_mounts) != 1 or control_mounts[0].get('type') != 'bind'
+                or control_mounts[0].get('read_only') is not True):
+            raise BackupError('unexpected_compose_mounts')
+        api_environment = services['api'].get('environment', {})
+        if (api_environment.get('LIFECYCLE_DATA_ROOT') != '/app/lifecycle'
+                or api_environment.get('LIFECYCLE_BACKUP_LOCK_PATH') != '/app/lifecycle/.backup.lock'):
+            raise BackupError('lifecycle_backup_lock_not_configured')
+        control_source = control_mounts[0].get('source')
+        if not isinstance(control_source, str) or not Path(control_source).is_absolute():
+            raise BackupError('invalid_recovery_control_source')
+        control_path = Path(control_source)
+        if (control_path.is_symlink() or not control_path.is_file()
+                or any(parent.is_symlink() for parent in control_path.parents)):
+            raise BackupError('invalid_recovery_control_source')
+        try:
+            control_path.resolve().relative_to(self.root.resolve())
+        except ValueError:
+            pass
+        else:
+            raise BackupError('recovery_control_inside_deployment_root')
+        for service, logical, target in (('db', 'production_database', '/var/lib/postgresql/data'),):
             mounts = services[service].get('volumes', [])
             if (len(mounts) != 1 or mounts[0].get('type') != 'volume' or mounts[0].get('source') != logical
                     or mounts[0].get('target') != target or config['volumes'][logical]['name'] != PROJECT + '_' + logical):
@@ -172,7 +238,29 @@ class ActiveRelease:
         if len(ids) != 3:
             raise BackupError('unexpected_service_count')
         containers = json.loads(command(['docker', 'inspect', *ids], self.env))
-        report = json.loads((self.bundle / 'deployment-report.json').read_text())
+        report_directory = self.root / 'var' / 'deployment-reports'
+        report_path = report_directory / (self.bundle.name + '.json')
+        for directory in (self.root / 'var', report_directory):
+            if os.path.lexists(directory) and (directory.is_symlink() or not directory.is_dir()):
+                raise BackupError('current_release_report_invalid')
+        if os.path.lexists(report_path):
+            if report_path.is_symlink() or not report_path.is_file():
+                raise BackupError('current_release_report_invalid')
+        else:
+            if self.release.get('security_profile'):
+                raise BackupError('current_release_report_invalid')
+            report_path = self.bundle / 'deployment-report.json'
+            if report_path.is_symlink() or not report_path.is_file():
+                raise BackupError('current_release_report_invalid')
+        try:
+            if (report_path == report_directory / (self.bundle.name + '.json') and os.name == 'posix'
+                    and report_path.stat().st_mode & 0o077):
+                raise ValueError()
+            report = json.loads(report_path.read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            raise BackupError('current_release_report_invalid') from None
+        if not isinstance(report, dict):
+            raise BackupError('current_release_report_invalid')
         if report.get('status') != 'success' or report.get('git_sha') != self.release['git_sha']:
             raise BackupError('current_release_not_successful')
         seen = set()
@@ -195,8 +283,19 @@ class ActiveRelease:
             if container['Image'] != actual:
                 raise BackupError('container_image_mismatch')
             mounts = [mount for mount in container['Mounts'] if mount['Type'] != 'tmpfs']
-            expected = {'db': ('database', '/var/lib/postgresql/data'), 'api': ('documents', '/app/var')}.get(service)
-            if expected:
+            expected = {'db': ('database', '/var/lib/postgresql/data')}.get(service)
+            if service == 'api':
+                documents = [mount for mount in mounts if mount.get('Destination') == '/app/var']
+                lifecycle = [mount for mount in mounts if mount.get('Destination') == '/app/lifecycle']
+                control = [mount for mount in mounts if mount.get('Destination') == '/run/documind/recovery-state.json']
+                if (len(mounts) != 3 or len(documents) != 1 or documents[0].get('Type') != 'volume'
+                        or documents[0].get('Name') != PROJECT + '_production_documents'
+                        or len(lifecycle) != 1 or lifecycle[0].get('Type') != 'volume'
+                        or lifecycle[0].get('Name') != PROJECT + '_production_lifecycle'
+                        or len(control) != 1 or control[0].get('Type') != 'bind'
+                        or control[0].get('Source') != str(control_path.resolve()) or control[0].get('RW') is not False):
+                    raise BackupError('unexpected_container_mounts')
+            elif expected:
                 if (len(mounts) != 1 or mounts[0]['Type'] != 'volume' or mounts[0].get('Name') != PROJECT + '_production_' + expected[0]
                         or mounts[0]['Destination'] != expected[1]):
                     raise BackupError('unexpected_container_mounts')
@@ -389,16 +488,33 @@ def execute(root, report):
             report['phase'] = 'local_backup'
             database_bytes = int(active.call('exec', '-T', 'db', 'sh', '-c',
                 'exec psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -c "SELECT pg_database_size(current_database())"'))
-            document_bytes = int(active.call('run', '--rm', '--no-deps', '-T', '--entrypoint',
-                'du', 'api', '-sb', '/app/var/documents').split()[0])
-            if shutil.disk_usage(root).free < 8 * 1024**3 + int((database_bytes + document_bytes) * 1.25):
+            backup_helper = load_helper(active.bundle, 'backup_local')
+            with backup_helper._offline_api_compose(active.compose, active.env) as offline:
+                document_bytes = int(command(offline + ['run', '--rm', '--no-deps', '-T', '--entrypoint',
+                    'du', 'api', '-sb', '/app/var/documents'], active.env).split()[0])
+                lifecycle_bytes = int(command(offline + ['run', '--rm', '--no-deps', '-T', '--entrypoint',
+                    'du', 'api', '-sb', '/app/lifecycle'], active.env).split()[0])
+            if shutil.disk_usage(root).free < 8 * 1024**3 + int(
+                    (database_bytes + document_bytes + lifecycle_bytes) * 1.25):
                 raise BackupError('insufficient_snapshot_headroom')
             with local_backup_deadline():
-                load_helper(active.bundle, 'backup_local').create_backup(active.compose, destination, env=active.env)
+                backup_helper.create_backup(active.compose, destination, env=active.env)
             manifest = json.loads((destination / 'manifest.json').read_text())
-            if manifest['migration'] != active.release['schema_revision']:
+            if (manifest.get('migration') != active.release['schema_revision']
+                    or manifest.get('backup_format_version') != 3
+                    or manifest.get('capture_complete') is not True
+                    or manifest.get('s2_recovery_authorized') is not False
+                    or manifest.get('recovery_disposition') !=
+                    'quarantine_pending_independent_freshness_and_operator_review'
+                    or set(manifest.get('files', [])) != set(backup_helper.BACKUP_FILES)
+                    or set(manifest.get('sha256', {})) != set(backup_helper.BACKUP_FILES)
+                    or set(manifest.get('lifecycle_store_sha256', {})) != {
+                        'registry', 'witness', 'authenticated', 'holds', 'admission_anchor'
+                    }):
                 raise BackupError('backup_schema_mismatch')
-            for name in ('database.dump', 'documents.tar.gz'):
+            if set(path.name for path in destination.iterdir()) != set(backup_helper.BACKUP_FILES) | {'manifest.json'}:
+                raise BackupError('backup_file_inventory_mismatch')
+            for name in backup_helper.BACKUP_FILES:
                 with (destination / name).open('rb') as source:
                     if hashlib.file_digest(source, 'sha256').hexdigest() != manifest['sha256'][name]:
                         raise BackupError('backup_checksum_mismatch')

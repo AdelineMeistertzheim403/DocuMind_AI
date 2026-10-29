@@ -272,6 +272,7 @@ def test_units_are_independent_and_code_never_runs_mutating_commands():
     assert 'User=debian' in service and 'CapabilityBoundingSet=' in service
     assert 'Requires=documind-backup' not in service and 'ExecStartPre=' not in service
     assert 'ReadWritePaths=/var/lib/documind-monitor' in service and 'docker.sock' in service
+    assert 'ExecStart=/usr/bin/python3 /srv/documind-ai/current/monitor_production.py --reminder-hours 72' in service
     code=Path('tools/monitor_production.py').read_text()
     assert "['docker'" not in code
     assert "'stop'" not in code and "'restart'" not in code

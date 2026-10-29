@@ -29,6 +29,7 @@ EVENTS = {
     'test-notification': 'Test de notification DocuMind : aucune panne de production n’a été simulée.',
     'documind-backup-failed': 'La sauvegarde DocuMind a échoué : consulter son journal systemd.',
     'retention-failed': 'La simulation de conservation est bloquée ou présente une incohérence. Aucune sauvegarde n’a été supprimée.',
+    'lifecycle-inventory-failed': 'L’inventaire des comptes en attente a échoué. Aucune purge planifiée n’a été exécutée.',
 }
 REASONS = {
     'repository-unavailable': 'Vérifier l’accès B2 et la configuration privée, sans publier les identifiants.',
@@ -43,6 +44,7 @@ REASONS = {
     'clock-inconsistent': 'L’horloge est incohérente : vérifier la synchronisation du VPS.',
     'normal': 'Aucune action supplémentaire n’est nécessaire pour ce contrôle.',
     'retention-inconsistent': 'Examiner le rapport privé de conservation. Préserver les copies existantes et demander une revue manuelle.',
+    'lifecycle-review-required': 'Consulter le journal administratif restreint et vérifier la disponibilité de la base et du planificateur.',
 }
 
 

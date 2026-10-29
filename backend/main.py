@@ -22,6 +22,7 @@ from .account_api import router as account_router
 from .resource_limits import RateLimiter
 from .upload_admission import IPAdmission, UploadAdmission, UploadCapacity, is_upload
 from .audit_middleware import SecurityAudit
+from .recovery_quarantine import RecoveryQuarantine, read_recovery_state
 from .security_audit import emit, mark
 
 
@@ -83,65 +84,77 @@ def create_app(settings=None):
         if not settings.api_keys and not settings.bff_service_key.get_secret_value():
             emit('system.security_config.invalid', reason_code='security_unavailable')
             raise RuntimeError("Configurez API_KEYS avant de démarrer le serveur")
-        if settings.extraction_mode == 'sandbox':
+        recovery_state = read_recovery_state(settings.recovery_state_path)
+        app.state.recovery_ready_at_start = recovery_state == 'ready'
+        if not app.state.recovery_ready_at_start:
+            emit('system.recovery.quarantine', reason_code='recovery_quarantined')
+        if app.state.recovery_ready_at_start and settings.extraction_mode == 'sandbox':
             from .services.extraction import check_available
             try:
                 await asyncio.to_thread(check_available, settings)
             except Exception:
                 emit('system.security_config.invalid', reason_code='security_unavailable')
                 raise RuntimeError('Confinement requis indisponible') from None
-        settings.storage_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
-        from .rag.indexing import recover_jobs
-        recover_jobs(app)
-        from .ai.long_summary import recover
-        recover(app)
-        app.state.summary_worker.thread.start()
+        if app.state.recovery_ready_at_start:
+            settings.storage_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+            from .rag.indexing import recover_jobs
+            recover_jobs(app)
+            from .ai.long_summary import recover
+            recover(app)
+            app.state.summary_worker.thread.start()
 
-        def deliver_mail():
-            from .account_api import send_reset,send_verification
-            while not app.state.mail_stopping.is_set():
-                try:
-                    item = app.state.mail_queue.get(timeout=.2)
-                    email, token = item[:2]
-                    verification = len(item)==3 and item[2]=='verify'
-                except queue.Empty:
-                    continue
-                try:
-                    sender = getattr(app.state,'mail_sender',None)
-                    if sender:
-                        sender(email,token)
-                    else:
-                        (send_verification if verification else send_reset)(settings,email,token)
-                except Exception:
-                    emit('system.mail.failed', reason_code='mail_failed')
-                finally:
-                    app.state.mail_queue.task_done()
+            def deliver_mail():
+                from .account_api import send_reset,send_verification
+                while not app.state.mail_stopping.is_set():
+                    try:
+                        item = app.state.mail_queue.get(timeout=.2)
+                        email, token = item[:2]
+                        verification = len(item)==3 and item[2]=='verify'
+                    except queue.Empty:
+                        continue
+                    try:
+                        sender = getattr(app.state,'mail_sender',None)
+                        if sender:
+                            sender(email,token)
+                        else:
+                            (send_verification if verification else send_reset)(settings,email,token)
+                    except Exception:
+                        emit('system.mail.failed', reason_code='mail_failed')
+                    finally:
+                        app.state.mail_queue.task_done()
 
-        mail_thread = threading.Thread(target=deliver_mail,daemon=True)
-        mail_thread.start()
+            mail_thread = threading.Thread(target=deliver_mail,daemon=True)
+            mail_thread.start()
 
-        async def expire_sessions():
-            while True:
-                await asyncio.sleep(15)
-                with app.state.session_vault.lock:
-                    app.state.session_vault.purge()
+            async def expire_sessions():
+                while True:
+                    await asyncio.sleep(15)
+                    with app.state.session_vault.lock:
+                        app.state.session_vault.purge()
 
-        cleanup = asyncio.create_task(expire_sessions())
+            cleanup = asyncio.create_task(expire_sessions())
+        else:
+            mail_thread = None
+            cleanup = None
         try:
             yield
         finally:
-            cleanup.cancel()
-            with suppress(asyncio.CancelledError):
-                await cleanup
-            await asyncio.to_thread(app.state.summary_worker.stop)
-            app.state.mail_stopping.set()
-            await asyncio.to_thread(mail_thread.join,12)
+            if cleanup is not None:
+                cleanup.cancel()
+                with suppress(asyncio.CancelledError):
+                    await cleanup
+            if app.state.recovery_ready_at_start:
+                await asyncio.to_thread(app.state.summary_worker.stop)
+            if mail_thread is not None:
+                app.state.mail_stopping.set()
+                await asyncio.to_thread(mail_thread.join,12)
             app.state.session_vault.clear()
             app.state.authentication_engine.dispose()
             app.state.engine.dispose()
 
     app = FastAPI(title="DocuMind AI", version="0.1.0", lifespan=lifespan)
     app.state.settings = settings
+    app.state.recovery_ready_at_start = False
     app.state.engine = make_engine(settings.database_url)
     app.state.sessions = make_sessions(app.state.engine)
     app.state.authentication_engine = make_authentication_engine(settings.database_url, app.state.engine)
@@ -163,6 +176,7 @@ def create_app(settings=None):
     app.add_middleware(UploadAdmission)
     app.add_middleware(IPAdmission)
     app.add_middleware(SecurityAudit)
+    app.add_middleware(RecoveryQuarantine)
     app.include_router(router)
     app.include_router(ai_router)
     app.include_router(settings_router)

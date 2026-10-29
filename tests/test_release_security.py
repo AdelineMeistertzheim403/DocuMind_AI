@@ -20,7 +20,12 @@ def approved_bundle(bundle,candidate,trust):
     candidate={**candidate,'security_profile':security.PROFILE}
     (bundle/'release.json').write_text(json.dumps(candidate))
     for name in security.BUNDLE_FILES-{'release.json'}:
-        source=Path(name) if name=='compose.production.yaml' else Path('tools')/name
+        if name=='compose.production.yaml':
+            source=Path(name)
+        elif name.endswith(('.service','.timer')):
+            source=Path('ops/systemd')/name
+        else:
+            source=Path('tools')/name
         shutil.copyfile(source,bundle/name)
     security.make_statement(bundle,candidate,{'repository':'example/documind','workflow':'.github/workflows/ci.yml',
         'run_id':'123','run_attempt':'1'})
@@ -36,6 +41,52 @@ def approved(tmp_path,monkeypatch):
     candidate=approved_bundle(bundle,release('0007'),trust)
     monkeypatch.setattr(security,'load_trust',lambda:trust)
     return bundle,candidate,trust
+
+
+def test_controller_from_another_release_is_rejected(tmp_path):
+    trust={'format':1,'releases':{}}
+    first=tmp_path/'release-a'
+    second=tmp_path/'release-b'
+    first_release=approved_bundle(first,release('0007','a'*40),trust)
+    second_release=approved_bundle(second,release('0007','b'*40),trust)
+    (first/'backup_local.py').write_text('different historical backup helper')
+    (first/security.STATEMENT).unlink()
+    security.make_statement(first,first_release,{'repository':'example/documind',
+        'workflow':'.github/workflows/ci.yml','run_id':'123','run_attempt':'1'})
+    controller=tmp_path/'controller'
+    controller.mkdir()
+    for name in deploy.CONTROLLER_FILES:
+        shutil.copyfile(first/name,controller/name)
+    with pytest.raises(deploy.DeploymentError,match='Incompatible deployment controller'):
+        deploy.verify_controller_bundle_compatibility(controller,second,second_release)
+
+
+def test_controller_helper_must_match_attested_bundle(approved,tmp_path):
+    bundle,candidate,_=approved
+    controller=tmp_path/'controller'
+    controller.mkdir()
+    for name in deploy.CONTROLLER_FILES:
+        shutil.copyfile(bundle/name,controller/name)
+    (controller/'backup_local.py').write_text('unattested helper')
+    with pytest.raises(deploy.DeploymentError,match='differs from the attested candidate'):
+        deploy.verify_controller_bundle_compatibility(controller,bundle,candidate)
+
+
+@pytest.mark.parametrize('tamper',['missing_file','systemd_missing_script'])
+def test_operational_inventory_requires_every_attested_file_and_unit_target(approved,tamper):
+    bundle,candidate,_=approved
+    if tamper=='missing_file':
+        (bundle/'verify_snapshot.py').unlink()
+    else:
+        unit=bundle/'documind-backup.service'
+        unit.write_text(unit.read_text().replace(
+            '/srv/documind-ai/current/backup_production.py',
+            '/srv/documind-ai/current/absent_backup.py'))
+        (bundle/security.STATEMENT).unlink()
+        security.make_statement(bundle,candidate,{'repository':'example/documind',
+            'workflow':'.github/workflows/ci.yml','run_id':'123','run_attempt':'1'})
+    with pytest.raises(security.SecurityError):
+        security.validate_operational_bundle(bundle,candidate)
 
 
 @pytest.mark.parametrize('claim',[None,'public-beta-2026-10-v1','invented-profile'])
@@ -75,6 +126,29 @@ def test_self_authored_statement_does_not_grant_root_approval(approved):
     security.make_statement(bundle,candidate,{'repository':'example/documind','workflow':'.github/workflows/ci.yml','run_id':'123','run_attempt':'1'})
     with pytest.raises(security.SecurityError,match='independently approved'):
         security.authorize(bundle,candidate)
+
+
+def test_legacy_attestation_remains_valid_for_approved_rollback_only(tmp_path,monkeypatch):
+    bundle=tmp_path/'legacy-release'
+    bundle.mkdir()
+    candidate={**release('0007'),'security_profile':security.PROFILE}
+    (bundle/'release.json').write_text(json.dumps(candidate))
+    for name in security.LEGACY_BUNDLE_FILES-{'release.json'}:
+        source=Path(name) if name=='compose.production.yaml' else Path('tools')/name
+        shutil.copyfile(source,bundle/name)
+    producer={'repository':'example/documind','workflow':'.github/workflows/ci.yml',
+              'run_id':'123','run_attempt':'1'}
+    statement={'format':1,'profile':security.PROFILE,'git_sha':candidate['git_sha'],
+        'schema_revision':candidate['schema_revision'],'images':candidate['images'],
+        'producer':producer,'bundle_sha256':{
+            name:hashlib.sha256(security.read_file(bundle/name)).hexdigest()
+            for name in sorted(security.LEGACY_BUNDLE_FILES)}}
+    (bundle/security.STATEMENT).write_text(json.dumps(statement))
+    _,digest=security.validate_statement(bundle,candidate)
+    trust={'format':1,'releases':{candidate['git_sha']:{
+        'profile':security.PROFILE,'attestation_sha256':digest,**producer}}}
+    monkeypatch.setattr(security,'load_trust',lambda:trust)
+    assert security.authorize(bundle,candidate)['independently_approved'] is True
 
 
 @pytest.mark.parametrize('label',['missing','wrong','valid'])
@@ -204,8 +278,10 @@ def test_beta_approval_cannot_restart_a_public_legacy_source_behind_disabled_tar
     (bundle/'release.json').write_text(json.dumps(release('0007')))
     prior=deploy.Stack(args.root,bundle.parent/'prior',release('0007',sha='b'*40))
     monkeypatch.setattr(deploy,'current_stack',lambda *_:prior)
-    monkeypatch.setattr(deploy,'check_config',lambda stack,*args:{'services':{'api':{'environment':{
-        'REGISTRATION_MODE':'public' if stack.bundle.name=='prior' else 'disabled'}}}})
+    control_file=args.root.parent/'recovery-state.json'
+    control_file.write_text('{"format":1,"state":"ready"}\n',encoding='utf-8')
+    from tests.test_public_beta_authorization import configuration, PUBLIC
+    monkeypatch.setattr(deploy,'check_config',lambda *args:configuration(PUBLIC,control_file))
     with pytest.raises(deploy.DeploymentError,match='security profile'):deploy.execute(args,{})
     assert not events
 
@@ -253,6 +329,19 @@ def test_routine_backup_rechecks_current_security_without_changing_gate(approved
     assert queries and all('UPDATE ' not in str(command) and command[0]=='exec' for command in queries)
 
 
+@pytest.fixture
+def open_synthetic_public_gate(app):
+    # This test injects the unsafe state it must reject; fresh migrations stay closed.
+    if app.state.engine.dialect.name == 'postgresql':
+        from backend.account_models import PublicRegistrationQuota
+        with app.state.sessions() as db:
+            quota = db.get(PublicRegistrationQuota, 'public')
+            assert quota.closed is True
+            quota.closed = False
+            db.commit()
+
+
+@pytest.mark.usefixtures('open_synthetic_public_gate')
 def test_real_postgresql_history_and_disabled_account_guard(app,approved):
     if app.state.engine.dialect.name!='postgresql':pytest.skip('Requires a new dedicated PostgreSQL database')
     from sqlalchemy import text, event
@@ -294,9 +383,29 @@ def test_workflows_use_current_controller_and_bind_ci_statement():
     assert len(builds)==3 and all(security.PROFILE in s['with']['labels'] for s in builds)
     creation=next(s['run'] for s in publish['steps'] if s.get('name')=='Create digest-pinned release bundle')
     assert 'release_security.py create release-bundle' in creation
+    for name in ('verify_snapshot.py','validate_restore.py','retention_production.py',
+                 'monitor_production.py','gmail_monitor_alert.py',
+                 'documind-backup.service','documind-monitor.service','documind-retention.service'):
+        assert name in security.BUNDLE_FILES and name in creation
     rollout=next(s['run'] for s in workflow['jobs']['deploy']['steps'] if s.get('id')=='rollout')
+    staging=next(s['run'] for s in workflow['jobs']['deploy']['steps']
+                 if s.get('name')=='Stage reviewed release without touching other applications')
+    assert 'cp release-bundle/deploy_production.py' in staging
     assert "python3 '$CONTROL/deploy_production.py' --bundle '$TARGET'" in rollout
+    assert 'deployment-reports/$RELEASE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json' in workflow['jobs']['deploy']['steps'][-2]['run']
     assert "python3 '$TARGET/deploy_production.py'" not in rollout
+
+
+def test_systemd_release_templates_target_atomic_current_release():
+    for name,script in (
+        ('documind-backup.service','backup_production.py'),
+        ('documind-backup-alert.service','backup_production.py'),
+        ('documind-monitor.service','monitor_production.py'),
+        ('documind-retention.service','retention_production.py'),
+    ):
+        unit=(Path('ops/systemd')/name).read_text()
+        assert f'/srv/documind-ai/current/{script}' in unit
+        assert '/srv/documind-ai/ops/' not in unit
 
 
 def test_actual_workflow_artifact_validation_on_generated_bundle(approved,tmp_path,monkeypatch):
@@ -311,7 +420,37 @@ def test_actual_workflow_artifact_validation_on_generated_bundle(approved,tmp_pa
     exec(compile(code,'reviewed-workflow-validation','exec'),{})
 
 
+def test_actual_workflow_allows_legacy_attestation_only_for_rollback(tmp_path,monkeypatch):
+    bundle=tmp_path/'release-bundle'
+    bundle.mkdir()
+    candidate={**release('0007'),'security_profile':security.PROFILE}
+    (bundle/'release.json').write_text(json.dumps(candidate))
+    for name in security.LEGACY_BUNDLE_FILES-{'release.json'}:
+        source=Path(name) if name=='compose.production.yaml' else Path('tools')/name
+        shutil.copyfile(source,bundle/name)
+    producer={'repository':'example/documind','workflow':'.github/workflows/ci.yml',
+              'run_id':'123','run_attempt':'1'}
+    statement={'format':1,'profile':security.PROFILE,'git_sha':candidate['git_sha'],
+        'schema_revision':candidate['schema_revision'],'images':candidate['images'],
+        'producer':producer,'bundle_sha256':{
+            name:hashlib.sha256(security.read_file(bundle/name)).hexdigest()
+            for name in sorted(security.LEGACY_BUNDLE_FILES)}}
+    (bundle/security.STATEMENT).write_text(json.dumps(statement))
+    workflow=yaml.load(Path('.github/workflows/deploy.yml').read_text(),Loader=yaml.BaseLoader)
+    step=next(s for s in workflow['jobs']['deploy']['steps'] if s.get('name')=='Validate the immutable release')
+    code='\n'.join(step['run'].splitlines()[1:-1])
+    monkeypatch.chdir(tmp_path)
+    values={'RELEASE_SHA':candidate['git_sha'],'CI_RUN_ID':'123','GITHUB_REPOSITORY':'example/documind',
+            'OPERATION':'rollback','APPROVE_PUBLIC_BETA':'false'}
+    for key,value in values.items():monkeypatch.setenv(key,value)
+    exec(compile(code,'reviewed-legacy-rollback-validation','exec'),{})
+    monkeypatch.setenv('OPERATION','deploy')
+    with pytest.raises((AssertionError,security.SecurityError)):
+        exec(compile(code,'reviewed-legacy-deploy-validation','exec'),{})
+
+
 @pytest.mark.skipif(sys.platform!='linux' or os.geteuid()==0,reason='Actual non-root ownership proof requires local Linux non-root process')
+@pytest.mark.posix
 def test_non_root_registry_is_not_an_authority(tmp_path,monkeypatch):
     parent=tmp_path/'unprivileged';parent.mkdir(mode=0o755)
     target=parent/'trust.json';target.write_text('{"format":1,"releases":{}}');target.chmod(0o644)
@@ -320,6 +459,7 @@ def test_non_root_registry_is_not_an_authority(tmp_path,monkeypatch):
 
 
 @pytest.mark.skipif(sys.platform!='linux' or os.geteuid()!=0,reason='Real root-owned registry proof requires a disposable Linux root test process')
+@pytest.mark.posix
 def test_real_root_registry_permissions_and_symlinks(tmp_path,monkeypatch):
     parent=tmp_path/'root-policy';parent.mkdir(mode=0o755)
     target=parent/'trust.json';target.write_text('{"format":1,"releases":{}}');target.chmod(0o644)
@@ -335,6 +475,7 @@ def test_real_root_registry_permissions_and_symlinks(tmp_path,monkeypatch):
 
 
 @pytest.mark.skipif(sys.platform!='linux' or os.geteuid()!=0,reason='Real root approval requires disposable Linux root process')
+@pytest.mark.posix
 def test_real_approval_and_installed_backup_guard_end_to_end(tmp_path,monkeypatch):
     trust={'format':1,'releases':{}}
     bundle=tmp_path/'bundle';candidate=approved_bundle(bundle,release('0007'),trust)

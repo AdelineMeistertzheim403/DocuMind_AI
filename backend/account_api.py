@@ -2,6 +2,7 @@
 import re
 import secrets
 import smtplib
+import sqlite3
 import ssl
 import time
 import queue
@@ -110,6 +111,20 @@ def options(request: Request, session: Session):
         capacity=bool(quota and not quota.closed and 0<=quota.issued_count<settings.public_registration_limit)
         if capacity:availability='available'
         elif quota and not quota.closed and quota.issued_count>=settings.public_registration_limit:availability='full'
+        if capacity and getattr(settings, 'lifecycle_durable_receipts_required', True):
+            from .lifecycle_admissions import configured_admissions
+            from .lifecycle_durability import configured_coordinator, require_synthetic_mutation
+            from .lifecycle_registry import configured_registry
+            from .security_audit import emit
+            try:
+                require_synthetic_mutation(settings)
+                coordinator = configured_coordinator(settings, configured_registry(settings))
+                if configured_admissions(settings, coordinator).inspect(quota.issued_count)['state'] != 'observed_consistent':
+                    emit('system.security_config.invalid', reason_code='security_unavailable')
+                    capacity, availability = False, 'closed'
+            except (OSError, ValueError, sqlite3.Error):
+                emit('system.security_config.invalid', reason_code='security_unavailable')
+                capacity, availability = False, 'closed'
     return {'registration_mode':settings.registration_mode,
             'public_capacity_configured':capacity,
             'public_registration_availability':availability,
@@ -286,11 +301,35 @@ def deletion(body: PasswordInput, request: Request, owner: Owner, session: Sessi
     request.app.state.rate_limiter.check(f'delete:{user.id}',5)
     if not verify_password(body.password.get_secret_value(),user.password_hash):
         raise HTTPException(401,'Identifiants invalides')
-    lock_workspace(session,owner)
-    session.add(DeletionRequest(user_id=user.id,owner_id=owner))
-    user.disabled_at=now()
-    session.commit()
-    request.app.state.session_vault.revoke_user(user.id)
+    from .lifecycle_registry import configured_registry
+    from .lifecycle_durability import configured_coordinator, require_synthetic_mutation
+    from .lifecycle_holds import ActiveHoldError, configured_hold_guard
+    from .security_audit import emit
+    settings = request.app.state.settings
+    try:
+        require_synthetic_mutation(settings)
+        lock_workspace(session,owner)
+        registry = configured_registry(settings)
+        coordinator = configured_coordinator(settings, registry)
+        with configured_hold_guard(settings, [('account', user.id), ('owner', owner)], coordinator):
+            receipt = None
+            if registry:
+                receipt = registry.receive('erasure', user_id=user.id, owner_id=owner)
+            if coordinator:
+                coordinator.confirm_account(receipt)
+                coordinator.authorize_account(receipt)
+            session.add(DeletionRequest(user_id=user.id,owner_id=owner))
+            user.disabled_at=now()
+            session.commit()
+            request.app.state.session_vault.revoke_user(user.id)
+            if coordinator:
+                registry.account_deactivated(receipt)
+                coordinator.account_result(receipt)
+    except ActiveHoldError:
+        raise HTTPException(409,'La demande est suspendue par un gel de conservation actif.') from None
+    except (OSError, ValueError, sqlite3.Error):
+        emit('system.security_config.invalid', reason_code='security_unavailable')
+        raise HTTPException(503,'La demande ne peut pas être traitée ; une vérification administrative est nécessaire.') from None
     return {'requested':True,'message':'Compte désactivé. La suppression doit être traitée par l’administrateur local.'}
 
 
@@ -302,6 +341,8 @@ def clear_ai(document_id: UUID, request: Request, owner: Owner, session: Session
     current_user(request,session,owner)
     lock_workspace(session,owner)
     owned_document(session,document_id,owner,lock=True)
+    from .derived_mutations import require_derived_erasure_support
+    require_derived_erasure_support(request.app.state.settings)
     linked_reservations=select(OperationDocument.reservation_id).where(OperationDocument.document_id==document_id)
     if session.scalar(select(AIReservation.id).where(AIReservation.status=='reserved',
         (AIReservation.document_id==document_id)|(AIReservation.id.in_(linked_reservations))).limit(1)):
@@ -320,6 +361,8 @@ def clear_embeddings(document_id: UUID, request: Request, owner: Owner, session:
     current_user(request,session,owner)
     lock_workspace(session,owner)
     owned_document(session,document_id,owner,lock=True)
+    from .derived_mutations import require_derived_erasure_support
+    require_derived_erasure_support(request.app.state.settings)
     if session.scalar(select(IndexJob.id).where(IndexJob.document_id==document_id,IndexJob.status.in_(['queued','running'])).limit(1)):
         raise HTTPException(409,'Une indexation est en cours')
     session.execute(delete(ChunkEmbedding).where(ChunkEmbedding.document_id==document_id,ChunkEmbedding.owner_id==owner))

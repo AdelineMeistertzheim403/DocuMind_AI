@@ -42,6 +42,18 @@ class Settings(BaseSettings):
     max_storage_bytes_total: int = Field(5 * 1024 * 1024 * 1024, ge=1024)
     ai_max_concurrent_per_owner: int = Field(1, ge=1, le=4)
     storage_dir: Path = Path("var/documents")
+    recovery_state_path: Path | None = None
+    # Explicitly provisioned operator ledger outside the application backup/restore.
+    # None preserves schema 0007 and leaves production behavior unchanged.
+    lifecycle_registry_path: Path | None = None
+    lifecycle_durable_receipts_required: bool = True
+    lifecycle_synthetic_mutations_enabled: bool = False
+    lifecycle_confirmation_path: Path | None = None
+    lifecycle_authenticated_confirmation_path: Path | None = None
+    lifecycle_authentication_key_path: Path | None = None
+    lifecycle_holds_path: Path | None = None
+    lifecycle_admission_anchor_path: Path | None = None
+    lifecycle_admission_key_path: Path | None = None
     # Safety backpressure for crash/uncertain-commit leftovers; never automatic purge.
     document_retention_max_files: int = Field(100, ge=1)
     document_retention_max_bytes: int = Field(64 * 1024 * 1024, ge=1024)

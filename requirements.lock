@@ -5,6 +5,7 @@ anyio==4.15.1
 certifi==2026.10.18
 click==8.5.0
 colorama==0.4.6
+cryptography==50.0.2
 distro==1.9.0
 fastapi==0.146.0
 greenlet==3.5.6

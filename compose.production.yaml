@@ -1,4 +1,4 @@
-# VPS: existing Traefik v3.0, Docker provider, web/websecure/letsencrypt.
+# Deployment contract: Traefik Docker provider, web/websecure/letsencrypt.
 # Images are supplied by a reviewed release manifest and pinned by digest.
 name: documind-prod
 services:
@@ -28,6 +28,7 @@ services:
     env_file: ${PRODUCTION_ENV_FILE:-.env.production}
     environment:
       DATABASE_URL: postgresql+psycopg://documind:${POSTGRES_PASSWORD:?}@db:5432/documind
+      ACCOUNT_BASE_URL: https://${APP_HOST:?Set the production DNS hostname}
       STORAGE_DIR: /app/var/documents
       MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-10485760}
       UPLOAD_MAX_CONCURRENT: ${UPLOAD_MAX_CONCURRENT:-2}
@@ -47,7 +48,18 @@ services:
       LEGACY_API_ENABLED: 'false'
       BFF_SERVICE_KEY: ${BFF_SERVICE_KEY:?Configure an independent service credential}
       REGISTRATION_MODE: ${REGISTRATION_MODE:-disabled}
-    volumes: ["production_documents:/app/var"]
+      RECOVERY_STATE_PATH: /run/documind/recovery-state.json
+      LIFECYCLE_DATA_ROOT: /app/lifecycle
+      LIFECYCLE_BACKUP_LOCK_PATH: /app/lifecycle/.backup.lock
+    volumes:
+      - production_documents:/app/var
+      - production_lifecycle:/app/lifecycle
+      - type: bind
+        source: ${RECOVERY_CONTROL_FILE:?Set the operator-managed recovery latch file}
+        target: /run/documind/recovery-state.json
+        read_only: true
+        bind:
+          create_host_path: false
     networks: [data,application,outbound]
     depends_on: {db: {condition: service_healthy}}
     mem_limit: 1536m
@@ -74,7 +86,7 @@ services:
       BFF_BACKEND_URL: http://api:8000
       BFF_HOST: 0.0.0.0
       BFF_PORT: 3000
-      BFF_ALLOWED_HOSTS: documind.adelinemeistertzheim.fr
+      BFF_ALLOWED_HOSTS: ${APP_HOST:?Set the production DNS hostname}
       BFF_TRUSTED_PROXY_IPS: ${BFF_TRUSTED_PROXY_IPS:?Resolve the actual Traefik address on web before deployment}
       MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-10485760}
       UPLOAD_MAX_CONCURRENT: ${UPLOAD_MAX_CONCURRENT:-2}
@@ -90,14 +102,14 @@ services:
     labels:
       traefik.enable: 'true'
       traefik.docker.network: web
-      traefik.http.routers.documind-ai.rule: Host(`documind.adelinemeistertzheim.fr`)
+      traefik.http.routers.documind-ai.rule: Host(`${APP_HOST:?Set the production DNS hostname}`)
       traefik.http.routers.documind-ai.entrypoints: websecure
       traefik.http.routers.documind-ai.tls: 'true'
       traefik.http.routers.documind-ai.tls.certresolver: letsencrypt
       traefik.http.routers.documind-ai.service: documind-ai
       traefik.http.routers.documind-ai.middlewares: documind-ai-headers@docker
       # Upload-only admission. No buffering middleware and no shared entrypoint changes.
-      traefik.http.routers.documind-ai-upload.rule: Host(`documind.adelinemeistertzheim.fr`) && Method(`POST`) && Path(`/bff/documents`)
+      traefik.http.routers.documind-ai-upload.rule: Host(`${APP_HOST:?Set the production DNS hostname}`) && Method(`POST`) && Path(`/bff/documents`)
       traefik.http.routers.documind-ai-upload.entrypoints: websecure
       traefik.http.routers.documind-ai-upload.tls: 'true'
       traefik.http.routers.documind-ai-upload.tls.certresolver: letsencrypt
@@ -136,3 +148,4 @@ networks:
 volumes:
   production_database: {}
   production_documents: {}
+  production_lifecycle: {}

@@ -16,3 +16,21 @@ frontend/*.tsbuildinfo
 frontend/playwright-report/
 frontend/test-results/
 var/tls/
+
+# Private documentation families; repository-relative Markdown paths only.
+# Ignoring a path does not untrack a file already present in the index.
+/DOCUMIND_*.md
+/PHASE_15_*.md
+/docs/DOCUMIND_*.md
+/docs/PHASE_15_*.md
+/docs/SPRINT_14_*.md
+/docs/business/DOCUMIND_BUSINESS_V1_*.md
+/docs/sprint-[6-9]-*.md
+/docs/validation-sprint-[6-9].md
+/docs/sprint-10-final-review.md
+/docs/sprint-11-sec10-03.md
+/docs/sprint-12-sec10-04.md
+/docs/sprint-3-ai-byok.md
+
+# Optional standalone experiment, outside the approved public candidate.
+/ops/testing/cloudflare_lot213/

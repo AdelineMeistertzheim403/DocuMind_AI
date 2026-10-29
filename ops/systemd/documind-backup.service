@@ -10,8 +10,8 @@ User=debian
 Group=debian
 SupplementaryGroups=docker
 WorkingDirectory=/srv/documind-ai
-ExecStart=/usr/bin/python3 /srv/documind-ai/ops/backup_production.py
-ExecStopPost=/usr/bin/python3 /srv/documind-ai/ops/backup_production.py --resume
+ExecStart=/usr/bin/python3 /srv/documind-ai/current/backup_production.py
+ExecStopPost=/usr/bin/python3 /srv/documind-ai/current/backup_production.py --resume
 UMask=0077
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Environment=HOME=/home/debian
