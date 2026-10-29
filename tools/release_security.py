@@ -12,8 +12,15 @@ PROFILE='public-beta-2026-10-v1'
 LABEL='io.documind.security-profile'
 TRUST_PATH=Path('/etc/documind-ai/release-security-trust.json')
 STATEMENT='security-attestation.json'
-BUNDLE_FILES=frozenset(('release.json','compose.production.yaml','deploy_production.py',
+LEGACY_BUNDLE_FILES=frozenset(('release.json','compose.production.yaml','deploy_production.py',
     'backup_local.py','backup_production.py','release_manifest.py','public_beta_policy.py','release_security.py'))
+BUNDLE_FILES=frozenset(('release.json','compose.production.yaml','deploy_production.py',
+    'backup_local.py','backup_production.py','verify_snapshot.py','validate_restore.py',
+    'retention_production.py','monitor_production.py','gmail_monitor_alert.py',
+    'documind-backup.service','documind-backup.timer','documind-backup-alert.service',
+    'documind-monitor.service','documind-monitor.timer',
+    'documind-retention.service','documind-retention.timer',
+    'release_manifest.py','public_beta_policy.py','release_security.py'))
 
 
 class SecurityError(ValueError):pass
@@ -87,7 +94,8 @@ def validate_statement(bundle,release):
         raise SecurityError('Security statement identity mismatch')
     if strict_json(read_file(bundle/'release.json'))!=release:raise SecurityError('Security manifest mismatch')
     hashes=data['bundle_sha256']
-    if not isinstance(hashes,dict) or set(hashes)!=BUNDLE_FILES:raise SecurityError('Incomplete security bundle')
+    if not isinstance(hashes,dict) or set(hashes) not in (BUNDLE_FILES,LEGACY_BUNDLE_FILES):
+        raise SecurityError('Incomplete security bundle')
     for name,digest in hashes.items():
         if not isinstance(digest,str) or not re.fullmatch('[a-f0-9]{64}',digest) or hashlib.sha256(read_file(bundle/name)).hexdigest()!=digest:
             raise SecurityError('Security bundle checksum mismatch')
@@ -98,6 +106,48 @@ def validate_statement(bundle,release):
             or any(not re.fullmatch('[1-9][0-9]*',str(producer[key])) for key in ('run_id','run_attempt'))):
         raise SecurityError('Invalid CI statement provenance')
     return data,hashlib.sha256(raw).hexdigest()
+
+
+def validate_operational_bundle(bundle,release,*,rollback=False):
+    data,digest=validate_statement(bundle,release)
+    names=set(data['bundle_sha256'])
+    legacy=names==LEGACY_BUNDLE_FILES
+    if names!=BUNDLE_FILES and not legacy:
+        raise SecurityError('Unrecognized operational bundle inventory')
+    if legacy and not rollback:
+        raise SecurityError('Legacy release bundles are rollback-only')
+    actual={path.name for path in bundle.iterdir()}
+    if actual!=names|{STATEMENT}:
+        raise SecurityError('Operational bundle contains missing or unverified files')
+    if not legacy:
+        required_units={
+            'documind-backup.service':('backup_production.py',''),
+            'documind-backup-alert.service':('backup_production.py','--alert'),
+            'documind-monitor.service':('monitor_production.py','--reminder-hours 72'),
+            'documind-retention.service':('retention_production.py','--simulate'),
+        }
+        for unit, (script, arguments) in required_units.items():
+            lines=(bundle/unit).read_text(encoding='utf-8').splitlines()
+            commands=[line.partition('=')[2] for line in lines if line.startswith('ExecStart=')]
+            expected=f'/usr/bin/python3 /srv/documind-ai/current/{script}'
+            if len(commands)!=1 or not commands[0].startswith(expected):
+                raise SecurityError('Systemd unit does not target its attested current-release script')
+            if arguments and arguments not in commands[0]:
+                raise SecurityError('Systemd unit arguments do not match the release contract')
+        backup=(bundle/'documind-backup.service').read_text(encoding='utf-8')
+        stop_commands=[line.partition('=')[2] for line in backup.splitlines()
+                       if line.startswith('ExecStopPost=')]
+        if stop_commands!=['/usr/bin/python3 /srv/documind-ai/current/backup_production.py --resume']:
+            raise SecurityError('Backup resume guard does not target the attested current release')
+        timers={
+            'documind-backup.timer':'documind-backup.service',
+            'documind-monitor.timer':'documind-monitor.service',
+            'documind-retention.timer':'documind-retention.service',
+        }
+        for timer,service in timers.items():
+            if f'Unit={service}' not in (bundle/timer).read_text(encoding='utf-8').splitlines():
+                raise SecurityError('Systemd timer does not target its attested service')
+    return data,digest
 
 
 def authorize(bundle,release):

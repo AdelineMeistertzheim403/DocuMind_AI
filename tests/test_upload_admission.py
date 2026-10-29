@@ -27,6 +27,8 @@ def session_token(app, state='valid'):
 
 
 def raw_request(app, headers, chunks, path='/api/v1/documents', method='POST'):
+    from backend.recovery_quarantine import read_recovery_state
+    app.state.recovery_ready_at_start = read_recovery_state(app.state.settings.recovery_state_path) == 'ready'
     metrics = {'receive_calls': 0, 'bytes': 0, 'messages': []}
 
     async def run():

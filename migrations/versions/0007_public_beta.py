@@ -16,7 +16,7 @@ def upgrade():
     op.create_table('public_registration_quota',
                     sa.Column('id', sa.String(16), primary_key=True),
                     sa.Column('issued_count', sa.BigInteger(), nullable=False, server_default='0'),
-                    sa.Column('closed', sa.Boolean(), nullable=False, server_default=sa.false()))
+                    sa.Column('closed', sa.Boolean(), nullable=False, server_default=sa.true()))
     op.execute("INSERT INTO public_registration_quota(id,issued_count) VALUES ('public',0)")
 
 

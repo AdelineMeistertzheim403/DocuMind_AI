@@ -9,7 +9,7 @@ from uuid import uuid4
 
 from fastapi import HTTPException
 from sqlalchemy import select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from .account_models import AccountToken, DeletionRequest, PublicRegistrationQuota, Workspace, WorkspaceMembership
 from .ai.models import AIBudget
@@ -62,6 +62,14 @@ def admit(request, session, body, *, resend=False):
         raise HTTPException(403,'Inscription désactivée')
     if not resend and (not body.terms_accepted or body.terms_version!=settings.public_terms_version):
         raise HTTPException(400,'Acceptez les conditions en vigueur après les avoir consultées')
+    if not resend and getattr(settings, 'lifecycle_durable_receipts_required', True):
+        from .lifecycle_durability import require_synthetic_mutation
+        try:
+            require_synthetic_mutation(settings)
+        except ValueError:
+            from .security_audit import emit
+            emit('system.security_config.invalid', reason_code='security_unavailable')
+            raise HTTPException(503,'Inscription temporairement indisponible') from None
     mark('account.registration.requested','completed')
     limiter=request.app.state.rate_limiter
     limiter.check('signup-global',10)
@@ -76,6 +84,7 @@ def admit(request, session, body, *, resend=False):
         mark('account.registration.denied','capacity')
         raise HTTPException(503,'Capacité de création de comptes atteinte')
     try:
+        admission = None
         # Equal password work for a new or already registered address; never overwrite an account.
         password_hash=hash_password(body.password.get_secret_value())
         query=select(User).where(User.email==body.email)
@@ -112,7 +121,34 @@ def admit(request, session, body, *, resend=False):
         session.execute(update(AccountToken).where(AccountToken.email==body.email,AccountToken.kind=='verify',
                                                   AccountToken.used_at.is_(None)).values(used_at=now()))
         token=issue_token(session,'verify',body.email,settings.public_verification_ttl_seconds)
-        session.commit()
+        if not resend and getattr(settings, 'lifecycle_durable_receipts_required', True):
+            from .lifecycle_admissions import configured_admissions
+            from .lifecycle_registry import configured_registry
+            from .lifecycle_durability import configured_coordinator
+            import sqlite3
+            try:
+                coordinator = configured_coordinator(settings, configured_registry(settings))
+                admission = configured_admissions(settings, coordinator)
+                admission.reserve(granted, user.id)
+            except (OSError, ValueError, sqlite3.Error):
+                session.rollback()
+                raise HTTPException(503,'Inscription temporairement indisponible') from None
+        try:
+            session.commit()
+        except SQLAlchemyError:
+            session.rollback()
+            if admission is not None:
+                from .security_audit import emit
+                emit('system.database.unavailable', reason_code='database')
+                raise HTTPException(503,'Inscription à vérifier avant toute nouvelle admission') from None
+            raise
+        if admission is not None:
+            try:
+                admission.settle(granted, user.id)
+            except (OSError, ValueError, sqlite3.Error):
+                from .security_audit import emit
+                emit('system.security_config.invalid', reason_code='security_unavailable')
+                raise HTTPException(503,'Inscription à vérifier avant toute nouvelle admission') from None
         try:request.app.state.mail_queue.put_nowait((body.email,token,'verify'))
         except queue.Full:
             from .security_audit import emit

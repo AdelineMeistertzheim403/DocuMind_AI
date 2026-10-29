@@ -8,6 +8,10 @@ import shutil
 from pathlib import Path
 from types import SimpleNamespace
 import sys
+import os
+import tempfile
+from functools import lru_cache
+from unittest.mock import patch
 
 import pytest
 
@@ -16,7 +20,34 @@ from tools import retention_production as retention
 NOW = datetime(2026,10,20,12,tzinfo=timezone.utc).timestamp()
 
 
-def make_daily(index):
+@lru_cache(maxsize=1)
+def lifecycle_archive():
+    from backend.lifecycle_registry import Registry
+    from backend.lifecycle_durability import ConfirmationStore
+    from backend.lifecycle_authenticated import AuthenticatedConfirmationStore
+    from backend.lifecycle_holds import HoldStore
+    from backend.lifecycle_admissions import AdmissionAnchor
+    from backend.lifecycle_snapshot import STORES, write_snapshot_archive
+    with tempfile.TemporaryDirectory() as temporary:
+        root = Path(temporary).resolve()
+        variables = {'LIFECYCLE_DATA_ROOT': str(root), 'LIFECYCLE_BACKUP_LOCK_PATH': '',
+                     'LIFECYCLE_CAPTURE_ID': '00000000-0000-4000-8000-000000000001'}
+        paths = {}
+        for name, (variable, _, _) in STORES.items():
+            directory = root / name; directory.mkdir(mode=0o700)
+            paths[name] = directory / (name + '.sqlite'); variables[variable] = str(paths[name])
+        with patch.dict(os.environ, variables):
+            Registry(paths['registry']).initialize()
+            ConfirmationStore(paths['witness']).initialize()
+            auth = AuthenticatedConfirmationStore(paths['authenticated'], os.urandom(32), 'documind-local-v2')
+            auth.initialize(); HoldStore(paths['holds'], auth).initialize()
+            AdmissionAnchor(paths['admission_anchor'], os.urandom(32)).initialize()
+            os.environ['LIFECYCLE_BACKUP_LOCK_PATH'] = str(root / '.backup.lock')
+            output = io.BytesIO(); metadata = write_snapshot_archive(output)
+        return output.getvalue(), metadata
+
+
+def make_daily(index, version=3):
     timestamp = NOW - index * 86400 - 3600
     stamp = datetime.fromtimestamp(timestamp,timezone.utc).strftime('%Y%m%dT%H%M%SZ')
     name = 'daily-' + stamp + '-' + hashlib.md5(str(index).encode()).hexdigest()
@@ -29,6 +60,24 @@ def make_daily(index):
         'sha256':{name:retention.digest(data) for name,data in archives.items()},
         'created_at':datetime.fromtimestamp(timestamp+60,timezone.utc).isoformat()}
     files = {**archives,'manifest.json':json.dumps(manifest,indent=2).encode(),'integrity.json':json.dumps(integrity,indent=2).encode()}
+    if version == 3:
+        payload, metadata = lifecycle_archive()
+        files['lifecycle.sqlite.tar.gz'] = payload
+        manifest.update(backup_format_version=3, capture_id=metadata['capture_id'], capture_complete=True,
+            s2_recovery_authorized=False,
+            recovery_disposition='quarantine_pending_independent_freshness_and_operator_review',
+            capture_scope=['postgresql','documents','lifecycle_sqlite'],
+            lifecycle_stores=metadata['stores'],
+            lifecycle_store_sha256={name:item['sha256'] for name,item in metadata['stores'].items()},
+            quiescence={**{name:True for name in ('api_web_stopped','only_database_service_running',
+                'private_networks_exclusive','no_other_postgresql_clients','lifecycle_exclusive_lock_acquired')},
+                'out_of_band_privileged_host_access':'trusted_operator_boundary_not_machine_verifiable'})
+        payload_names = set(files) - {'manifest.json'}
+        manifest['files'] = sorted(payload_names)
+        manifest['sha256'] = {name:retention.digest(files[name]) for name in payload_names}
+    elif version == 2:
+        manifest['backup_format_version'] = 2
+    files['manifest.json'] = json.dumps(manifest,indent=2).encode()
     row = {'id':identifier,'time':datetime.fromtimestamp(timestamp+120,timezone.utc).isoformat(),
         'tags':['documind-ai',name],'paths':['/srv/documind-ai/var/backups/'+name]}
     return row,files
@@ -268,6 +317,7 @@ def test_systemd_simulates_only_and_contains_no_destructive_tools():
     assert ' --simulate' in unit and '--execute' not in unit
     assert 'User=debian' in unit and 'ReadWritePaths=/var/lib/documind-retention' in unit
     assert '09:00:00 Europe/Paris' in timer
+    assert 'ExecStart=/usr/bin/python3 /srv/documind-ai/current/retention_production.py --simulate' in unit
     code=Path('tools/retention_production.py').read_text()
     assert "'forget'" not in code and "'prune'" not in code and "'restore'" not in code
     assert 'rmtree' not in code and '.unlink(' not in code and "['docker'" not in code

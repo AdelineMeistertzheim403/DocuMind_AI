@@ -213,6 +213,7 @@ def test_verification_identity_mismatch_is_not_cleanup_permission(client, app):
 
 
 @pytest.mark.skipif(os.name != 'posix', reason='Linux no-follow and Unix file permissions')
+@pytest.mark.posix
 def test_checker_refuses_symlink_and_import_is_private(client, app, tmp_path):
     assert upload(client).status_code == 201
     source = next(app.state.settings.storage_dir.glob('*.txt'))
@@ -297,7 +298,8 @@ def test_abrupt_process_exit_retains_sources_at_critical_boundaries(app, client,
         assert upload(client).status_code == 201
     configuration = tmp_path / 'child-config.json'
     configuration.write_text(json.dumps({'database_url': app.state.settings.database_url,
-        'storage_dir': str(app.state.settings.storage_dir), 'extraction_mode': 'development'}), encoding='utf-8')
+        'storage_dir': str(app.state.settings.storage_dir), 'extraction_mode': 'development',
+        'lifecycle_durable_receipts_required': app.state.settings.lifecycle_durable_receipts_required}), encoding='utf-8')
     # Dedicated test DB only; no authentication material is passed to this child.
     result = subprocess.run([sys.executable, str(script), str(configuration), stage],
                             capture_output=True, timeout=30)

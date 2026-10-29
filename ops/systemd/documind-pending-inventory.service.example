@@ -1,0 +1,26 @@
+[Unit]
+Description=DocuMind pending-account inventory ONLY (no purge)
+After=network-online.target
+OnFailure=documind-lifecycle-alert.service
+
+[Service]
+Type=oneshot
+User=documind-lifecycle
+Group=documind-lifecycle
+WorkingDirectory=/srv/documind-lifecycle/source
+EnvironmentFile=/etc/documind-lifecycle/inventory.env
+Environment=AI_ENABLED=false
+Environment=REGISTRATION_MODE=disabled
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/srv/documind-lifecycle/venv/bin/python -m tools.pending_lifecycle --simulate --older-than-hours ${PENDING_REVIEW_HOURS}
+TimeoutStartSec=10min
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateDevices=yes
+CapabilityBoundingSet=
+StandardOutput=journal
+StandardError=journal
+LogNamespace=documind-lifecycle

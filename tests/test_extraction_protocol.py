@@ -76,7 +76,8 @@ def test_broker_errors_are_controlled_and_no_fallback(tmp_path, monkeypatch, fai
     assert failure not in str(error.value.detail)
 
 
-def test_sandbox_default_and_production_settings_cannot_select_development():
+@pytest.mark.parametrize('reverse_mounts', [False, True])
+def test_sandbox_default_and_production_settings_cannot_select_development(reverse_mounts):
     import yaml
     settings = Settings(_env_file=None)
     assert settings.extraction_mode == 'sandbox'
@@ -85,7 +86,22 @@ def test_sandbox_default_and_production_settings_cannot_select_development():
     environment = production['services']['api']['environment']
     assert environment['EXTRACTION_MODE'] == 'sandbox'
     assert environment['MAX_CONCURRENT_WORKERS'] == '2'
-    assert production['services']['api']['volumes'] == ['production_documents:/app/var']
+    mounts = {}
+    volumes = production['services']['api']['volumes']
+    for volume in reversed(volumes) if reverse_mounts else volumes:
+        if isinstance(volume, str):
+            source, target = volume.split(':')
+            volume = {'type': 'volume', 'source': source, 'target': target}
+        assert volume['target'] not in mounts, 'Duplicate mount destination'
+        mounts[volume['target']] = volume
+    assert set(mounts) == {'/app/var', '/app/lifecycle', '/run/documind/recovery-state.json'}
+    assert mounts['/app/var'] == {'type': 'volume', 'source': 'production_documents', 'target': '/app/var'}
+    assert mounts['/app/lifecycle'] == {'type': 'volume', 'source': 'production_lifecycle', 'target': '/app/lifecycle'}
+    latch = mounts['/run/documind/recovery-state.json']
+    assert latch['type'] == 'bind'
+    assert latch['source'] == '${RECOVERY_CONTROL_FILE:?Set the operator-managed recovery latch file}'
+    assert latch['read_only'] is True
+    assert latch['bind']['create_host_path'] is False
 
 
 def test_failed_extraction_does_not_create_data_or_break_other_owner(client, app, monkeypatch):

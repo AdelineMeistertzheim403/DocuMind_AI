@@ -1,6 +1,8 @@
 import hashlib
 import base64
 import json
+from pathlib import Path
+import tomllib
 from types import SimpleNamespace
 import zipfile
 
@@ -9,6 +11,36 @@ import pytest
 from tools.build_materials import artifact_materials, constraint_pins, main, npm_materials, python_materials
 
 VALID_SRI = 'sha512-' + base64.b64encode(b'x' * 64).decode()
+
+
+def test_ci_constraints_and_hashed_test_lock_agree_on_cryptography():
+    from packaging.requirements import Requirement
+    project = tomllib.loads(Path('pyproject.toml').read_text(encoding='utf-8'))
+    requirement, = [Requirement(raw) for raw in project['project']['optional-dependencies']['test']
+                    if Requirement(raw).name == 'cryptography']
+    pinned, = [Requirement(line.split(' --hash=')[0])
+               for line in Path('requirements.test.lock').read_text(encoding='utf-8').splitlines()
+               if line.startswith('cryptography==')]
+    version = constraint_pins(Path('requirements.lock'))['cryptography']
+    assert pinned.specifier.contains(version) and requirement.specifier.contains(version)
+
+
+@pytest.mark.parametrize('pin, expected', [('', 1), ('cryptography==49.0.0', 1),
+                                        ('cryptography==50.0.2', 0)])
+def test_require_pins_checks_test_extra_and_returns_failure(tmp_path, monkeypatch, capsys, pin, expected):
+    from tools import build_materials
+    project = tmp_path / 'project.toml'
+    project.write_text('[build-system]\nrequires=[]\n[project]\ndependencies=[]\n'
+                       '[project.optional-dependencies]\ntest=["cryptography>=50,<51"]\n')
+    constraints = tmp_path / 'requirements.lock'
+    constraints.write_text(pin)
+    inventory = build_materials.python_materials
+    monkeypatch.setattr(build_materials, 'python_materials',
+                        lambda project, pins: inventory(project, pins,
+                            lambda name: SimpleNamespace(version='50.0.2', requires=[])))
+    assert main(['--project', str(project), '--constraints', str(constraints), '--require-pins']) == expected
+    report = json.loads(capsys.readouterr().out)
+    assert report['python_dependencies']['constraint_coverage_complete'] is (expected == 0)
 
 
 @pytest.mark.parametrize('value', ['pkg>=1', 'pkg==1.*', 'pkg @ https://example.test/private', 'pkg==1\npkg==2'])

@@ -69,7 +69,10 @@ Les vecteurs sont supprimés par cascade. La suppression applicative d’un docu
 
 ## Indexation explicite et reprise
 
-Ouvrir **https://localhost:8443/library** et se connecter à un compte personnel depuis les paramètres IA. Le certificat HTTPS et le secret de liaison doivent être configurés selon le [guide BYOK](sprint-3-ai-byok.md). Le partage HTTP classique continue de fonctionner ; les nouvelles recherches web utilisent HTTPS pour identifier le compte.
+Le parcours ci-dessous décrit le Sprint 4 historique. Pour démarrer une installation
+locale synthétique avec compte personnel et HTTPS, suivre le [README](../README.md).
+L'IA reste désactivée par défaut ; les opérations IA exigent une configuration et un
+consentement explicites. Ce guide ne qualifie pas un déploiement de production.
 
 1. Importer les PDF/TXT normalement. Aucun embedding n’est généré à l’import.
 2. Sélectionner les documents dans la bibliothèque intelligente.

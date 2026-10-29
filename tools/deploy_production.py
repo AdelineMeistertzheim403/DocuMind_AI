@@ -112,6 +112,26 @@ def check_backup_guard(root,bundle):
     except security.SecurityError as error:raise DeploymentError(str(error)) from None
 
 
+CONTROLLER_FILES=frozenset(('deploy_production.py','backup_local.py','release_manifest.py',
+                            'public_beta_policy.py','release_security.py'))
+
+
+def verify_controller_bundle_compatibility(controller,bundle,release,*,rollback=False):
+    try:
+        statement,_=security.validate_operational_bundle(bundle,release,rollback=rollback)
+        if {path.name for path in controller.iterdir()}!=CONTROLLER_FILES:
+            raise security.SecurityError('Unexpected deployment controller inventory')
+        for name in CONTROLLER_FILES:
+            actual=security.read_file(controller/name)
+            expected=security.read_file(bundle/name)
+            if hashlib.sha256(actual).digest()!=hashlib.sha256(expected).digest():
+                raise security.SecurityError('Deployment controller differs from the attested candidate')
+            if hashlib.sha256(actual).hexdigest()!=statement['bundle_sha256'][name]:
+                raise security.SecurityError('Deployment controller is not attested by the candidate')
+    except (OSError,security.SecurityError) as error:
+        raise DeploymentError(f'Incompatible deployment controller and release bundle: {error}') from None
+
+
 def maintenance(root,release):
     path=root/'var/security-maintenance.json'
     path.parent.mkdir(parents=True,exist_ok=True)
@@ -139,9 +159,8 @@ class Stack:
         self.root,self.bundle,self.release=root,bundle,release
         self.env={**os.environ,'PRODUCTION_ENV_FILE':str(root/'.env.production'),'BFF_TRUSTED_PROXY_IPS':proxy}
         self.env.update({variable:release['images'][name] for name,variable in COMPONENTS.items()})
-        (bundle/'images.env').write_text(images_env(release)+f'BFF_TRUSTED_PROXY_IPS={proxy}\n',encoding='utf-8')
         self.command=['docker','compose','--project-directory',str(root),'-p',PROJECT,
-            '--env-file',str(root/'.env.production'),'--env-file',str(bundle/'images.env'),
+            '--env-file',str(root/'.env.production'),
             '-f',str(bundle/'compose.production.yaml')]
 
     def call(self,*arguments):return run(self.command+list(arguments),self.env)
@@ -174,7 +193,6 @@ def resolve_proxy(stack):
     address=data['NetworkSettings']['Networks'].get('web',{}).get('IPAddress')
     if not data['State']['Running'] or not address:raise DeploymentError('Existing Traefik must be running on web')
     stack.env['BFF_TRUSTED_PROXY_IPS']=address
-    (stack.bundle/'images.env').write_text(images_env(stack.release)+f'BFF_TRUSTED_PROXY_IPS={address}\n',encoding='utf-8')
     return values
 
 
@@ -196,6 +214,51 @@ def check_config(stack,approve_public_beta=False):
     for name in ('api','db'):
         if 'web' in services[name]['networks']:raise DeploymentError('Backend joined the proxy network')
     return config
+
+
+def validate_recovery_control_config(stack,config):
+    mounts=config['services']['api'].get('volumes',[])
+    documents=[mount for mount in mounts if mount.get('target')=='/app/var']
+    lifecycle=[mount for mount in mounts if mount.get('target')=='/app/lifecycle']
+    controls=[mount for mount in mounts if mount.get('target')=='/run/documind/recovery-state.json']
+    if (len(mounts)!=3 or len(documents)!=1 or documents[0].get('type')!='volume'
+            or documents[0].get('source')!='production_documents'
+            or len(lifecycle)!=1 or lifecycle[0].get('type')!='volume'
+            or lifecycle[0].get('source')!='production_lifecycle'
+            or len(controls)!=1 or controls[0].get('type')!='bind' or controls[0].get('read_only') is not True):
+        raise DeploymentError('Unexpected recovery control mount')
+    for name in ('production_documents','production_lifecycle'):
+        volume=config.get('volumes',{}).get(name,{})
+        if (volume.get('name')!=f'{PROJECT}_{name}' or volume.get('driver','local')!='local'
+                or volume.get('driver_opts') or volume.get('external')):
+            raise DeploymentError('Unexpected recovery persistent volume')
+    source=controls[0].get('source')
+    stack.recovery_control_path=_validate_recovery_control_source(stack,source)
+
+
+def _validate_recovery_control_source(stack,source):
+    if not isinstance(source,str) or not Path(source).is_absolute():
+        raise DeploymentError('Recovery control file must use an absolute host path')
+    path=Path(source)
+    if path.is_symlink() or not path.is_file() or any(parent.is_symlink() for parent in path.parents):
+        raise DeploymentError('Recovery control file must be a regular operator-managed file')
+    try:
+        path.resolve().relative_to(Path(stack.root).resolve())
+    except ValueError:
+        pass
+    else:
+        raise DeploymentError('Recovery control file must be outside the deployment root')
+    # Approved default local named volumes reside under Docker's actual data root.
+    # Rejecting that entire root also excludes DB/documents/lifecycle mountpoints.
+    data_root=run(['docker','info','--format','{{.DockerRootDir}}'])
+    docker_root=Path(data_root)
+    if not data_root or not docker_root.is_absolute():
+        raise DeploymentError('Docker data root unavailable for recovery control validation')
+    try:
+        path.resolve().relative_to(docker_root.resolve())
+    except ValueError:
+        return path.resolve()
+    raise DeploymentError('Recovery control file must be outside restorable Docker volumes')
 
 
 def disk_check(root,minimum):
@@ -227,12 +290,13 @@ def verify_registry_tls():
 
 def check_volume_state(initialize):
     states=[]
-    for name in ('production_database','production_documents'):
+    for name in ('production_database','production_documents','production_lifecycle'):
         result=subprocess.run(['docker','volume','inspect',f'{PROJECT}_{name}'],capture_output=True,text=True)
         if result.returncode and 'no such volume' not in result.stderr.lower():
             raise DeploymentError('Cannot inspect persistent volumes')
         states.append(result.returncode==0)
-    if any(states)!=all(states):raise DeploymentError('Only one persistent volume exists; inspect before proceeding')
+    if any(states)!=all(states):
+        raise DeploymentError('Persistent volume set is partial; inspect lifecycle history before proceeding')
     if initialize and any(states):raise DeploymentError('Initialization refuses existing volumes')
     if not initialize and not all(states):raise DeploymentError('First installation requires explicit initialization approval')
 
@@ -331,6 +395,61 @@ def point_to(root,name,bundle):
     os.replace(temporary,root/name)
 
 
+def deployment_report_path(root,bundle):
+    return Path(root)/'var'/'deployment-reports'/(bundle.name+'.json')
+
+
+def deployment_evidence_path(root,bundle):
+    report=deployment_report_path(root,bundle)
+    directories=(Path(root)/'var',report.parent)
+    if any(os.path.lexists(directory) and (directory.is_symlink() or not directory.is_dir())
+           for directory in directories):
+        raise DeploymentError('Deployment evidence directory is invalid')
+    if os.path.lexists(report):
+        if report.is_symlink() or not report.is_file():
+            raise DeploymentError('Deployment evidence file is invalid')
+        try:
+            mode=report.stat().st_mode
+        except OSError:
+            raise DeploymentError('Deployment evidence file is invalid') from None
+        if os.name=='posix' and mode & 0o077:
+            raise DeploymentError('Deployment evidence file must be private')
+        return report
+    try:
+        manifest=json.loads(security.read_file(Path(bundle)/'release.json'))
+    except (OSError,ValueError,security.SecurityError):
+        raise DeploymentError('Deployment evidence manifest is missing or invalid') from None
+    if isinstance(manifest,dict) and manifest.get('security_profile'):
+        raise DeploymentError('Attested release evidence must remain outside the bundle')
+    legacy_report=bundle/'deployment-report.json'
+    if legacy_report.is_symlink() or not legacy_report.is_file():
+        raise DeploymentError('Deployment evidence is missing')
+    return legacy_report
+
+
+def persist_runtime_state(root,bundle,release,proxy):
+    try:
+        address=str(ipaddress.ip_address(proxy))
+    except ValueError:
+        raise DeploymentError('Invalid resolved proxy address') from None
+    directory=Path(root)/'var'/'deployment-runtime'
+    if any(parent.is_symlink() for parent in (Path(root)/'var',directory)):
+        raise DeploymentError('Deployment runtime state path contains a symlink')
+    directory.mkdir(parents=True,exist_ok=True,mode=0o700)
+    if not directory.is_dir() or os.name=='posix' and directory.stat().st_mode & 0o077:
+        raise DeploymentError('Deployment runtime state directory must be private')
+    path=directory/(bundle.name+'.json')
+    try:
+        with path.open('x',encoding='utf-8') as output:
+            json.dump({'format':1,'git_sha':release['git_sha'],'proxy_ip':address},output,sort_keys=True)
+            output.write('\n')
+            output.flush()
+            os.fsync(output.fileno())
+        if os.name=='posix':path.chmod(0o600)
+    except FileExistsError:
+        raise DeploymentError('Deployment runtime state already exists; manual inspection required') from None
+
+
 def current_stack(root,proxy):
     if not os.path.lexists(root/'current'):return None
     if not (root/'current').is_symlink() or not (root/'current').is_dir():
@@ -349,7 +468,7 @@ def recovery_source(root,bundle,path,release,proxy):
         raise DeploymentError('Recovery source must be a distinct existing release bundle')
     try:
         original=validate_release(json.loads((source/'release.json').read_text()))
-        evidence=json.loads((source/'deployment-report.json').read_text())
+        evidence=json.loads(deployment_evidence_path(root,source).read_text())
     except (OSError,ValueError):
         raise DeploymentError('Recovery requires a valid source manifest and failure report') from None
     if not (evidence.get('status')=='failed' and evidence.get('phase')=='start'
@@ -399,7 +518,7 @@ def recovery_after_https(root,bundle,path,release,proxy):
         visited.add(source)
         try:
             original=validate_release(json.loads((source/'release.json').read_text()))
-            evidence=json.loads((source/'deployment-report.json').read_text())
+            evidence=json.loads(deployment_evidence_path(root,source).read_text())
         except (OSError,ValueError):
             raise DeploymentError('Recovery requires every source manifest and failure report') from None
         if (evidence.get('status')!='failed' or evidence.get('git_sha')!=original['git_sha']
@@ -425,7 +544,8 @@ def recovery_after_https(root,bundle,path,release,proxy):
             raise DeploymentError('Recovery chain does not prove the retained database image')
     stack=Stack(root,latest,chain[0][1],proxy)
     stack.database_source=Stack(root,origin_path,origin_release,proxy)
-    check_config(stack);check_config(stack.database_source)
+    validate_recovery_control_config(stack,check_config(stack))
+    check_config(stack.database_source)
     verify_recovery_containers(stack)
     revision=stack.revision()
     if revision!=release['schema_revision'] or not schema_compatible(release,revision):
@@ -456,11 +576,33 @@ def verify_recovery_containers(stack):
         # tmpfs mounts are ephemeral; all other mounts must be explicitly expected.
         mounts=[mount for mount in container['Mounts'] if mount.get('Type')!='tmpfs']
         if service in ('db','api'):
-            destination='/var/lib/postgresql/data' if service=='db' else '/app/var'
-            volume=f'{PROJECT}_production_'+('database' if service=='db' else 'documents')
-            if (len(mounts)!=1 or mounts[0].get('Type')!='volume' or mounts[0].get('Name')!=volume
-                    or mounts[0].get('Destination')!=destination):
+            if service=='db':
+                valid_mounts=(len(mounts)==1 and mounts[0].get('Type')=='volume'
+                    and mounts[0].get('Name')==f'{PROJECT}_production_database'
+                    and mounts[0].get('Destination')=='/var/lib/postgresql/data')
+            else:
+                documents=[mount for mount in mounts if mount.get('Destination')=='/app/var']
+                lifecycle=[mount for mount in mounts if mount.get('Destination')=='/app/lifecycle']
+                controls=[mount for mount in mounts if mount.get('Destination')=='/run/documind/recovery-state.json']
+                control_path=getattr(stack,'recovery_control_path',None)
+                valid_mounts=(len(mounts)==3 and len(documents)==1 and documents[0].get('Type')=='volume'
+                    and documents[0].get('Name')==f'{PROJECT}_production_documents'
+                    and len(lifecycle)==1 and lifecycle[0].get('Type')=='volume'
+                    and lifecycle[0].get('Name')==f'{PROJECT}_production_lifecycle'
+                    and len(controls)==1 and controls[0].get('Type')=='bind'
+                    and controls[0].get('Source')==str(control_path) and controls[0].get('RW') is False)
+            if not valid_mounts:
                 raise DeploymentError('Recovery refuses unexpected persistent mounts')
+            if service=='api':
+                _validate_recovery_control_source(stack,str(control_path))
+                for candidate in containers:
+                    for mount in candidate.get('Mounts',[]):
+                        if mount.get('Type')!='volume':continue
+                        source=mount.get('Source')
+                        if not isinstance(source,str) or not Path(source).is_absolute():
+                            raise DeploymentError('Recovery refuses unknown persistent volume source')
+                        if Path(control_path).resolve().is_relative_to(Path(source).resolve()):
+                            raise DeploymentError('Recovery refuses unexpected persistent mounts')
         elif mounts:raise DeploymentError('Recovery refuses unexpected persistent mounts')
 
 
@@ -488,6 +630,7 @@ def execute(args,report):
     values=resolve_proxy(stack)
     approval=getattr(args,'approve_public_beta',False)
     config=check_config(stack,approval)
+    validate_recovery_control_config(stack,config)
     mode=config['services']['api']['environment'].get('REGISTRATION_MODE','disabled')
     minimum=int(values.get('DEPLOY_MIN_FREE_GIB','8'))*(1024**3)
     if minimum<4*(1024**3):raise DeploymentError('Deployment disk threshold must be at least 4 GiB')
@@ -586,6 +729,7 @@ def execute(args,report):
             if report['public_beta']['quota_after']!=report['public_beta']['quota_before']:
                 raise DeploymentError('Public quota changed before release activation')
         authorize_start(stack,report['schema_after'],required=strict,closed=closed)
+        persist_runtime_state(root,bundle,release,stack.env['BFF_TRUSTED_PROXY_IPS'])
         if previous:point_to(root,'previous',previous.bundle)
         point_to(root,'current',bundle)
         finish_maintenance(marker)
@@ -628,19 +772,32 @@ def main():
     parser.add_argument('--registry-login',action='store_true',help='Read ephemeral registry credentials from SSH stdin')
     args=parser.parse_args()
     os.umask(0o077)
+    root=args.root.resolve()
     bundle=(args.bundle or Path(__file__).resolve().parent).resolve()
-    if bundle.parent!=args.root.resolve()/'releases':
+    if bundle.parent!=root/'releases':
         print('Candidate bundle must be staged directly under releases')
         return 1
-    report_path=bundle/'deployment-report.json'
+    report_path=deployment_report_path(root,bundle)
+    report_directory=report_path.parent
+    for directory in (root/'var',report_directory):
+        if os.path.lexists(directory) and (directory.is_symlink() or not directory.is_dir()):
+            print('Deployment report directory is invalid; refusing to write evidence')
+            return 1
+        if (os.path.lexists(directory) and os.name=='posix'
+                and directory.stat().st_mode & 0o077):
+            print('Deployment report directory must be private; refusing to write evidence')
+            return 1
     if os.path.lexists(report_path):
         print('Existing deployment report preserved; stage a new reviewed bundle for this attempt')
         return 1
     report={'status':'failed','phase':'validation','started_at':datetime.now(timezone.utc).isoformat()}
     try:
         if os.name!='posix' or sys.version_info<(3,11):raise DeploymentError('Linux VPS with Python 3.11+ required')
-        if not args.root.is_dir() or args.root.stat().st_mode & 0o022:
+        if not root.is_dir() or root.stat().st_mode & 0o022:
             raise DeploymentError('Deployment root must exist and not be writable by other users')
+        release=validate_release(json.loads((bundle/'release.json').read_text(encoding='utf-8')))
+        verify_controller_bundle_compatibility(Path(__file__).resolve().parent,bundle,release,
+                                               rollback=args.rollback)
         verify_registry_tls()
         if args.registry_login:
             credentials=json.load(sys.stdin)
@@ -661,7 +818,12 @@ def main():
         if isinstance(error,DeploymentError):report['error']=str(error)
     report['finished_at']=datetime.now(timezone.utc).isoformat()
     try:
+        report_path.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
+        if (report_path.parent.is_symlink() or os.name=='posix'
+                and report_path.parent.stat().st_mode & 0o077):
+            raise DeploymentError('Deployment report directory must not be a symlink')
         with report_path.open('x',encoding='utf-8') as output:output.write(json.dumps(report,indent=2)+'\n')
+        if os.name=='posix':report_path.chmod(0o600)
     except FileExistsError:
         print('Deployment report already exists; refusing to overwrite evidence')
         return 1

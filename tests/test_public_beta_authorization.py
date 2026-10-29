@@ -18,12 +18,22 @@ EFFECTIVE_PUBLIC = {'REGISTRATION_MODE': 'public', 'PUBLIC_REGISTRATION_LIMIT': 
                     'AI_ENABLED': False, 'OWNER_DEMO_ENABLED': False, 'LEGACY_API_ENABLED': False}
 
 
-def configuration(environment):
+def configuration(environment, recovery_control_file=None):
     data = yaml.safe_load(Path('compose.production.yaml').read_text(encoding='utf-8'))
     for service, component in (('api', 'backend'), ('web', 'frontend'), ('db', 'postgres')):
         data['services'][service]['image'] = release('0007')['images'][component]
     data['services']['api']['environment'] = {
         **environment, 'ACCOUNT_BASE_URL': 'https://' + deploy.HOST}
+    data['services']['api']['volumes'] = [
+        {'type': 'volume', 'source': 'production_documents', 'target': '/app/var'},
+        {'type': 'volume', 'source': 'production_lifecycle', 'target': '/app/lifecycle'},
+        {'type': 'bind', 'source': str(recovery_control_file or Path('/synthetic/recovery-state.json')),
+         'target': '/run/documind/recovery-state.json', 'read_only': True},
+    ]
+    data['volumes'] = {
+        name: {'name': f'{deploy.PROJECT}_{name}'}
+        for name in ('production_documents', 'production_lifecycle')
+    }
     return data
 
 
@@ -95,6 +105,8 @@ def test_migration_approval_never_substitutes_for_beta_approval(simulation, monk
 
 def public_simulation(simulation, monkeypatch, *, opened=False):
     args, events, state, bundle = simulation
+    control_file = args.root.parent / 'recovery-state.json'
+    control_file.write_text('{"format":1,"state":"ready"}\n', encoding='utf-8')
     args.approve_public_beta = True
     state['revision'] = '0007'
     (bundle / 'release.json').write_text(json.dumps(release('0007')))
@@ -120,7 +132,7 @@ def public_simulation(simulation, monkeypatch, *, opened=False):
     monkeypatch.setattr(deploy, 'Stack', PublicStack)
     old = PublicStack(args.root, bundle.parent / 'prior', release('0007'))
     monkeypatch.setattr(deploy, 'current_stack', lambda *args: old)
-    monkeypatch.setattr(deploy, 'check_config', lambda *args: configuration(PUBLIC))
+    monkeypatch.setattr(deploy, 'check_config', lambda *args: configuration(PUBLIC, control_file))
     return args, events, state, bundle
 
 
@@ -249,13 +261,19 @@ def test_flat_bundle_scripts_import_without_application_or_secrets(tmp_path):
     import shutil
     import subprocess
     import sys
-    for name in ('deploy_production.py', 'prepare_production.py', 'backup_local.py', 'release_manifest.py', 'public_beta_policy.py','release_security.py'):
+    for name in ('deploy_production.py', 'prepare_production.py', 'backup_local.py', 'backup_production.py',
+                 'verify_snapshot.py','validate_restore.py','retention_production.py','monitor_production.py',
+                 'gmail_monitor_alert.py','release_manifest.py','public_beta_policy.py','release_security.py'):
         shutil.copyfile(Path('tools') / name, tmp_path / name)
-    for script in ('deploy_production.py', 'prepare_production.py'):
+    for script in ('deploy_production.py','prepare_production.py','backup_production.py',
+                   'verify_snapshot.py','validate_restore.py','retention_production.py','monitor_production.py'):
         result = subprocess.run([sys.executable, str(tmp_path / script), '--help'], cwd=tmp_path,
                                 capture_output=True, text=True, timeout=15)
         assert result.returncode == 0, result.stderr
-        assert '--approve-public-beta' in result.stdout
+        if script=='validate_restore.py':
+            assert '--restore-root' in result.stdout
+        elif script in ('deploy_production.py','prepare_production.py'):
+            assert '--approve-public-beta' in result.stdout
 
 
 def test_settings_probe_returns_only_allowlisted_non_secret_effective_fields():

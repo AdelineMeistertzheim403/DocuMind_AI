@@ -33,7 +33,8 @@ Aucun email réel ni appel OpenAI réel n’a été lancé par la validation.
   `src/services/api.ts`, `src/App.tsx`, `src/components/Layout.tsx`, `src/styles.css`,
   `src/test/app.test.tsx`, `playwright.config.ts`, `e2e/byok.spec.ts`, `e2e/documents.spec.ts`, `e2e/rag.spec.ts`.
 - Configuration/docs : `pyproject.toml`, `requirements.lock`, `compose.yaml`, `.env.example`,
-  `.gitignore`, `.dockerignore`, `frontend/.dockerignore`, `README.md`, `docs/sprint-3-ai-byok.md`.
+  `.gitignore`, `.dockerignore`, `frontend/.dockerignore`, `README.md`.
+  Le guide BYOK historique est conservé séparément du périmètre public.
 - Tests existants : `tests/conftest.py` configure le plafond de requêtes de la simulation pour
   le polling accéléré ; les valeurs réelles sont testées séparément et restent inchangées.
 - `.env` local uniquement : génération d’une clé interne BFF distincte. Les autres valeurs,

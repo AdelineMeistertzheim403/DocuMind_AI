@@ -7,9 +7,10 @@ Les corrections locales sont implémentées et les contrôles finaux réussissen
 L'inventaire global reste à approuver. **Aucune autorisation de commit, push ou déploiement n'est déduite
 de l'accord de préparation.** Aucun accès au VPS ou à la Registry privée effectué.
 
-Ce complément actualise RF10-01/02 de la [revue finale](sprint-10-final-review.md).
-Ses autres constats, les risques supply chain et la recette ABI 6 avant déploiement
-restent à traiter ou à accepter selon cette revue.
+Ce complément constitue un historique des corrections RF10-01/02 ; ses conclusions
+restent limitées aux versions et aux contrôles décrits ci-dessous. Le
+[modèle de confinement PDF/TXT](sprint-10-pdf-isolation-design.md) présente
+l'architecture technique, sans constituer une nouvelle validation d'exploitation.
 
 ## RF10-01 — Windows obligatoire avant publication
 
@@ -137,7 +138,7 @@ Fichiers versionnables modifiés pendant ce complément :
 
 1. `.github/workflows/ci.yml` : job Windows, nouveau verrou de publication, amd64 seulement.
 2. `tests/test_deployment.py` : couverture des deux décisions de CI.
-3. `docs/sprint-10-final-review.md` : renvoi au présent complément, historique conservé.
+3. Revue historique associée : renvoi au présent complément conservé séparément du périmètre public.
 4. `docs/sprint-10-rf01-rf02-validation.md` : présent rapport.
 
 Les références SHA-256 prises au début du travail permettent de confirmer les autres

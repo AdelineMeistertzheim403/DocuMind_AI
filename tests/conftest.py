@@ -17,6 +17,27 @@ OTHER_KEY = "test-owner-two-key-000000000000000002"
 BFF_KEY = "test-bff-service-key-not-a-real-secret-0001"
 
 
+def pytest_addoption(parser):
+    parser.addoption('--require-no-skips', action='store_true',
+                     help='Fail a required qualification group if any case is skipped.')
+
+
+def pytest_sessionfinish(session, exitstatus):
+    if session.config.getoption('--require-no-skips'):
+        reporter = session.config.pluginmanager.getplugin('terminalreporter')
+        if reporter is not None and reporter.stats.get('skipped'):
+            reporter.write_sep('=', 'Required qualification contains skipped tests')
+            session.exitstatus = pytest.ExitCode.TESTS_FAILED
+
+
+def pytest_collection_modifyitems(items):
+    # Explicit test contract, never a module-name exclusion or a production guard override.
+    if os.name != 'posix':
+        for item in items:
+            if item.get_closest_marker('posix') is not None:
+                item.add_marker(pytest.mark.skip(reason='Requires native POSIX; covered by Linux CI'))
+
+
 @pytest.fixture(autouse=True)
 def prohibit_real_openai_clients(monkeypatch):
     import openai
@@ -39,9 +60,13 @@ def app(tmp_path, monkeypatch):
     monkeypatch.setenv("DATABASE_URL", url)
     config = Config("alembic.ini")
     command.upgrade(config, "head")
+    recovery_state = tmp_path / "recovery-state.json"
+    recovery_state.write_text('{"format":1,"state":"ready"}\n', encoding='utf-8')
     settings = Settings(_env_file=None, database_url=url, storage_dir=tmp_path / "private",
+                        recovery_state_path=recovery_state,
                         api_keys={KEY: UUID(int=1), OTHER_KEY: UUID(int=2)}, bff_service_key=SecretStr(BFF_KEY), requests_per_minute=10000,
-                        extraction_mode='development', ai_enabled=False)  # Explicitly unconfined portable regression suite.
+                        extraction_mode='development', ai_enabled=False,
+                        lifecycle_durable_receipts_required=False)  # Legacy regression profile; strict mode is tested separately.
     application = create_app(settings)
     yield application
     # Only this fixture's empty-at-entry disposable DB: release the production downgrade

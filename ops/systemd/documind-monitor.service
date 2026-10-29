@@ -7,14 +7,14 @@ After=network-online.target
 Type=oneshot
 User=debian
 Group=debian
-WorkingDirectory=/srv/documind-ai/ops
+WorkingDirectory=/srv/documind-ai/current
 StateDirectory=documind-monitor
 StateDirectoryMode=0700
 UMask=0077
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Environment=HOME=/home/debian
 Environment=RESTIC_CACHE_DIR=/var/lib/documind-monitor/restic-cache
-ExecStart=/usr/bin/python3 /srv/documind-ai/ops/monitor_production.py --reminder-hours 72
+ExecStart=/usr/bin/python3 /srv/documind-ai/current/monitor_production.py --reminder-hours 72
 TimeoutStartSec=15min
 NoNewPrivileges=yes
 PrivateTmp=yes

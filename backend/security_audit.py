@@ -23,6 +23,7 @@ EVENTS = {
     'upload.rejected': 'WARNING',
     'account.deletion.requested': 'INFO', 'account.deletion.completed': 'INFO',
     'account.sessions.revoked': 'INFO', 'system.database.unavailable': 'ERROR',
+    'system.recovery.quarantine': 'WARNING',
     'system.security_config.invalid': 'CRITICAL', 'system.worker.failed': 'ERROR',
     'system.file_cleanup.failed': 'ERROR', 'system.mail.failed': 'ERROR',
     'system.ai.settled': 'INFO', 'system.ai.output_rejected': 'WARNING',
@@ -35,7 +36,8 @@ REASONS = frozenset(('invalid_service_credential', 'secure_transport_required', 
     'invalid_session', 'session_revoked', 'not_owner', 'not_found', 'rate_limit', 'quota',
     'authentication_required', 'capacity', 'size', 'timeout', 'disconnected', 'database',
     'unexpected_error', 'security_unavailable', 'cleanup_failed', 'mail_failed',
-    'worker_failed', 'invalid_output', 'settled', 'completed', 'denied', 'dropped', 'invalid_request'))
+    'worker_failed', 'invalid_output', 'settled', 'completed', 'denied', 'dropped', 'invalid_request',
+    'recovery_quarantined'))
 REQUEST_ID = re.compile(r'^[0-9a-f]{32}$')
 
 

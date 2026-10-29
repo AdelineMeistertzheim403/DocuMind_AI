@@ -11,7 +11,8 @@ from backend.config import Settings
 from backend.services import extraction
 from documind_extractor import contract
 
-pytestmark = pytest.mark.skipif(sys.platform != 'linux', reason='Requires native Linux Landlock/seccomp')
+pytestmark = [pytest.mark.posix,
+              pytest.mark.skipif(sys.platform != 'linux', reason='Requires native Linux Landlock/seccomp')]
 
 
 def require_sandbox():

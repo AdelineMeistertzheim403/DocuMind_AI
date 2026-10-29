@@ -45,6 +45,8 @@ def prepare(session, settings, owner, identifier, body):
             dimensions=settings.embedding_dimensions, version=settings.embedding_version, total=total)
         session.add(job)
     elif body.force:
+        from ..derived_mutations import require_derived_erasure_support
+        require_derived_erasure_support(settings)
         session.execute(delete(ChunkEmbedding).where(ChunkEmbedding.document_id == identifier, *config_filter(ChunkEmbedding, settings)))
         job.generation, job.completed = uuid4(), 0
     job.status, job.error_code, job.updated_at = 'queued', None, now()

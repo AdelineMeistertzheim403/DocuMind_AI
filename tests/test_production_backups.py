@@ -11,6 +11,7 @@ import yaml
 
 from tools import backup_production as backup
 from tools import backup_local
+from tools import release_security as security
 from tests.test_deployment import release
 
 
@@ -45,22 +46,32 @@ def run_backup(tmp_path, monkeypatch):
     def create(compose, destination, env):
         events.append(('snapshot',))
         if state.get('local_failure'):
-            def actual_command(command, **kwargs):
-                stage = 'pg_dump' if 'pg_dump' in ' '.join(command) else 'archive'
-                events.append((stage,))
-                if stage == state['local_failure']:
-                    raise subprocess.CalledProcessError(1, command, stderr='never-log-password')
-                kwargs['stdout'].write(b'dump')
-            monkeypatch.setattr(backup_local.subprocess, 'check_output', lambda *a, **k: '')
-            monkeypatch.setattr(backup_local.subprocess, 'run', actual_command)
-            return backup_local.create_backup(compose, destination, env)
+            stage = state['local_failure']
+            events.append((stage,))
+            raise subprocess.CalledProcessError(1, [stage], stderr='never-log-password')
         destination.mkdir(parents=True)
         hashes = {}
-        for name in ('database.dump', 'documents.tar.gz'):
+        for name in backup_local.BACKUP_FILES:
             data = b'local test only'; (destination / name).write_bytes(data)
             hashes[name] = hashlib.sha256(data).hexdigest()
-        (destination / 'manifest.json').write_text(json.dumps({'migration': '0006', 'sha256': hashes}))
+        (destination / 'manifest.json').write_text(json.dumps({
+            'migration': '0006',
+            'backup_format_version': 3,
+            'capture_complete': True,
+            's2_recovery_authorized': False,
+            'recovery_disposition': 'quarantine_pending_independent_freshness_and_operator_review',
+            'files': list(backup_local.BACKUP_FILES),
+            'sha256': hashes,
+            'lifecycle_store_sha256': {
+                name: 'a' * 64 for name in ('registry', 'witness', 'authenticated', 'holds', 'admission_anchor')
+            },
+        }))
     def command(argv, environment=None, timeout=300):
+        if argv[0]=='docker':
+            assert environment=={'PATH':'safe'} and '--network' not in argv
+            assert 'synthetic-offline.yaml' in argv and 'du' in argv
+            events.append(('offline-size',tuple(argv)))
+            return '1000 synthetic-data'
         assert argv[0] == 'restic'
         assert environment == env
         events.append(('restic', tuple(argv[1:])))
@@ -76,7 +87,13 @@ def run_backup(tmp_path, monkeypatch):
     monkeypatch.setattr(backup, 'ActiveRelease', Active)
     monkeypatch.setattr(backup, 'deployment_lock', lock)
     monkeypatch.setattr(backup, 'local_backup_deadline', nullcontext)
-    monkeypatch.setattr(backup, 'load_helper', lambda *a: SimpleNamespace(create_backup=create))
+    @contextmanager
+    def offline(compose, environment):
+        assert compose==['docker','compose','-p','documind-prod'] and environment=={'PATH':'safe'}
+        events.append(('offline-isolation',()))
+        yield compose+['-f','synthetic-offline.yaml']
+    monkeypatch.setattr(backup, 'load_helper', lambda *a: SimpleNamespace(
+        create_backup=create, BACKUP_FILES=backup_local.BACKUP_FILES, _offline_api_compose=offline))
     monkeypatch.setattr(backup, 'restic_environment', lambda: env)
     monkeypatch.setattr(backup, 'command', command)
     monkeypatch.setattr(backup.shutil, 'disk_usage', lambda p: SimpleNamespace(free=100*1024**3))
@@ -232,7 +249,7 @@ def test_systemd_timer_and_no_retention_or_destructive_commands():
     assert 'OnCalendar=*-*-* 03:00:00 Europe/Paris' in timer and 'Persistent=true' in timer
     assert 'ExecStopPost=' in service and '--resume' in service and 'OnFailure=documind-backup-alert.service' in service
     assert 'EnvironmentFile' not in service  # Secrets are read only by the Restic environment loader.
-    assert 'ExecStart=/usr/bin/python3 /srv/documind-ai/ops/backup_production.py' in service
+    assert 'ExecStart=/usr/bin/python3 /srv/documind-ai/current/backup_production.py' in service
     assert 'deploy_production.py' not in service and 'alembic' not in service
     assert backup.SECRET_FILE == Path('/home/debian/.config/restic/documind.env')
     text = Path('tools/backup_production.py').read_text()
@@ -258,10 +275,13 @@ def test_main_returns_failure_and_redacts_external_exception(tmp_path, monkeypat
     assert json.loads(output.out)['error'] == 'backup_operation_failed'
 
 
-@pytest.mark.parametrize('invalid', [None, 'pins', 'compose_image', 'compose_volume', 'container_image',
-    'container_volume', 'other_project', 'extra_service', 'schema', 'failed_release'])
+@pytest.mark.parametrize('invalid', [None, 'runtime_proxy', 'runtime_git_sha', 'runtime_missing',
+    'runtime_symlink', 'compose_image', 'compose_volume', 'container_image', 'container_volume',
+    'other_project', 'extra_service', 'schema', 'failed_release'])
 def test_real_active_preflight_confirms_release_and_project_boundaries(tmp_path, monkeypatch, invalid):
     root = tmp_path / 'vps'; bundle = root / 'releases/active'; bundle.mkdir(parents=True)
+    control_file = tmp_path / 'recovery-state.json'
+    control_file.write_text('{"format":1,"state":"ready"}\n', encoding='utf-8')
     pointer = root / 'current'
     original_link, original_dir, original_resolve = Path.is_symlink, Path.is_dir, Path.resolve
     monkeypatch.setattr(Path, 'is_symlink', lambda p: True if p == pointer else original_link(p))
@@ -273,11 +293,25 @@ def test_real_active_preflight_confirms_release_and_project_boundaries(tmp_path,
         (bundle / name).write_bytes((Path('tools') / name).read_bytes())
     (bundle / 'compose.production.yaml').write_bytes(Path('compose.production.yaml').read_bytes())
     (bundle / 'release.json').write_text(json.dumps(data))
-    pins = {name: data['images'][component] for component, name in
-            [('backend', 'BACKEND_IMAGE'), ('frontend', 'FRONTEND_IMAGE'), ('postgres', 'POSTGRES_IMAGE')]}
-    if invalid == 'pins': pins['BACKEND_IMAGE'] = 'unreviewed:latest'
-    (bundle / 'images.env').write_text(''.join(f'{k}={v}\n' for k, v in pins.items()))
-    (bundle / 'deployment-report.json').write_text(json.dumps({'status': 'failed' if invalid == 'failed_release' else 'success', 'git_sha': data['git_sha']}))
+    runtime_directory = root / 'var' / 'deployment-runtime'
+    runtime_directory.mkdir(parents=True)
+    runtime = {'format': 1, 'git_sha': data['git_sha'], 'proxy_ip': '192.0.2.10'}
+    if invalid == 'runtime_proxy': runtime['proxy_ip'] = 'not-an-ip'
+    elif invalid == 'runtime_git_sha': runtime['git_sha'] = 'b' * 40
+    elif invalid == 'runtime_missing': runtime_directory.rmdir()
+    runtime_path = runtime_directory / 'active.json'
+    if invalid != 'runtime_missing':
+        runtime_path.write_text(json.dumps(runtime))
+        runtime_path.chmod(0o600)
+    report_directory = root / 'var' / 'deployment-reports'
+    report_directory.mkdir()
+    report_path = report_directory / 'active.json'
+    report_path.write_text(json.dumps({
+        'status': 'failed' if invalid == 'failed_release' else 'success', 'git_sha': data['git_sha']}))
+    report_path.chmod(0o600)
+    if invalid == 'runtime_symlink':
+        current_is_symlink = Path.is_symlink
+        monkeypatch.setattr(Path, 'is_symlink', lambda path: True if path == runtime_path else current_is_symlink(path))
     config = {'name': backup.PROJECT, 'services': {}, 'volumes': {}}
     containers = []
     for service, component in [('db', 'postgres'), ('api', 'backend'), ('web', 'frontend')]:
@@ -288,7 +322,20 @@ def test_real_active_preflight_confirms_release_and_project_boundaries(tmp_path,
             volumes = [{'type': 'volume', 'source': logical, 'target': target}]
             config['volumes'][logical] = {'name': backup.PROJECT + '_' + logical}
             mounts = [{'Type': 'volume', 'Name': backup.PROJECT + '_' + logical, 'Destination': target}]
+        if service == 'api':
+            volumes.append({'type':'volume','source':'production_lifecycle','target':'/app/lifecycle'})
+            config['volumes']['production_lifecycle']={'name':backup.PROJECT+'_production_lifecycle'}
+            mounts.append({'Type':'volume','Name':backup.PROJECT+'_production_lifecycle','Destination':'/app/lifecycle'})
+            volumes.append({'type':'bind','source':str(control_file),'target':'/run/documind/recovery-state.json',
+                            'read_only':True})
+            mounts.append({'Type':'bind','Source':str(control_file),'Destination':'/run/documind/recovery-state.json',
+                           'RW':False})
         config['services'][service] = {'image': data['images'][component], 'volumes': volumes}
+        if service == 'api':
+            config['services'][service]['environment']={
+                'LIFECYCLE_DATA_ROOT':'/app/lifecycle',
+                'LIFECYCLE_BACKUP_LOCK_PATH':'/app/lifecycle/.backup.lock',
+            }
         containers.append({'Image': service + '-id', 'Config': {'Labels': {
             'com.docker.compose.project': backup.PROJECT, 'com.docker.compose.service': service,
             'com.docker.compose.project.config_files': str(bundle / 'compose.production.yaml')}},
@@ -303,6 +350,8 @@ def test_real_active_preflight_confirms_release_and_project_boundaries(tmp_path,
     def command(argv, env=None, timeout=300):
         calls.append(argv)
         assert not (set(env or {}) & backup.RESTIC_KEYS)
+        assert env['BFF_TRUSTED_PROXY_IPS'] == '192.0.2.10'
+        assert env['BACKEND_IMAGE'] == data['images']['backend']
         if 'config' in argv: return json.dumps(config)
         if argv[:3] == ['docker', 'ps', '-aq']: return 'db\napi\nweb'
         if argv[:2] == ['docker', 'inspect']:
@@ -317,9 +366,42 @@ def test_real_active_preflight_confirms_release_and_project_boundaries(tmp_path,
         with pytest.raises(backup.BackupError): backup.ActiveRelease(root).preflight()
     else:
         backup.ActiveRelease(root).preflight()
-        assert not (bundle / 'deploy_production.py').exists()  # No new app release/helper required.
+        assert not (bundle / 'images.env').exists()
     # Preflight must stay read-only, always explicitly scoped to the named project.
     assert not any('stop' in argv or 'up' in argv or 'run' in argv or 'down' in argv for argv in calls)
+
+
+@pytest.mark.parametrize('attested',[False,True])
+def test_legacy_active_bundle_reads_only_unattested_legacy_image_pins(tmp_path, monkeypatch, attested):
+    root = tmp_path / 'vps'
+    bundle = root / 'releases' / 'legacy'
+    bundle.mkdir(parents=True)
+    (root / '.env.production').write_text('private=true')
+    (root / '.env.production').chmod(0o600)
+    data = release('0007' if attested else '0006')
+    if attested:
+        data['security_profile']=security.PROFILE
+    for name in ('backup_local.py', 'release_manifest.py'):
+        (bundle / name).write_bytes((Path('tools') / name).read_bytes())
+    (bundle / 'compose.production.yaml').write_bytes(Path('compose.production.yaml').read_bytes())
+    (bundle / 'release.json').write_text(json.dumps(data))
+    pins = {variable: data['images'][component] for component, variable in
+            [('backend', 'BACKEND_IMAGE'), ('frontend', 'FRONTEND_IMAGE'), ('postgres', 'POSTGRES_IMAGE')]}
+    pins['BFF_TRUSTED_PROXY_IPS'] = '192.0.2.10'
+    (bundle / 'images.env').write_text(''.join(f'{key}={value}\n' for key, value in pins.items()))
+    pointer = root / 'current'
+    original_link, original_dir, original_resolve = Path.is_symlink, Path.is_dir, Path.resolve
+    monkeypatch.setattr(Path, 'is_symlink', lambda path: True if path == pointer else original_link(path))
+    monkeypatch.setattr(Path, 'is_dir', lambda path: True if path == pointer else original_dir(path))
+    monkeypatch.setattr(Path, 'resolve', lambda path: bundle if path == pointer else original_resolve(path))
+    if attested:
+        with pytest.raises(backup.BackupError,match='runtime_state_missing'):
+            backup.ActiveRelease(root)
+    else:
+        active = backup.ActiveRelease(root)
+        assert active.env['BFF_TRUSTED_PROXY_IPS'] == '192.0.2.10'
+        assert active.env['BACKEND_IMAGE'] == data['images']['backend']
+        assert str(bundle / 'images.env') not in active.compose
 
 
 @pytest.fixture
@@ -354,7 +436,9 @@ def test_existing_password_file_config_works_with_simulated_backup_confirmation(
     environment = state['environment_loader'](config)
     monkeypatch.setattr(backup, 'restic_environment', lambda: environment)
     run_id = {}; calls = []
+    size_command=backup.command
     def restic(argv, env=None, timeout=300):
+        if argv[0]=='docker':return size_command(argv,env,timeout)
         assert env == environment and 'RESTIC_PASSWORD' not in env
         assert str(password) not in argv and 'never-log-b2-key' not in argv
         calls.append(argv)

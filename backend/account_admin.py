@@ -30,6 +30,8 @@ def registration_control(session,settings,action,execute=False):
     if quota is None:raise ValueError('Migration 0007 requise')
     before={'closed':quota.closed,'issued_count':quota.issued_count}
     if action=='reopen' and execute:
+        if getattr(settings, 'lifecycle_durable_receipts_required', True):
+            raise ValueError('Réouverture interdite avant garde de restauration approuvée')
         if (settings.registration_mode!='public' or settings.public_registration_limit!=5 or settings.ai_enabled
                 or settings.owner_demo_enabled or settings.legacy_api_enabled):
             raise ValueError('La réouverture exige public/5, IA, démonstration et clés historiques désactivées')
@@ -79,18 +81,15 @@ def purge_pending(session, settings, hours=168, execute=False):
     """Local explicit cleanup only. Never free lifetime admission slots or touch active users."""
     from datetime import timedelta
     from .models import now
-    if not 48<=hours<=720:raise ValueError('Choisir une ancienneté entre 48 et 720 heures')
+    if type(hours) is not int or not 48<=hours<=720:raise ValueError('Choisir une ancienneté entre 48 et 720 heures')
+    if execute and getattr(settings, 'lifecycle_durable_receipts_required', True):
+        raise ValueError('Pending-account purge disabled until confirmation precedes all mutations')
     candidates=session.scalars(select(User.id).where(User.registration_kind=='public',User.email_verified_at.is_(None),User.disabled_at.is_(None),
         User.created_at<now()-timedelta(hours=hours))).all()
     count=0
     for identifier in candidates:
         user=session.get(User,identifier,populate_existing=True,with_for_update=True)
-        if user is None or user.registration_kind!='public' or user.email_verified_at is not None or user.disabled_at is not None:continue
-        if session.scalar(select(AccountToken.id).where(AccountToken.email==user.email,AccountToken.kind=='verify',
-                AccountToken.used_at.is_(None),AccountToken.expires_at>now()).limit(1)) is not None:continue
-        if session.scalar(select(Document.id).where(Document.owner_id==user.owner_id).limit(1)) is not None:continue
-        if session.scalar(select(AIReservation.id).where(AIReservation.owner_id==user.owner_id).limit(1)) is not None:continue
-        if session.scalar(select(AIUsage.id).where(AIUsage.owner_id==user.owner_id).limit(1)) is not None:continue
+        if pending_exclusion(session,user,hours) is not None:continue
         count+=1
         if execute:
             user.disabled_at=now()
@@ -101,9 +100,76 @@ def purge_pending(session, settings, hours=168, execute=False):
     return count
 
 
+def pending_exclusion(session, user, hours, at=None):
+    """Shared dry-run/execution predicate, rechecked after the user row lock."""
+    from datetime import timedelta
+    from .models import now
+    if type(hours) is not int or not 48 <= hours <= 720:
+        raise ValueError('Invalid pending-account age')
+    if user is None or user.registration_kind != 'public':return 'not_public'
+    if user.email_verified_at is not None:return 'verified'
+    if user.disabled_at is not None:return 'disabled'
+    created = user.created_at
+    if created.tzinfo is None:created=created.replace(tzinfo=timezone.utc)
+    if created >= (at or now())-timedelta(hours=hours):return 'too_recent'
+    if session.scalar(select(DeletionRequest.id).where(DeletionRequest.user_id==user.id)) is not None:return 'deletion_pending'
+    if session.scalar(select(AccountToken.id).where(AccountToken.email==user.email,AccountToken.kind=='verify',
+            AccountToken.used_at.is_(None),AccountToken.expires_at>(at or now())).limit(1)) is not None:return 'valid_verification_link'
+    for model, reason in ((Document,'documents_present'),(AIReservation,'ai_reservation_present'),(AIUsage,'ai_usage_present')):
+        if session.scalar(select(model.id).where(model.owner_id==user.owner_id).limit(1)) is not None:return reason
+    return None
+
+
+def plan_pending_cleanup(session, hours):
+    """Aggregate-only inventory; no locks, token invalidation or account mutation."""
+    from collections import Counter
+    from .models import now
+    if type(hours) is not int or not 48 <= hours <= 720:raise ValueError('Invalid pending-account age')
+    at=now(); counts=Counter()
+    for user in session.scalars(select(User).where(User.registration_kind=='public')).yield_per(100):
+        counts[pending_exclusion(session,user,hours,at) or 'eligible']+=1
+    return {'simulation':True,'older_than_hours':hours,'observed_at':at.isoformat(),
+            'counts':dict(sorted(counts.items())),'execution_enabled':False}
+
+
 def purge_account(session, settings, identifier):
+    if getattr(settings, 'lifecycle_durable_receipts_required', True):
+        raise ValueError('Account purge disabled until multi-step erasure is reconciled')
+    from .lifecycle_registry import configured_registry
+    from .lifecycle_durability import configured_coordinator
+    registry = configured_registry(settings)
+    coordinator = configured_coordinator(settings, registry)
+    receipt = None
+    if registry:
+        user = session.get(User, identifier)
+        request = session.scalar(select(DeletionRequest).where(DeletionRequest.user_id == identifier))
+        if user is None or user.disabled_at is None or request is None:
+            raise ValueError('A disabled account with a deletion request is required')
+        receipt = registry.receive('erasure', user_id=user.id, owner_id=user.owner_id,
+                                   received_at=request.created_at.replace(tzinfo=timezone.utc) if request.created_at.tzinfo is None else request.created_at)
+        if coordinator:
+            coordinator.confirm_account(receipt)
+        quota = session.get(PublicRegistrationQuota, 'public')
+        if quota is not None:
+            registry.observe_admissions(quota.issued_count)
+    try:
+        _purge_account(session, settings, identifier)
+    except Exception:
+        if registry:
+            registry.finish(receipt, failed=True)
+        raise
+    if registry:
+        # No legal duration inferred; operator closes/sets expiry after residual
+        # reconciliation. SQL deletion alone is not proof of physical erasure.
+        registry.active_erased(receipt)
+
+
+def _purge_account(session, settings, identifier):
+    if getattr(settings, 'lifecycle_durable_receipts_required', True):
+        raise ValueError('Account purge disabled until multi-step erasure is reconciled')
     user=session.get(User,identifier)
-    if user is None or user.disabled_at is None or session.scalar(select(DeletionRequest.id).where(DeletionRequest.user_id==identifier)) is None:
+    request=session.scalar(select(DeletionRequest).where(DeletionRequest.user_id==identifier))
+    if user is None or user.disabled_at is None or request is None:
         raise ValueError('A disabled account with a deletion request is required')
     if session.scalar(select(SummaryStep.id).join(LongSummaryJob).where(LongSummaryJob.owner_id==user.owner_id,SummaryStep.status=='processing').limit(1)):
         raise ValueError('A worker is processing this account; wait for it to stop')
@@ -115,6 +181,10 @@ def purge_account(session, settings, identifier):
         raise ValueError('An outstanding reservation requires reconciliation')
     for document in session.scalars(select(Document).where(Document.owner_id==user.owner_id)).all():
         delete_document(session,settings,document)
+    from .lifecycle_registry import configured_registry
+    registry=configured_registry(settings)
+    if registry and registry.pending_document_files(user.owner_id):
+        raise ValueError('Document residual reconciliation required before final account purge')
     session.execute(delete(RAGResult).where(RAGResult.owner_id==user.owner_id))
     if user.email:
         session.execute(delete(AccountToken).where(AccountToken.email==user.email))

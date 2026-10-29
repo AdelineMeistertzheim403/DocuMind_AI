@@ -34,6 +34,9 @@ Les services `db`, `api` et `web` sont sains ; `https` est démarré. API locale
 
 `AI_ENABLED=false` reste conservé. Aucun appel OpenAI réel, gratuit ou payant, n’a été effectué ; les tests de génération et de validation fournisseur sont simulés. L’accès au modèle, les crédits, les coûts réellement facturés et la qualité des réponses réelles ne sont donc pas validés. Aucun mot de passe utilisateur par défaut n’est créé et aucune autorité de certification n’est installée automatiquement dans Windows/Firefox.
 
-Le [guide de configuration et de révocation](sprint-3-ai-byok.md) indique comment créer son compte, approuver le certificat local, connecter sa propre clé et mener un essai réel volontaire à petit budget. Les plafonds sont estimatifs ; les opérations ambiguës gardent leur réservation, et la révocation locale ne peut annuler un appel déjà transmis.
+Le [README](../README.md) décrit la configuration locale actuelle sur des données
+synthétiques. Le présent bilan reste un historique de tests simulés, sans validation
+réelle d'un fournisseur. Les plafonds sont estimatifs ; les opérations ambiguës gardent
+leur réservation, et la révocation locale ne peut annuler un appel déjà transmis.
 
 Le coffre éphémère exige un seul processus API. L’accès HTTP partagé reste local. La production publique et les sessions distribuées nécessitent des travaux supplémentaires explicités dans le guide. Le dépôt n’étant pas initialisé avec Git, aucun commit n’a été créé.
