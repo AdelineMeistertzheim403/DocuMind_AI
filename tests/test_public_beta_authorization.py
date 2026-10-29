@@ -407,6 +407,12 @@ def test_missing_sql_gate_refuses_operator_mutation(app):
 
 def test_cli_close_output_contains_before_after_and_no_secret(app, monkeypatch, capsys):
     from backend import account_admin
+    from backend.account_models import PublicRegistrationQuota
+    with app.state.sessions() as session:
+        quota = session.get(PublicRegistrationQuota, 'public')
+        assert quota.closed is True
+        quota.closed = False
+        session.commit()
     monkeypatch.setattr(account_admin, 'Settings', lambda: app.state.settings)
     monkeypatch.setattr('sys.argv', ['account_admin', 'public-registration', 'close', '--execute'])
     account_admin.main()
@@ -414,6 +420,7 @@ def test_cli_close_output_contains_before_after_and_no_secret(app, monkeypatch, 
     result = json.loads(raw)
     assert result['action'] == 'close' and result['closed'] is True and result['before']['closed'] is False
     assert result['verified'] and result['timestamp'] and result['issued_count'] == 0
+    assert result['before']['issued_count'] == result['issued_count']
     assert app.state.settings.bff_service_key.get_secret_value() not in raw
 
 

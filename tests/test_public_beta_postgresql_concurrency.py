@@ -3,11 +3,13 @@ from concurrent.futures import ThreadPoolExecutor, wait
 from contextlib import contextmanager, ExitStack
 from queue import Queue
 from threading import Barrier, Event
+import os
 import time
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import event, select, func, text
+from sqlalchemy.engine import make_url
 
 from backend.api import db as database_dependency
 from backend.main import create_app
@@ -20,12 +22,51 @@ from tests.test_public_beta_state import new_request
 
 
 @pytest.fixture
-def pg_beta(beta):
+def pg_beta(request):
+    # Match conftest.app's database selection before paying for its migrations.
+    url = os.environ.get('TEST_DATABASE_URL', 'sqlite://')
+    if make_url(url).get_backend_name() != 'postgresql':
+        pytest.skip('Requires a NEW dedicated PostgreSQL 17 test database')
+    beta = request.getfixturevalue('beta')
     client, app, sent = beta
     if app.state.engine.dialect.name != 'postgresql':
         pytest.skip('Requires a NEW dedicated PostgreSQL 17 test database')
     app.state.settings.public_registration_limit = 5
     return beta
+
+
+@pytest.mark.parametrize('url', [None, 'sqlite://', 'sqlite:///synthetic.db'])
+def test_pg_beta_skips_sqlite_before_initializing_app(monkeypatch, url):
+    if url is None:
+        monkeypatch.delenv('TEST_DATABASE_URL', raising=False)
+    else:
+        monkeypatch.setenv('TEST_DATABASE_URL', url)
+
+    class Request:
+        def getfixturevalue(self, name):
+            pytest.fail('SQLite-only skips must not initialize the application')
+
+    with pytest.raises(pytest.skip.Exception, match='Requires a NEW dedicated PostgreSQL'):
+        pg_beta.__wrapped__(Request())
+
+
+def test_pg_beta_retains_actual_engine_guard(monkeypatch):
+    from types import SimpleNamespace
+    monkeypatch.setenv('TEST_DATABASE_URL', 'postgresql+psycopg://synthetic/unused')
+    calls = []
+    app = SimpleNamespace(state=SimpleNamespace(
+        engine=SimpleNamespace(dialect=SimpleNamespace(name='sqlite')),
+        settings=SimpleNamespace(public_registration_limit=0)))
+
+    class Request:
+        def getfixturevalue(self, name):
+            calls.append(name)
+            return None, app, None
+
+    with pytest.raises(pytest.skip.Exception, match='Requires a NEW dedicated PostgreSQL'):
+        pg_beta.__wrapped__(Request())
+    assert calls == ['beta']
+    assert app.state.settings.public_registration_limit == 0
 
 
 @contextmanager

@@ -136,7 +136,17 @@ jobs:
       - name: Portable Windows suite with disposable SQLite databases
         run: |
           Remove-Item Env:TEST_DATABASE_URL -ErrorAction SilentlyContinue
-          python -m pytest -q -p no:cacheprovider -m "not posix"
+          New-Item -ItemType Directory -Path ci-artifacts -Force -ErrorAction Stop | Out-Null
+          python -m pytest -q -p no:cacheprovider -m "not posix" --durations=0 --durations-min=0.1 --junitxml=ci-artifacts/windows-pytest.xml
+          exit $LASTEXITCODE
+      - name: Preserve Windows pytest diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: documind-windows-pytest-${{ github.sha }}-${{ github.run_attempt }}
+          path: ci-artifacts/windows-pytest.xml
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Preserve runner materials separately from the security release bundle
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
