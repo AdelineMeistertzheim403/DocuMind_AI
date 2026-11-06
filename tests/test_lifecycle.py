@@ -309,6 +309,36 @@ def test_registry_cli_defaults_and_failure_output_are_private(registry,monkeypat
     assert 'private database connection' not in capsys.readouterr().out
 
 
+def test_administrative_erasure_intake_is_idempotent_but_never_authorizes_purge(beta,registry,monkeypatch,capsys):
+    from tools import lifecycle_admin
+    from backend.account_models import DeletionRequest
+    client, app, _ = beta
+    enroll(beta)
+    app.state.settings.lifecycle_durable_receipts_required = True
+    app.state.settings.lifecycle_synthetic_mutations_enabled = False
+    with app.state.sessions() as session:
+        user = session.scalar(select(User))
+        identifier, owner = user.id, user.owner_id
+    args = ['lifecycle_admin','--registry',str(registry.path),
+            '--backup-lock',str(registry.path.parent/'.backup.lock'),
+            'receive','erasure','--user-id',str(identifier),'--owner-id',str(owner)]
+    monkeypatch.setenv('LIFECYCLE_BACKUP_LOCK_PATH',str(registry.path.parent/'.backup.lock'))
+    monkeypatch.setattr('sys.argv',args)
+    assert lifecycle_admin.main() == 0
+    receipt = json.loads(capsys.readouterr().out)['id']
+    assert lifecycle_admin.main() == 0
+    assert json.loads(capsys.readouterr().out)['id'] == receipt
+    with registry.connection() as connection:
+        rows = connection.execute('SELECT id,state FROM requests').fetchall()
+        assert [(row['id'], row['state']) for row in rows] == [(receipt, 'received')]
+    with app.state.sessions() as session:
+        assert session.get(User, identifier).disabled_at is None
+        assert session.scalar(select(DeletionRequest.id)) is None
+        assert session.get(PublicRegistrationQuota, 'public').issued_count == 1
+        with pytest.raises(ValueError, match='purge disabled'):
+            purge_account(session, app.state.settings, identifier)
+
+
 def test_registry_timezone_policy_assignment_and_no_future_backup_boundary(registry):
     start=datetime(2026,1,1,tzinfo=timezone.utc)
     case=registry.receive('restriction',received_at=start)

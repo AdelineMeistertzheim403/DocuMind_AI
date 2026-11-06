@@ -31,7 +31,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       <div className="modal-actions"><button className="button secondary" disabled={remove.isPending} onClick={() => setTarget(null)}>Conserver</button>
         <button className="button danger" disabled={remove.isPending} onClick={() => remove.mutate(target.id, { onSuccess: () => {
           setTarget(null); setToast('Document supprimé.'); navigate('/documents')
-        } })}>Supprimer définitivement</button></div>
+        } })}>Demander la suppression</button></div>
     </Modal>}
     {toast && <div className="toast" role="status"><CheckCircle2 size={20}/><span>{toast}</span><button className="icon-button" aria-label="Fermer la notification" onClick={() => setToast('')}><X size={16}/></button></div>}
   </Context.Provider>

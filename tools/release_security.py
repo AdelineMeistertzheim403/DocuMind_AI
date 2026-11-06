@@ -89,8 +89,8 @@ def validate_statement(bundle,release):
     if not isinstance(data,dict) or set(data)!={'format','profile','git_sha','schema_revision','images','bundle_sha256','producer'}:
         raise SecurityError('Invalid security statement structure')
     if (type(data['format']) is not int or data['format']!=1 or data['profile']!=PROFILE
-            or data['git_sha']!=release['git_sha'] or data['schema_revision']!='0007'
-            or release['schema_revision']!='0007' or data['images']!=release['images']):
+            or data['git_sha']!=release['git_sha'] or data['schema_revision'] not in ('0007','0008')
+            or release['schema_revision']!=data['schema_revision'] or data['images']!=release['images']):
         raise SecurityError('Security statement identity mismatch')
     if strict_json(read_file(bundle/'release.json'))!=release:raise SecurityError('Security manifest mismatch')
     hashes=data['bundle_sha256']

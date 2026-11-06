@@ -34,7 +34,7 @@ def validate_release(data):
     revision=data.get('schema_revision')
     if not isinstance(revision,str) or not re.fullmatch(r'[a-zA-Z0-9_]+',revision):raise ValueError('Invalid schema revision')
     if data.get('supported_schema_revisions')!=[revision]:raise ValueError('Only the tested schema revision is supported')
-    if 'security_profile' in data and (data['security_profile']!='public-beta-2026-10-v1' or revision!='0007'):
+    if 'security_profile' in data and (data['security_profile']!='public-beta-2026-10-v1' or revision not in ('0007','0008')):
         raise ValueError('Unrecognized release security profile')
     return data
 

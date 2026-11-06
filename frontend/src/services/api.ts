@@ -1,4 +1,4 @@
-import type { Analysis, AnalyzeOptions, DocumentDetail, DocumentList, DocumentSummary, Health } from '../types/api'
+﻿import type { Analysis, AnalyzeOptions, DocumentDetail, DocumentList, DocumentSummary, Health, UiConfig } from '../types/api'
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string) { super(message); this.name = 'ApiError' }
@@ -24,7 +24,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   catch (error) {
     if (error instanceof ApiError) throw error
     if (error instanceof DOMException && error.name === 'AbortError') throw error
-    throw new ApiError(0, 'Connexion interrompue. Vérifiez que DocuMind est démarré.')
+    throw new ApiError(0, 'Connexion interrompue. Vérifiez que Docnelo est démarré.')
   }
   if (!response.ok) {
     let message = fallback[response.status] || 'Une erreur est survenue. Réessayez.'
@@ -39,6 +39,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
 export const api = {
   config: () => request<{ max_upload_bytes: number }>('/config'),
   health: () => request<Health>('/health'),
+  uiConfig: () => request<UiConfig>('/ui-config'),
   documents: (offset = 0, limit = 12, signal?: AbortSignal) => request<DocumentList>(`/documents?offset=${offset}&limit=${limit}`, { signal }),
   document: (id: string, signal?: AbortSignal) => request<DocumentDetail>(`/documents/${encodeURIComponent(id)}`, { signal }),
   analysis: (id: string, signal?: AbortSignal) => request<Analysis>(`/documents/${encodeURIComponent(id)}/analysis`, { signal }),

@@ -86,6 +86,7 @@ services:
       BFF_BACKEND_URL: http://api:8000
       BFF_HOST: 0.0.0.0
       BFF_PORT: 3000
+      UI_ENVIRONMENT_LABEL: ${UI_ENVIRONMENT_LABEL:-}
       BFF_ALLOWED_HOSTS: ${APP_HOST:?Set the production DNS hostname}
       BFF_TRUSTED_PROXY_IPS: ${BFF_TRUSTED_PROXY_IPS:?Resolve the actual Traefik address on web before deployment}
       MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-10485760}

@@ -81,6 +81,7 @@ def create_app(settings=None):
 
     @asynccontextmanager
     async def lifespan(app):
+        summary_started = False
         if not settings.api_keys and not settings.bff_service_key.get_secret_value():
             emit('system.security_config.invalid', reason_code='security_unavailable')
             raise RuntimeError("Configurez API_KEYS avant de démarrer le serveur")
@@ -101,7 +102,9 @@ def create_app(settings=None):
             recover_jobs(app)
             from .ai.long_summary import recover
             recover(app)
-            app.state.summary_worker.thread.start()
+            if settings.ai_enabled:
+                app.state.summary_worker.thread.start()
+                summary_started = True
 
             def deliver_mail():
                 from .account_api import send_reset,send_verification
@@ -143,7 +146,7 @@ def create_app(settings=None):
                 cleanup.cancel()
                 with suppress(asyncio.CancelledError):
                     await cleanup
-            if app.state.recovery_ready_at_start:
+            if summary_started:
                 await asyncio.to_thread(app.state.summary_worker.stop)
             if mail_thread is not None:
                 app.state.mail_stopping.set()
@@ -152,7 +155,7 @@ def create_app(settings=None):
             app.state.authentication_engine.dispose()
             app.state.engine.dispose()
 
-    app = FastAPI(title="DocuMind AI", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="Docnelo", version="0.1.0", lifespan=lifespan)
     app.state.settings = settings
     app.state.recovery_ready_at_start = False
     app.state.engine = make_engine(settings.database_url)

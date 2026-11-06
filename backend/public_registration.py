@@ -17,6 +17,7 @@ from .auth import DUMMY_HASH, SessionVault, User, hash_password, verify_password
 from .gateway import client_ip
 from .models import now
 from .security_audit import mark
+from .config import PUBLIC_BETA_MAX_ADMISSIONS
 
 GENERIC = {'message': "Si cette demande peut aboutir, un lien de vérification sera envoyé. Vérifiez aussi les courriers indésirables."}
 
@@ -55,6 +56,20 @@ def challenge(request):
     return request.app.state.registration_challenges.issue(client_ip(request),request.app.state.settings.public_challenge_difficulty)
 
 
+def increment_quota(session, limit):
+    """Caller owns the transaction; never recycle a lifetime admission."""
+    return session.execute(update(PublicRegistrationQuota).where(
+        PublicRegistrationQuota.id == 'public',
+        PublicRegistrationQuota.issued_count < min(limit, PUBLIC_BETA_MAX_ADMISSIONS),
+        PublicRegistrationQuota.issued_count >= 0, PublicRegistrationQuota.closed.is_(False)
+    ).values(issued_count=PublicRegistrationQuota.issued_count+1)
+      .returning(PublicRegistrationQuota.issued_count)).scalar_one_or_none()
+
+
+def admission_receipts_required(settings):
+    return settings.lifecycle_durable_receipts_required and settings.public_registration_use_lifecycle_receipts
+
+
 def admit(request, session, body, *, resend=False):
     from .account_api import issue_token
     settings=request.app.state.settings
@@ -62,7 +77,7 @@ def admit(request, session, body, *, resend=False):
         raise HTTPException(403,'Inscription désactivée')
     if not resend and (not body.terms_accepted or body.terms_version!=settings.public_terms_version):
         raise HTTPException(400,'Acceptez les conditions en vigueur après les avoir consultées')
-    if not resend and getattr(settings, 'lifecycle_durable_receipts_required', True):
+    if not resend and admission_receipts_required(settings):
         from .lifecycle_durability import require_synthetic_mutation
         try:
             require_synthetic_mutation(settings)
@@ -97,11 +112,7 @@ def admit(request, session, body, *, resend=False):
         else:
             if user is not None:
                 return GENERIC
-            granted=session.execute(update(PublicRegistrationQuota).where(
-                PublicRegistrationQuota.id=='public',PublicRegistrationQuota.issued_count<settings.public_registration_limit,
-                PublicRegistrationQuota.issued_count>=0,
-                PublicRegistrationQuota.closed.is_(False)
-            ).values(issued_count=PublicRegistrationQuota.issued_count+1).returning(PublicRegistrationQuota.issued_count)).scalar_one_or_none()
+            granted=increment_quota(session, settings.public_registration_limit)
             if granted is None:
                 mark('account.registration.requested','quota')
                 return GENERIC
@@ -121,7 +132,7 @@ def admit(request, session, body, *, resend=False):
         session.execute(update(AccountToken).where(AccountToken.email==body.email,AccountToken.kind=='verify',
                                                   AccountToken.used_at.is_(None)).values(used_at=now()))
         token=issue_token(session,'verify',body.email,settings.public_verification_ttl_seconds)
-        if not resend and getattr(settings, 'lifecycle_durable_receipts_required', True):
+        if not resend and admission_receipts_required(settings):
             from .lifecycle_admissions import configured_admissions
             from .lifecycle_registry import configured_registry
             from .lifecycle_durability import configured_coordinator
@@ -178,4 +189,4 @@ def verify(request, session, body):
     user.email_verified_at=now()
     session.commit()
     mark('account.email.verified','completed')
-    return {'verified':True}
+    return {'verified':True, 'approval_required':request.app.state.settings.public_registration_requires_approval}

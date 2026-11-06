@@ -35,18 +35,37 @@ try{
   await page.getByLabel('Email ou identifiant historique').fill(email)
   await page.getByLabel('Mot de passe',{exact:true}).fill(config.password)
   await page.getByRole('button',{name:'Connexion',exact:true}).click()
+  if(config.approvalRequired){
+    await page.getByRole('alert').waitFor()
+    assert.equal(new URL(page.url()).pathname,'/login')
+    console.log('awaiting_approval')
+    const [approval]=await once(messages,'line')
+    assert.equal(JSON.parse(approval).approved,true)
+    await page.getByLabel('Mot de passe',{exact:true}).fill(config.password)
+    await page.getByRole('button',{name:'Connexion',exact:true}).click()
+  }
   await page.getByRole('heading',{name:'Tableau de bord'}).waitFor()
   // Same browser session, full HTTPS BFF -> API upload admission and local analysis.
-  const result=await page.evaluate(async()=>{
+  const result=await page.evaluate(async({password,strict})=>{
     async function csrf(){return (await(await fetch('/bff/auth/csrf')).json()).csrf_token}
     const body=new FormData();body.append('file',new File(['Fictitious beta document. Only local text analysis.'],'fictitious.txt',{type:'text/plain'}))
     const uploaded=await fetch('/bff/documents',{method:'POST',headers:{'X-CSRF-Token':await csrf()},body})
     const document=await uploaded.json()
     const analysis=await fetch(`/bff/documents/${document.id}/analyze`,{method:'POST',headers:{'X-CSRF-Token':await csrf(),'Content-Type':'application/json'},body:'{}'})
     const ai=await fetch('/bff/ai/key',{method:'POST',headers:{'X-CSRF-Token':await csrf(),'Content-Type':'application/json'},body:JSON.stringify({api_key:'sk-fictitious-never-sent-to-provider'})})
-    return {upload:uploaded.status,analysis:analysis.status,ai:ai.status}
-  })
-  assert.deepEqual(result,{upload:201,analysis:201,ai:403})
+    if(!strict)return {upload:uploaded.status,analysis:analysis.status,ai:ai.status}
+    const documentDeletion=await fetch(`/bff/documents/${document.id}`,{method:'DELETE',headers:{'X-CSRF-Token':await csrf()}})
+    const accountDeletion=await fetch('/bff/account/deletion-request',{method:'POST',
+      headers:{'X-CSRF-Token':await csrf(),'Content-Type':'application/json'},body:JSON.stringify({password})})
+    const account=await fetch('/bff/account')
+    const retained=await fetch(`/bff/documents/${document.id}`)
+    return {upload:uploaded.status,analysis:analysis.status,ai:ai.status,
+      documentDeletion:documentDeletion.status,accountDeletion:accountDeletion.status,
+      account:account.status,retained:retained.status}
+  },{password:config.password,strict:config.approvalRequired})
+  assert.deepEqual(result,config.approvalRequired
+    ?{upload:201,analysis:201,ai:403,documentDeletion:503,accountDeletion:503,account:200,retained:200}
+    :{upload:201,analysis:201,ai:403})
   const cookies=await context.cookies()
   const session=cookies.find(value=>value.name==='__Host-documind')
   assert.ok(session?.secure&&session.httpOnly&&session.sameSite==='Strict')

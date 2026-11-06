@@ -72,6 +72,18 @@ def test_controller_helper_must_match_attested_bundle(approved,tmp_path):
         deploy.verify_controller_bundle_compatibility(controller,bundle,candidate)
 
 
+def test_schema_0008_attestation_is_pinned_and_cannot_authorize_old_application(tmp_path, monkeypatch):
+    trust={'format':1,'releases':{}}
+    bundle=tmp_path/'release'
+    candidate=approved_bundle(bundle, release('0008'), trust)
+    validate_release(candidate)
+    monkeypatch.setattr(security, 'load_trust', lambda:trust)
+    assert security.authorize(bundle, candidate)['independently_approved']
+    assert not deploy.can_rollback(release('0007'), '0008', security_verified=True)
+    with pytest.raises(security.SecurityError, match='identity mismatch'):
+        security.validate_statement(bundle, {**candidate, 'schema_revision':'0007'})
+
+
 @pytest.mark.parametrize('tamper',['missing_file','systemd_missing_script'])
 def test_operational_inventory_requires_every_attested_file_and_unit_target(approved,tamper):
     bundle,candidate,_=approved

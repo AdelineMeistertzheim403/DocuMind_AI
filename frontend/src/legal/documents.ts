@@ -1,9 +1,9 @@
 // Published versions must be retained unchanged; add a new entry for each revision.
-export const TERMS_VERSION = 'beta-2026-10-v1'
+export const TERMS_VERSION = 'beta-2026-11-06-draft-1'
 export type LegalBlock = {kind:'paragraph'; text:string}|{kind:'list'; items:readonly string[]}|{kind:'table'; headers:readonly string[]; rows:readonly (readonly string[])[]}
 export type LegalDocument = {title:string; version:string; sections:readonly {title:string; text:string; items?:readonly string[]; blocks?:readonly LegalBlock[]}[]}
-export const termsArchive:Readonly<Record<string,LegalDocument>> = {
-  [TERMS_VERSION]: {
+const archivedTerms:Readonly<Record<string,LegalDocument>> = {
+  'beta-2026-10-v1': {
   "title": "Conditions générales d’utilisation",
   "version": "beta-2026-10-v1",
   "sections": [
@@ -321,6 +321,20 @@ export const termsArchive:Readonly<Record<string,LegalDocument>> = {
       {title:'Clauses à compléter et valider',text:'À compléter par l’exploitante : identité des parties, public éligible et âge, gratuité ou prix, durée et fin de la bêta, droits sur les documents, usages interdits, assistance, suspension, responsabilités, réclamations et droit applicable. Aucune clause de renonciation aux droits ou garantie de disponibilité n’est présumée.'},
     ],
   },
+}
+export const betaTenTerms:LegalDocument = {
+  title:'Conditions générales d’utilisation',
+  version:TERMS_VERSION,
+  sections:[
+    {title:'Statut',text:'Projet non validé par l’exploitante. Les inscriptions restent fermées. Ce document ne constitue pas une autorisation d’ouverture.'},
+    {title:'Périmètre',text:'Docnelo permet l’import de PDF et TXT et leur analyse documentaire classique. Les fonctions IA sont désactivées. Dix admissions publiques cumulatives au maximum sont autorisées, comptes en attente, refusés et supprimés compris. Les comptes historiques et sur invitation sont exclus. Aucune suppression ne restitue une place.'},
+    {title:'Accès',text:'La vérification de l’adresse e-mail et l’approbation administrative sont nécessaires avant la connexion. Un accusé de réception ne garantit ni admission ni livraison du message.'},
+    {title:'Effacement',text:'L’effacement physique n’est pas opérationnel dans ce candidat. Un refus 503 ne signifie pas que la demande a été enregistrée ou le compte désactivé. Les demandes doivent être adressées au contact publié et suivies administrativement, sans promesse de suppression accomplie. Ce blocage interdit l’ouverture.'},
+    {title:'Validation requise',text:'Les modalités juridiques, les délais de traitement et la gestion des copies résiduelles restent à approuver avant publication. Les versions antérieures sont conservées sans modification.'},
+  ],
+}
+export const termsArchive:Readonly<Record<string,LegalDocument>> = {
+  ...archivedTerms, [TERMS_VERSION]:betaTenTerms,
 }
 export const legalNotice:LegalDocument = {
   title:'Mentions légales',version:'2026-10-26-draft-2',sections:[

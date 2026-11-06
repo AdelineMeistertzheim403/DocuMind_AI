@@ -25,7 +25,7 @@ on:
         type: boolean
         default: false
       approve_public_beta:
-        description: Approve public/5 preparation ONLY with an already closed SQL gate; never opens admissions
+        description: Approve reviewed public/5 (0007) or public/10 (0008) preparation with a closed SQL gate; never opens admissions
         type: boolean
         default: false
 

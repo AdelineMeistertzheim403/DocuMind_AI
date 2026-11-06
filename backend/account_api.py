@@ -1,4 +1,4 @@
-"""Account lifecycle. No provider calls, ownership claims, cookies or secrets in responses."""
+﻿"""Account lifecycle. No provider calls, ownership claims, cookies or secrets in responses."""
 import re
 import secrets
 import smtplib
@@ -24,6 +24,7 @@ from .ai.settings_api import user_session
 from .gateway import secure_gateway, client_ip
 from .models import now
 from .resource_limits import lock_workspace
+from .config import PUBLIC_BETA_MAX_ADMISSIONS
 
 router = APIRouter(prefix='/api/v1', tags=['comptes'], dependencies=[Depends(secure_gateway)])
 
@@ -48,6 +49,8 @@ class Register(EmailInput):
     website: str = Field('', max_length=200)
     terms_accepted: StrictBool = False
     terms_version: str = Field('', max_length=40)
+    adult_declared: StrictBool = False
+    operation_id: UUID | None = None
 
 
 class VerifyEmail(StrictModel):
@@ -107,11 +110,13 @@ def options(request: Request, session: Session):
     availability='closed'
     if settings.registration_mode=='public':
         from .account_models import PublicRegistrationQuota
+        from .public_registration import admission_receipts_required
         quota=session.get(PublicRegistrationQuota,'public')
-        capacity=bool(quota and not quota.closed and 0<=quota.issued_count<settings.public_registration_limit)
+        limit=min(settings.public_registration_limit, PUBLIC_BETA_MAX_ADMISSIONS)
+        capacity=bool(quota and not quota.closed and 0<=quota.issued_count<limit)
         if capacity:availability='available'
-        elif quota and not quota.closed and quota.issued_count>=settings.public_registration_limit:availability='full'
-        if capacity and getattr(settings, 'lifecycle_durable_receipts_required', True):
+        elif quota and not quota.closed and quota.issued_count>=limit:availability='full'
+        if capacity and admission_receipts_required(settings):
             from .lifecycle_admissions import configured_admissions
             from .lifecycle_durability import configured_coordinator, require_synthetic_mutation
             from .lifecycle_registry import configured_registry
@@ -127,6 +132,8 @@ def options(request: Request, session: Session):
                 capacity, availability = False, 'closed'
     return {'registration_mode':settings.registration_mode,
             'public_capacity_configured':capacity,
+            'public_registration_limit':min(settings.public_registration_limit, PUBLIC_BETA_MAX_ADMISSIONS),
+            'public_registration_requires_approval':settings.public_registration_requires_approval,
             'public_registration_availability':availability,
             'terms_version':settings.public_terms_version,
             'legal_notice_url':settings.public_legal_notice_url,'privacy_url':settings.public_privacy_url,
@@ -186,10 +193,10 @@ def send_account_link(settings, email, token, *, verification=False):
     if not settings.smtp_host:
         return
     message = EmailMessage()
-    message['From'], message['To'], message['Subject'] = settings.smtp_from, email, 'Vérification DocuMind' if verification else 'Réinitialisation DocuMind'
+    message['From'], message['To'], message['Subject'] = settings.smtp_from, email, 'Vérification Docnelo' if verification else 'Réinitialisation Docnelo'
     # Fragment is never sent to the web server or its access log; UI immediately clears it.
     route='verify-email' if verification else 'reset-password'
-    message.set_content(f"Ouvrez ce lien DocuMind : {settings.account_base_url}/{route}#token={token}\nCe lien est temporaire et à usage unique.\n"+
+    message.set_content(f"Ouvrez ce lien Docnelo : {settings.account_base_url}/{route}#token={token}\nCe lien est temporaire et à usage unique.\n"+
         ('La vérification exige aussi le mot de passe choisi lors de l’inscription.\n' if verification else '')+
         'Si vous n’êtes pas à l’origine de cette demande, ignorez ce message.')
     context = ssl.create_default_context()

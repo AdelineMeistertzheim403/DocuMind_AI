@@ -151,6 +151,10 @@ export function createApp(config, upstreamFetch = fetch, {auditSink}={}) {
   })
 
   app.get('/bff/config', (req, res) => res.json({ max_upload_bytes: config.maxUploadBytes }))
+  app.get('/bff/ui-config', (req, res) => {
+    if (Object.keys(req.query).length) return res.status(400).json({ detail: messages[400] })
+    res.json({ environment_label: process.env.UI_ENVIRONMENT_LABEL || '' })
+  })
 
   // Readiness is public only after the same Host/origin validation as all BFF routes.
   // No session, cookie, user data or upstream response body is exposed by this probe.

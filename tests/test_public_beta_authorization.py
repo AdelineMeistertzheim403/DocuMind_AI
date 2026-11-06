@@ -92,6 +92,29 @@ def test_quota_check_reads_only_and_preserves_lifetime_counter():
     assert 'UPDATE ' not in queries[0]
 
 
+def test_ten_account_delivery_requires_new_schema_review_and_postgresql_admissions():
+    environment={**PUBLIC, 'PUBLIC_REGISTRATION_LIMIT':'10',
+                 'PUBLIC_REGISTRATION_REQUIRES_APPROVAL':'true',
+                 'PUBLIC_REGISTRATION_USE_LIFECYCLE_RECEIPTS':'false'}
+    assert deploy.registration_policy(environment, '0008', True) == 'public'
+    for changed in ({'PUBLIC_REGISTRATION_REQUIRES_APPROVAL':'false'},
+                    {'PUBLIC_REGISTRATION_REQUIRES_APPROVAL':None},
+                    {'PUBLIC_REGISTRATION_USE_LIFECYCLE_RECEIPTS':'true'},
+                    {'PUBLIC_REGISTRATION_USE_LIFECYCLE_RECEIPTS':None},
+                    {'PUBLIC_REGISTRATION_LIMIT':'11'}):
+        with pytest.raises(deploy.DeploymentError):
+            deploy.registration_policy({**environment, **changed}, '0008', True)
+    with pytest.raises(deploy.DeploymentError):
+        deploy.registration_policy(environment, '0007', True)
+    with pytest.raises(deploy.DeploymentError):
+        deploy.registration_policy(environment, '0008', False)
+    quota=SimpleNamespace(release=release('0008'), sql=lambda query:json.dumps({'closed':True,'issued_count':10}))
+    assert deploy.check_public_quota(quota)['issued_count'] == 10
+    quota.sql=lambda query:json.dumps({'closed':True,'issued_count':11})
+    with pytest.raises(deploy.DeploymentError):
+        deploy.check_public_quota(quota)
+
+
 @pytest.mark.parametrize('allow_migration', [False, True])
 def test_migration_approval_never_substitutes_for_beta_approval(simulation, monkeypatch, allow_migration):
     args, events, state, bundle = simulation

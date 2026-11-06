@@ -8,6 +8,9 @@ from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+PUBLIC_BETA_MAX_ADMISSIONS = 10
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     database_url: str = "postgresql+psycopg://documind:documind@localhost:5432/documind"
@@ -15,7 +18,10 @@ class Settings(BaseSettings):
     legacy_api_enabled: bool = True
     bff_service_key: SecretStr = SecretStr('')
     registration_mode: Literal['disabled', 'invite', 'public'] = 'disabled'
+    application_profile: Literal['standard'] = 'standard'
     public_registration_limit: int = Field(0, ge=0, le=10000)
+    public_registration_requires_approval: bool = True
+    public_registration_use_lifecycle_receipts: bool = True
     public_registration_per_hour: int = Field(3, ge=1, le=10)
     public_verification_ttl_seconds: int = Field(3600, ge=300, le=86400)
     public_challenge_difficulty: int = Field(12, ge=10, le=18)
@@ -121,6 +127,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_keys(self):
+        if self.registration_mode == 'public' and self.public_registration_limit > PUBLIC_BETA_MAX_ADMISSIONS:
+            raise ValueError('La bêta publique est limitée à 10 admissions cumulatives')
         if self.registration_mode == 'public':
             if (not self.bff_service_key.get_secret_value() or self.legacy_api_enabled or self.owner_demo_enabled or
                     not self.smtp_host or self.smtp_from == 'no-reply@localhost' or not self.public_legal_ready or

@@ -51,8 +51,9 @@ def check_public_quota(stack):
         quota=json.loads(raw)
     except (ValueError,TypeError):
         raise DeploymentError('Public beta requires an unambiguous closed SQL quota') from None
+    limit=10 if getattr(stack,'release',{}).get('schema_revision')=='0008' else 5
     if (not isinstance(quota,dict) or quota.get('closed') is not True
-            or type(quota.get('issued_count')) is not int or not 0<=quota['issued_count']<=5):
+            or type(quota.get('issued_count')) is not int or not 0<=quota['issued_count']<=limit):
         raise DeploymentError('Public beta requires a closed SQL quota with a valid cumulative counter')
     return {'closed':True,'issued_count':quota['issued_count']}
 
@@ -78,13 +79,13 @@ def can_rollback(release,revision,*,security_verified=False,require_security=Tru
 
 
 def public_history(stack,revision):
-    if revision!='0007':return False
+    if revision not in ('0007','0008'):return False
     raw=stack.sql("SELECT json_build_object('has_public_users',EXISTS(SELECT 1 FROM users WHERE registration_kind='public'), "
                   "'issued_count',issued_count,'closed',closed)::text FROM public_registration_quota WHERE id='public'")
     try:data=security.strict_json(raw)
     except security.SecurityError:raise DeploymentError('Cannot establish public account history') from None
     if (not isinstance(data,dict) or type(data.get('has_public_users')) is not bool
-            or type(data.get('issued_count')) is not int or not 0<=data['issued_count']<=5
+            or type(data.get('issued_count')) is not int or not 0<=data['issued_count']<=(10 if revision=='0008' else 5)
             or type(data.get('closed')) is not bool):
         raise DeploymentError('Missing or incoherent public account history; manual review required')
     return data['has_public_users'] or data['issued_count']>0
@@ -119,9 +120,10 @@ CONTROLLER_FILES=frozenset(('deploy_production.py','backup_local.py','release_ma
 def verify_controller_bundle_compatibility(controller,bundle,release,*,rollback=False):
     try:
         statement,_=security.validate_operational_bundle(bundle,release,rollback=rollback)
-        if {path.name for path in controller.iterdir()}!=CONTROLLER_FILES:
+        files=CONTROLLER_FILES
+        if {path.name for path in controller.iterdir()}!=files:
             raise security.SecurityError('Unexpected deployment controller inventory')
-        for name in CONTROLLER_FILES:
+        for name in files:
             actual=security.read_file(controller/name)
             expected=security.read_file(bundle/name)
             if hashlib.sha256(actual).digest()!=hashlib.sha256(expected).digest():
@@ -647,7 +649,7 @@ def execute(args,report):
     if previous:
         report['previous_sha']=previous.release['git_sha']
     if mode=='public' and (args.initialize or recovery or previous is None):
-        raise DeploymentError('Public beta requires an existing closed schema 0007 installation')
+        raise DeploymentError(f"Public beta requires an existing closed schema {release['schema_revision']} installation")
     if not args.initialize and previous is None and not recovery:
         raise DeploymentError('Existing deployment must be adopted explicitly before automated updates')
     if args.initialize and previous is not None:raise DeploymentError('Initialization refuses an existing release')
@@ -662,8 +664,9 @@ def execute(args,report):
     if previous:
         previous_mode=check_config(previous,approval)['services']['api']['environment'].get('REGISTRATION_MODE','disabled')
     if mode=='public':
-        if before!='0007':raise DeploymentError('Public beta requires an existing closed schema 0007 installation')
-        report['public_beta']={'approved':True,'preparation_only':True,'limit':5,
+        if before!=release['schema_revision']:
+            raise DeploymentError(f"Public beta requires an existing closed schema {release['schema_revision']} installation")
+        report['public_beta']={'approved':True,'preparation_only':True,'limit':10 if before=='0008' else 5,
                                'quota_before':check_public_quota(previous)}
     history=public_history(source or previous,before) if source or previous else False
     strict=bool(args.rollback or mode=='public' or previous_mode=='public' or history or os.path.lexists(root/'var/security-maintenance.json') or 'security_profile' in release
@@ -765,7 +768,7 @@ def main():
     parser.add_argument('--bundle',type=Path,help='Candidate data bundle; execute the trusted controller, never an old candidate script')
     parser.add_argument('--initialize',action='store_true')
     parser.add_argument('--allow-migration',action='store_true')
-    parser.add_argument('--approve-public-beta',action='store_true',help='Approve public/5 preparation with an already closed SQL gate; never opens admissions')
+    parser.add_argument('--approve-public-beta',action='store_true',help='Approve public/5 (0007) or public/10 (0008) preparation with a closed SQL gate; never opens admissions')
     parser.add_argument('--rollback',action='store_true')
     parser.add_argument('--recover-from',type=Path,help='Explicit source bundle of a failed first installation at start; no migrations')
     parser.add_argument('--recover-after-https',type=Path,help='Explicit failed HTTPS recovery source; verify original DB and replaced apps; no migrations')

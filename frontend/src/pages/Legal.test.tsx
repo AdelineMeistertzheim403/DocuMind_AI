@@ -30,7 +30,10 @@ it.each([
 
 it('conserve une version explicite et son lien permanent sans substitution silencieuse',()=>{
   mount('/cgu')
-  expect(termsArchive[TERMS_VERSION].version).toBe('beta-2026-10-v1')
+  expect(termsArchive[TERMS_VERSION].version).toBe(TERMS_VERSION)
+  expect(termsArchive['beta-2026-10-v1'].version).toBe('beta-2026-10-v1')
+  expect(JSON.stringify(termsArchive['beta-2026-10-v1'])).toContain('cinq inscriptions publiques cumulatives')
+  expect(JSON.stringify(termsArchive[TERMS_VERSION])).toContain('Dix admissions publiques cumulatives')
   expect(screen.getByRole('link',{name:'Lien permanent de cette version'})).toHaveAttribute('href',`/cgu/versions/${TERMS_VERSION}`)
   fireEvent.click(screen.getByRole('link',{name:'Lien permanent de cette version'}))
   expect(screen.getByRole('heading',{level:1})).toHaveTextContent('Conditions générales')

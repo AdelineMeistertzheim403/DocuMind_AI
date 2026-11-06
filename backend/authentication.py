@@ -4,7 +4,7 @@ import secrets
 from fastapi import HTTPException
 from sqlalchemy import select
 
-from .auth import User
+from .auth import User, public_access_allowed
 
 
 def authenticate(request, key=None, *, charge=True):
@@ -17,7 +17,7 @@ def authenticate(request, key=None, *, charge=True):
         with sessions() as session:
             user = session.get(User, context.user_id)
             if (user is None or user.disabled_at is not None or user.owner_id != context.owner_id or
-                    (user.registration_kind=='public' and user.email_verified_at is None)):
+                    not public_access_allowed(settings, user)):
                 from .security_audit import mark
                 mark('auth.session.revoked', 'session_revoked')
                 request.app.state.session_vault.revoke(token)

@@ -16,7 +16,7 @@ concurrency:
 jobs:
   python:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
       AI_ENABLED: 'false'
       OPENAI_API_KEY: ''
@@ -70,7 +70,25 @@ jobs:
             tests/test_lifecycle_durability.py::test_concurrent_last_admission_with_independent_witness \
             tests/test_lifecycle_posix.py::test_inventory_postgresql_transaction_rejects_writes \
             tests/test_document_integrity.py::test_postgresql_verifier_waits_for_original_writer_fence \
-            tests/test_release_security.py::test_real_postgresql_history_and_disabled_account_guard
+            tests/test_release_security.py::test_real_postgresql_history_and_disabled_account_guard \
+            tests/test_public_beta_approval.py \
+            tests/test_public_beta_postgresql_concurrency.py
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Prepare real local HTTPS, SMTP and browser qualification
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          npm run build
+      - name: Required public beta browser and mail path (zero skips)
+        env:
+          TEST_DATABASE_URL: postgresql+psycopg://lot210:ci-test-only@127.0.0.1:5432/documind_test
+          TEST_PUBLIC_BETA_E2E: '1'
+        run: python -m pytest -q --require-no-skips tests/test_public_beta_email_e2e.py
       - name: Required native root ownership proofs (zero skips)
         run: |
           sudo .ci-venv/bin/python -m pytest -q -p no:cacheprovider --require-no-skips \

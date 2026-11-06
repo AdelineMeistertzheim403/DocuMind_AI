@@ -8,7 +8,7 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field, SecretStr
 from sqlalchemy import select
 
 from ..api import Owner, Session
-from ..auth import DUMMY_HASH, User, verify_password, hash_password, PASSWORD_HASHER
+from ..auth import DUMMY_HASH, User, verify_password, hash_password, PASSWORD_HASHER, public_access_allowed
 from ..gateway import secure_gateway, client_ip
 
 router = APIRouter(prefix='/api/v1', tags=['comptes et BYOK'])
@@ -53,7 +53,7 @@ def login(body: Login, request: Request, session: Session):
     # Do a real password derivation for unknown users too.
     encoded = user.password_hash if user else DUMMY_HASH
     if (not verify_password(body.password.get_secret_value(), encoded) or user is None or user.disabled_at is not None or
-            (user.registration_kind=='public' and user.email_verified_at is None)):
+            not public_access_allowed(request.app.state.settings, user)):
         raise HTTPException(401, 'Identifiants invalides')
     if not encoded.startswith('$argon2id$') or PASSWORD_HASHER.check_needs_rehash(encoded):
         user.password_hash = hash_password(body.password.get_secret_value())

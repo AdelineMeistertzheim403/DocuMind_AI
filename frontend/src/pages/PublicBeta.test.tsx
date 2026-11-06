@@ -9,6 +9,7 @@ import * as registration from '../services/registration'
 import {ApiError} from '../services/api'
 
 const options={registration_mode:'public' as const,public_capacity_configured:true,terms_version:'v1',
+  public_registration_limit:10,public_registration_requires_approval:true,
   terms_url:'https://documind.test/terms',privacy_url:'https://documind.test/privacy',legal_notice_url:'https://documind.test/legal-notice',
   operator_name:'Fictitious operator',contact_email:'contact@example.test'}
 function mount(element:React.ReactNode){return render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><MemoryRouter>{element}</MemoryRouter></QueryClientProvider>)}
@@ -18,7 +19,8 @@ it('présente le formulaire public accessible sans demander une invitation',asyn
   mount(<AccountAccess mode="register"/>)
   expect(await screen.findByRole('checkbox')).toBeRequired()
   expect(screen.getByRole('checkbox')).not.toBeChecked()
-  expect(screen.getByText(/cinq admissions cumulatives/)).toBeVisible()
+  expect(screen.getByText(/10 admissions publiques cumulatives/)).toBeVisible()
+  expect(screen.getByText(/une approbation administrative est nécessaire/)).toBeVisible()
   expect(screen.getByLabelText('Email')).toHaveAttribute('type','email')
   expect(screen.getByLabelText('Mot de passe')).toHaveAttribute('minlength','12')
   expect(screen.queryByLabelText('Invitation')).not.toBeInTheDocument()
@@ -45,13 +47,15 @@ it('retire le jeton du fragment et exige une action et le mot de passe pour vér
   const token='A'.repeat(43)
   history.replaceState(null,'','/verify-email#token='+token)
   vi.spyOn(services.account,'options').mockResolvedValue(options)
-  const post=vi.spyOn(services,'accountPost').mockResolvedValue({verified:true})
+  const post=vi.spyOn(services,'accountPost').mockResolvedValue({verified:true,approval_required:true})
   mount(<AccountAccess mode="verify"/>)
   await waitFor(()=>expect(location.hash).toBe(''))
   expect(post).not.toHaveBeenCalled()
   fireEvent.change(screen.getByLabelText('Mot de passe'),{target:{value:'Fictitious-password-123'}})
   fireEvent.click(screen.getByRole('button',{name:'Vérifier mon adresse e-mail'}))
   expect(await screen.findByRole('status')).toHaveTextContent('Adresse vérifiée')
+  expect(screen.getByRole('status')).toHaveTextContent('attend une approbation administrative')
+  expect(screen.getByRole('status')).not.toHaveTextContent('Vous pouvez maintenant vous connecter')
   expect(post).toHaveBeenCalledWith('/auth/verify-email',{token,password:'Fictitious-password-123'})
 })
 

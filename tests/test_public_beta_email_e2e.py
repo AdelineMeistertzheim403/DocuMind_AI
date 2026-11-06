@@ -74,10 +74,15 @@ def test_browser_signup_smtp_verify_login_document_and_ai_denied(app,mail_certif
     monkeypatch.setattr('backend.account_api.ssl.create_default_context',lambda:original(cafile=str(cert)))
     with FakeSMTP(mail_certificate,starttls=True) as smtp:
         settings=Settings(_env_file=None,**{**app.state.settings.model_dump(),**PUBLIC,
-            'public_registration_limit':5,'public_registration_per_hour':3,'public_challenge_difficulty':12,
+            'public_registration_limit':10,'public_registration_per_hour':3,'public_challenge_difficulty':12,
+            'public_registration_requires_approval':True,'public_registration_use_lifecycle_receipts':False,
+            'lifecycle_durable_receipts_required':True,'lifecycle_synthetic_mutations_enabled':False,
             'ai_enabled':False,'smtp_host':'127.0.0.1','smtp_port':smtp.port,'smtp_starttls':True,
             'account_base_url':'https://localhost','storage_dir':tmp_path/'documents'})
         application=create_app(settings)
+        with application.state.sessions() as session:
+            session.get(PublicRegistrationQuota,'public').closed=False
+            session.commit()
         with application_server(application) as api:
             gateway_log=tmp_path/'gateway-errors.log'
             with gateway_log.open('w',encoding='utf-8') as errors:
@@ -100,13 +105,21 @@ def test_browser_signup_smtp_verify_login_document_and_ai_denied(app,mail_certif
                     spki=base64.b64encode(hashlib.sha256(der).digest()).decode()
                     browser=subprocess.Popen(['node',str(ROOT/'tests/fixtures/public_beta_browser.mjs')],
                         stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=errors,text=True,cwd=ROOT)
-                    browser.stdin.write(json.dumps({'origin':origin,'spki':spki,'mobile':mobile,'password':PASSWORD})+'\n');browser.stdin.flush()
+                    browser.stdin.write(json.dumps({'origin':origin,'spki':spki,'mobile':mobile,
+                        'password':PASSWORD,'approvalRequired':True})+'\n');browser.stdin.flush()
                     assert line_with_deadline(browser)=='registered'
                     raw=smtp.messages.get(timeout=10)
                     message=BytesParser(policy=policy.default).parsebytes(raw)
                     assert str(message['To'])=='browser@example.test'
                     token=re.search(r'#token=([A-Za-z0-9_-]{43})',message.get_content()).group(1)
                     browser.stdin.write(json.dumps({'token':token})+'\n');browser.stdin.flush()
+                    assert line_with_deadline(browser)=='awaiting_approval'
+                    from backend.account_admin import public_account_control
+                    with application.state.sessions() as session:
+                        user=session.scalar(select(User).where(User.email=='browser@example.test'))
+                        assert user.email_verified_at is not None and user.approved_at is None
+                        public_account_control(session,user.id,'approve',True)
+                    browser.stdin.write(json.dumps({'approved':True})+'\n');browser.stdin.flush()
                     assert line_with_deadline(browser)=='completed'
                     assert browser.wait(timeout=10)==0
                     assert smtp.tls_connections==1
@@ -133,6 +146,9 @@ def live_beta(app,mail_certificate,monkeypatch,tmp_path):
             'ai_enabled':False,'smtp_host':'127.0.0.1','smtp_port':smtp.port,'smtp_starttls':True,
             'storage_dir':tmp_path/'documents'})
         application=create_app(settings)
+        with application.state.sessions() as session:
+            session.get(PublicRegistrationQuota,'public').closed=False
+            session.commit()
         with application_server(application) as api, (tmp_path/'gateway-errors.log').open('w',encoding='utf-8') as errors:
             gateway=subprocess.Popen(['node',str(ROOT/'tests/fixtures/public_beta_gateway.mjs')],
                 stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=errors,text=True,cwd=ROOT)
