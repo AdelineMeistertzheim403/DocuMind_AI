@@ -2,6 +2,7 @@
 # Never adds root, capabilities, host sockets or an administrative HTTP endpoint.
 services:
   api:
+    cap_drop: [ALL]
     environment:
       ERASURE_AUTHORITY_DIR: /run/docnelo-erasure/authority
       ERASURE_REQUESTS_DIR: /run/docnelo-erasure/requests

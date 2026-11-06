@@ -164,8 +164,22 @@ class Stack:
         self.command=['docker','compose','--project-directory',str(root),'-p',PROJECT,
             '--env-file',str(root/'.env.production'),
             '-f',str(bundle/'compose.production.yaml')]
+        self.compose_files=[bundle/'compose.production.yaml']
+        self.erasure=None
+        self.configured=False
 
-    def call(self,*arguments):return run(self.command+list(arguments),self.env)
+    def call(self,*arguments):
+        if not self.configured:
+            values=dict(line.split('=',1) for line in run(self.command+['config','--environment'],self.env).splitlines()
+                        if '=' in line)
+            try:
+                self.compose_files,self.erasure=security.erasure_compose_files(self.root,self.bundle,self.release,values)
+            except security.SecurityError as error:raise DeploymentError(str(error)) from None
+            if self.erasure:
+                self.command+=['-f',str(self.compose_files[1])]
+                self.env.update(self.erasure)
+            self.configured=True
+        return run(self.command+list(arguments),self.env)
 
     def sql(self,sql):
         return self.call('exec','-T','db','sh','-c',
@@ -220,6 +234,10 @@ def check_config(stack,approve_public_beta=False):
 
 def validate_recovery_control_config(stack,config):
     mounts=config['services']['api'].get('volumes',[])
+    try:
+        mounts=security.validate_erasure_mounts(stack.root,config,getattr(stack,'erasure',None),
+            run(['docker','info','--format','{{.DockerRootDir}}']))
+    except security.SecurityError as error:raise DeploymentError(str(error)) from None
     documents=[mount for mount in mounts if mount.get('target')=='/app/var']
     lifecycle=[mount for mount in mounts if mount.get('target')=='/app/lifecycle']
     controls=[mount for mount in mounts if mount.get('target')=='/run/documind/recovery-state.json']
@@ -236,6 +254,32 @@ def validate_recovery_control_config(stack,config):
             raise DeploymentError('Unexpected recovery persistent volume')
     source=controls[0].get('source')
     stack.recovery_control_path=_validate_recovery_control_source(stack,source)
+
+
+ERASURE_PROBE="""import json,os
+from backend.config import Settings
+from backend.erasure import Authority
+s=Settings(_env_file=None)
+assert os.getresuid()==(s.erasure_application_uid,)*3 and s.erasure_application_uid>0
+try:
+    os.seteuid(0)
+except PermissionError:
+    pass
+else:
+    raise RuntimeError('Unexpected root privilege')
+Authority(s).check()
+print(json.dumps({'authority_checked':True,'uid':os.geteuid()}))
+"""
+
+
+def check_erasure_runtime(stack):
+    if getattr(stack,'erasure',None) is None:return
+    raw=stack.call('run','--rm','--no-deps','-T','--entrypoint','python','api','-c',ERASURE_PROBE)
+    try:
+        result=security.strict_json(raw)
+        if result!={'authority_checked':True,'uid':int(stack.erasure['ERASURE_APPLICATION_UID'])}:
+            raise ValueError()
+    except (ValueError,TypeError):raise DeploymentError('Independent erasure authority runtime probe failed') from None
 
 
 def _validate_recovery_control_source(stack,source):
@@ -566,7 +610,7 @@ def verify_recovery_containers(stack):
         owner=getattr(stack,'database_source',stack) if service=='db' else stack
         if (labels.get('com.docker.compose.project')!=PROJECT or service not in ('db','api','web')
                 or service in seen or labels.get('com.docker.compose.oneoff','false').lower()!='false'
-                or labels.get('com.docker.compose.project.config_files')!=str(owner.bundle/'compose.production.yaml')):
+                or labels.get('com.docker.compose.project.config_files')!=','.join(map(str,owner.compose_files))):
             raise DeploymentError('Ambiguous recovery container ownership or source bundle')
         seen.add(service)
         component={'db':'postgres','api':'backend','web':'frontend'}[service]
@@ -583,6 +627,9 @@ def verify_recovery_containers(stack):
                     and mounts[0].get('Name')==f'{PROJECT}_production_database'
                     and mounts[0].get('Destination')=='/var/lib/postgresql/data')
             else:
+                try:security.validate_erasure_container(container,getattr(stack,'erasure',None))
+                except security.SecurityError as error:raise DeploymentError(str(error)) from None
+                mounts=[mount for mount in mounts if mount.get('Destination') not in security.ERASURE_TARGETS]
                 documents=[mount for mount in mounts if mount.get('Destination')=='/app/var']
                 lifecycle=[mount for mount in mounts if mount.get('Destination')=='/app/lifecycle']
                 controls=[mount for mount in mounts if mount.get('Destination')=='/run/documind/recovery-state.json']
@@ -671,7 +718,7 @@ def execute(args,report):
     history=public_history(source or previous,before) if source or previous else False
     strict=bool(args.rollback or mode=='public' or previous_mode=='public' or history or os.path.lexists(root/'var/security-maintenance.json') or 'security_profile' in release
                 or (previous and 'security_profile' in previous.release))
-    closed=mode=='public' or previous_mode=='public' or history
+    closed=mode=='public' or previous_mode=='public' or history or getattr(stack,'erasure',None) is not None
     report['release_security']={'required':strict,'public_history':history}
     # Authenticate immutable metadata before pulling, quiescing services or migrations.
     # Initial installs/approved upgrades check the target schema here and the live schema again below.
@@ -679,10 +726,13 @@ def execute(args,report):
         try:report['release_security']['candidate']=security.authorize(bundle,release)
         except security.SecurityError as error:raise DeploymentError(str(error)) from None
         check_backup_guard(root,bundle)
-    if closed:check_public_quota(source or previous)
+    if closed:
+        if source or previous:check_public_quota(source or previous)
+        else:raise DeploymentError('Erasure/public preparation requires an existing closed database')
     report['phase']='pull'
     stack.call('pull','db','api','web')
     verify_images(stack)
+    check_erasure_runtime(stack)
     report['phase']='settings'
     effective=stack.call('run','--rm','--no-deps','-T','--entrypoint','python','api','-c',SETTINGS_PROBE)
     try:effective=json.loads(effective)
@@ -693,6 +743,8 @@ def execute(args,report):
     marker=None
     try:
         if strict:marker=maintenance(root,release)
+        try:security.pin_erasure_configuration(root,getattr(stack,'erasure',None))
+        except security.SecurityError as error:raise DeploymentError(str(error)) from None
         snapshot=source or previous
         if snapshot:
             report['phase']='backup'
@@ -723,7 +775,9 @@ def execute(args,report):
         authorize_start(stack,report['schema_after'],required=strict,closed=closed)
         if strict:check_backup_guard(root,bundle)
         verify_images(stack)
-        stack.call('up','-d','--no-deps','--wait','--wait-timeout','180','--scale','api=1','--scale','web=1','api','web')
+        check_erasure_runtime(stack)
+        # Refresh application provenance even when only the selected Compose files changed.
+        stack.call('up','-d','--no-deps','--force-recreate','--wait','--wait-timeout','180','--scale','api=1','--scale','web=1','api','web')
         stack.check_health('db','api','web')
         report['phase']='https'
         https_check(report)
@@ -753,7 +807,8 @@ def execute(args,report):
                 if can_rollback(previous.release,actual,security_verified=previous_evidence['independently_approved'],require_security=required_previous):
                     if required_previous:check_backup_guard(root,previous.bundle)
                     verify_images(previous)
-                    previous.call('up','-d','--no-deps','--wait','--wait-timeout','180','api','web')
+                    check_erasure_runtime(previous)
+                    previous.call('up','-d','--no-deps','--force-recreate','--wait','--wait-timeout','180','api','web')
                     previous.check_health('db','api','web')
                     report['previous_application_restarted']=True
                     finish_maintenance(marker)

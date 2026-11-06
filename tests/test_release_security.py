@@ -20,7 +20,7 @@ def approved_bundle(bundle,candidate,trust):
     candidate={**candidate,'security_profile':security.PROFILE}
     (bundle/'release.json').write_text(json.dumps(candidate))
     for name in security.BUNDLE_FILES-{'release.json'}:
-        if name=='compose.production.yaml':
+        if name.endswith('.yaml'):
             source=Path(name)
         elif name.endswith(('.service','.timer')):
             source=Path('ops/systemd')/name
@@ -395,7 +395,7 @@ def test_workflows_use_current_controller_and_bind_ci_statement():
     assert len(builds)==3 and all(security.PROFILE in s['with']['labels'] for s in builds)
     creation=next(s['run'] for s in publish['steps'] if s.get('name')=='Create digest-pinned release bundle')
     assert 'release_security.py create release-bundle' in creation
-    for name in ('verify_snapshot.py','validate_restore.py','retention_production.py',
+    for name in ('compose.erasure.yaml','verify_snapshot.py','validate_restore.py','retention_production.py',
                  'monitor_production.py','gmail_monitor_alert.py',
                  'documind-backup.service','documind-monitor.service','documind-retention.service'):
         assert name in security.BUNDLE_FILES and name in creation
@@ -406,6 +406,40 @@ def test_workflows_use_current_controller_and_bind_ci_statement():
     assert "python3 '$CONTROL/deploy_production.py' --bundle '$TARGET'" in rollout
     assert 'deployment-reports/$RELEASE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json' in workflow['jobs']['deploy']['steps'][-2]['run']
     assert "python3 '$TARGET/deploy_production.py'" not in rollout
+
+
+@pytest.mark.parametrize('change',['partial','blank','root','negative','uid-leading-zero','uuid',
+                                 'relative','traversal','alias-root','runtime-path'])
+def test_erasure_selection_never_accepts_partial_or_ambiguous_values(change):
+    values={'ERASURE_AUTHORITY_HOST_DIR':'/etc/docnelo/authority',
+            'ERASURE_REQUESTS_HOST_DIR':'/var/lib/docnelo/requests',
+            'ERASURE_INSTANCE_ID':'00000000-0000-0000-0000-000000000001',
+            'ERASURE_APPLICATION_UID':'1000'}
+    if change=='partial':values.pop('ERASURE_INSTANCE_ID')
+    elif change=='blank':values['ERASURE_REQUESTS_HOST_DIR']=''
+    elif change in ('root','negative','uid-leading-zero'):
+        values['ERASURE_APPLICATION_UID']={'root':'0','negative':'-1','uid-leading-zero':'01000'}[change]
+    elif change=='uuid':values['ERASURE_INSTANCE_ID']='not-an-installation'
+    elif change=='relative':values['ERASURE_AUTHORITY_HOST_DIR']='authority'
+    elif change=='traversal':values['ERASURE_AUTHORITY_HOST_DIR']='/etc/../authority'
+    elif change=='alias-root':values['ERASURE_AUTHORITY_HOST_DIR']='//etc/authority'
+    elif change=='runtime-path':values['ERASURE_AUTHORITY_DIR']='/app/var/control'
+    with pytest.raises(security.SecurityError):security.erasure_configuration(values)
+    assert security.erasure_configuration({}) is None
+
+
+@pytest.mark.parametrize('inventory',[security.PRE_ERASURE_BUNDLE_FILES,security.LEGACY_BUNDLE_FILES])
+def test_pre_erasure_operational_inventory_remains_rollback_only(approved,inventory):
+    bundle,candidate,trust=approved
+    for name in security.BUNDLE_FILES-inventory:(bundle/name).unlink()
+    statement=security.strict_json((bundle/security.STATEMENT).read_bytes())
+    statement['bundle_sha256']={name:digest for name,digest in statement['bundle_sha256'].items() if name in inventory}
+    (bundle/security.STATEMENT).write_text(json.dumps(statement))
+    data,digest=security.validate_operational_bundle(bundle,candidate,rollback=True)
+    trust['releases'][candidate['git_sha']]['attestation_sha256']=digest
+    assert security.authorize(bundle,candidate)['independently_approved']
+    with pytest.raises(security.SecurityError,match='rollback-only'):
+        security.validate_operational_bundle(bundle,candidate)
 
 
 def test_systemd_release_templates_target_atomic_current_release():

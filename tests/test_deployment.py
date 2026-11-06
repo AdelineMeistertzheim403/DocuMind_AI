@@ -291,6 +291,9 @@ def test_backup_precedes_migration_and_release_activation(simulation):
     assert any(event[1][:1]==('stop',) for event in events[:backup])
     assert backup<migration<next(i for i,event in enumerate(events) if event[0]=='https')
     assert report['status']=='success' and report['schema_after']=='0006'
+    application_starts=[cmd for _,cmd in events if cmd[:1]==('up',) and 'api' in cmd]
+    assert application_starts and all('--force-recreate' in cmd and '--no-deps' in cmd and 'db' not in cmd
+                                      for cmd in application_starts)
 
 
 def test_failed_start_restarts_only_compatible_previous_application(simulation):

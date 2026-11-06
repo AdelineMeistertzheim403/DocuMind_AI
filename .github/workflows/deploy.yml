@@ -99,16 +99,17 @@ jobs:
           import json,os
           from pathlib import Path
           from tools.release_manifest import validate_release
-          from tools.release_security import validate_operational_bundle,BUNDLE_FILES,LEGACY_BUNDLE_FILES,STATEMENT
+          from tools.release_security import validate_operational_bundle,BUNDLE_FILES,PRE_ERASURE_BUNDLE_FILES,LEGACY_BUNDLE_FILES,STATEMENT
           data=validate_release(json.loads(Path('release-bundle/release.json').read_text()))
           assert data['git_sha']==os.environ['RELEASE_SHA']
           actual={p.name for p in Path('release-bundle').iterdir()}
           secure=set(BUNDLE_FILES)|{STATEMENT}
           legacy_secure=set(LEGACY_BUNDLE_FILES)|{STATEMENT}
-          assert actual in (secure,legacy_secure), 'Deployment requires an attested operational bundle'
+          pre_erasure_secure=set(PRE_ERASURE_BUNDLE_FILES)|{STATEMENT}
+          assert actual in (secure,pre_erasure_secure,legacy_secure), 'Deployment requires an attested operational bundle'
           statement,_=validate_operational_bundle(
               Path('release-bundle'),data,rollback=os.environ['OPERATION']=='rollback')
-          if actual==legacy_secure:
+          if actual!=secure:
               assert os.environ['OPERATION']=='rollback'
               assert os.environ['APPROVE_PUBLIC_BETA']!='true'
           assert statement['producer']['repository']==os.environ['GITHUB_REPOSITORY']
@@ -117,7 +118,7 @@ jobs:
           if os.environ['APPROVE_PUBLIC_BETA']=='true':
               assert actual==secure, 'Public beta requires an attested bundle and independent host approval'
           if os.environ['OPERATION']=='rollback':
-              assert actual in (secure,legacy_secure), 'Rollback requires an attested bundle'
+              assert actual in (secure,pre_erasure_secure,legacy_secure), 'Rollback requires an attested bundle'
           PY
       - name: Configure verified SSH
         env:

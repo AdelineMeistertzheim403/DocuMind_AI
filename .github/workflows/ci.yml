@@ -82,7 +82,7 @@ jobs:
             --tmpfs /tmp:rw,size=512m,mode=1777 \
             --env TEST_ERASURE_POSTGRES_DSN=postgresql://erasure_test:isolated-test-only@127.0.0.1:5432/postgres \
             documind-ci-isolation python -m pytest -q -p no:cacheprovider --require-no-skips \
-            --basetemp=/tmp/erasure-tests tests/test_standard_erasure.py
+            --basetemp=/tmp/erasure-tests tests/test_standard_erasure.py tests/test_erasure_deployment.py
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
@@ -280,7 +280,7 @@ jobs:
           python tools/release_manifest.py --sha "$RELEASE_SHA" \
             --backend "$BACKEND_DIGEST" --frontend "$FRONTEND_DIGEST" \
             --postgres "$POSTGRES_DIGEST" --security-profile public-beta-2026-10-v1 --output release-bundle/release.json
-          cp compose.production.yaml tools/deploy_production.py tools/backup_local.py tools/release_manifest.py tools/public_beta_policy.py release-bundle/
+          cp compose.production.yaml compose.erasure.yaml tools/deploy_production.py tools/backup_local.py tools/release_manifest.py tools/public_beta_policy.py release-bundle/
           cp tools/release_security.py tools/backup_production.py tools/verify_snapshot.py tools/validate_restore.py \
             tools/retention_production.py tools/monitor_production.py tools/gmail_monitor_alert.py release-bundle/
           cp ops/systemd/documind-backup.service ops/systemd/documind-backup.timer \

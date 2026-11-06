@@ -37,6 +37,9 @@ COPY requirements.test.lock ./
 RUN python -m pip install --no-cache-dir --index-url https://pypi.org/simple --only-binary=:all: --require-hashes -r requirements.test.lock
 COPY tests ./tests
 COPY compose.production.yaml ./compose.production.yaml
+COPY compose.erasure.yaml ./compose.erasure.yaml
+COPY tools ./tools
+COPY ops/systemd ./ops/systemd
 USER app
 CMD ["python", "-m", "pytest", "-p", "no:cacheprovider", "tests/test_extraction_linux.py", "tests/test_extraction_protocol.py", "-q"]
 

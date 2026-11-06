@@ -19,6 +19,11 @@ import urllib.error
 import urllib.request
 from uuid import uuid4
 
+try:
+    from . import release_security as security
+except ImportError:
+    import release_security as security
+
 PROJECT = 'documind-prod'
 HEALTH_URL = 'https://documind.adelinemeistertzheim.fr/bff/health'
 SECRET_FILE = Path('/home/debian/.config/restic/documind.env')
@@ -182,12 +187,25 @@ class ActiveRelease:
         self.compose = ['docker', 'compose', '--project-directory', str(root), '-p', PROJECT,
                         '--env-file', str(root / '.env.production'),
                         '-f', str(self.bundle / 'compose.production.yaml')]
+        self.base_compose=list(self.compose)
+        self.compose_files=[self.bundle/'compose.production.yaml']
+        self.erasure=None
 
     def call(self, *args):
         return command(self.compose + list(args), self.env)
 
     def preflight(self, require_healthy=True):
         check_security_maintenance(self.root)
+        values=dict(line.split('=',1) for line in command(
+            self.base_compose+['config','--environment'],self.env).splitlines() if '=' in line)
+        try:
+            self.compose_files,self.erasure=security.erasure_compose_files(
+                self.root,self.bundle,self.release,values)
+        except security.SecurityError:raise BackupError('erasure_release_configuration_refused') from None
+        self.compose=list(self.base_compose)
+        if self.erasure:
+            self.compose+=['-f',str(self.compose_files[1])]
+            self.env.update(self.erasure)
         config = json.loads(self.call('config', '--format', 'json'))
         services = config['services']
         if set(services) != {'db', 'api', 'web'} or config['name'] != PROJECT:
@@ -196,6 +214,10 @@ class ActiveRelease:
             if services[service]['image'] != self.release['images'][component] or services[service].get('ports') or services[service].get('build'):
                 raise BackupError('unexpected_compose_image_or_exposure')
         mounts = services['api'].get('volumes', [])
+        try:
+            mounts=security.validate_erasure_mounts(self.root,config,self.erasure,
+                command(['docker','info','--format','{{.DockerRootDir}}'],self.env).strip() if self.erasure else '')
+        except security.SecurityError:raise BackupError('erasure_mounts_refused') from None
         if len(mounts) != 3:
             raise BackupError('unexpected_compose_mounts')
         document_mounts = [mount for mount in mounts if mount.get('target') == '/app/var']
@@ -271,7 +293,7 @@ class ActiveRelease:
                     or labels.get('com.docker.compose.oneoff', 'false').lower() != 'false'):
                 raise BackupError('unexpected_container_identity')
             seen.add(service)
-            if service != 'db' and labels.get('com.docker.compose.project.config_files') != str(self.bundle / 'compose.production.yaml'):
+            if service != 'db' and labels.get('com.docker.compose.project.config_files') != ','.join(map(str,self.compose_files)):
                 raise BackupError('container_release_mismatch')
             component = {'api': 'backend', 'web': 'frontend', 'db': 'postgres'}[service]
             image = self.release['images'][component]
@@ -285,6 +307,9 @@ class ActiveRelease:
             mounts = [mount for mount in container['Mounts'] if mount['Type'] != 'tmpfs']
             expected = {'db': ('database', '/var/lib/postgresql/data')}.get(service)
             if service == 'api':
+                try:security.validate_erasure_container(container,self.erasure)
+                except security.SecurityError:raise BackupError('erasure_container_refused') from None
+                mounts=[mount for mount in mounts if mount.get('Destination') not in security.ERASURE_TARGETS]
                 documents = [mount for mount in mounts if mount.get('Destination') == '/app/var']
                 lifecycle = [mount for mount in mounts if mount.get('Destination') == '/app/lifecycle']
                 control = [mount for mount in mounts if mount.get('Destination') == '/run/documind/recovery-state.json']
