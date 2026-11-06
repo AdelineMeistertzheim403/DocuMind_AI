@@ -13,7 +13,7 @@ from tests.conftest import OTHER_KEY
 
 
 @pytest.fixture
-def ai(client, app, monkeypatch):
+def ai(app, monkeypatch, request):
     # No OpenAI HTTP request is possible in these tests, even if a real key exists in .env.
     import openai
     monkeypatch.setattr(openai, 'OpenAI', lambda **kwargs: pytest.fail('Real OpenAI client forbidden in tests'))
@@ -22,6 +22,9 @@ def ai(client, app, monkeypatch):
     app.state.settings.ai_requests_per_minute = 60
     provider = MockAIProvider()
     app.state.ai_provider = provider
+    # Configure the mocked feature before the client enters the application lifespan.
+    client = request.getfixturevalue('client')
+    assert app.state.summary_worker.thread.is_alive()
     return client, app, provider
 
 

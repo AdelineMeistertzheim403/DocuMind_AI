@@ -15,10 +15,9 @@ PERSONAL = 'test-personal-key-not-a-real-secret-12345'
 
 
 @pytest.fixture
-def accounts(gateway_client, app):
+def accounts(app, request):
     # BYOK positive scenarios explicitly use the enabled feature, with a fake validator.
     app.state.settings.ai_enabled = True
-    client = gateway_client
     with app.state.sessions() as db:
         for number, name in [(101, 'alice'), (202, 'bob')]:
             owner = UUID(int=number)
@@ -26,6 +25,9 @@ def accounts(gateway_client, app):
             db.add(AIBudget(id=f'byok:{owner}:openai'))
         db.commit()
     app.state.ai_key_validator = lambda key, model: None
+    # Worker startup follows the settings present when the client enters its lifespan.
+    client = request.getfixturevalue('gateway_client')
+    assert app.state.summary_worker.thread.is_alive()
     return client, app
 
 

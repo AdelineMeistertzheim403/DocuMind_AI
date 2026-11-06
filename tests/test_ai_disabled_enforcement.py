@@ -26,6 +26,7 @@ def disabled_account(accounts, request, monkeypatch):
         user = db.scalar(select(User).where(User.username == 'alice'))
         user.registration_kind = request.param
         user.email_verified_at = now() if request.param == 'public' else None
+        user.approved_at = now() if request.param == 'public' else None
         db.commit()
     token = login(client, 'alice')
     context = app.state.session_vault.resolve(token)
