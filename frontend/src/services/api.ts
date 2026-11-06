@@ -4,6 +4,10 @@ export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string) { super(message); this.name = 'ApiError' }
 }
 
+export interface ErasureReceipt {
+  operation_id:string; requested:true; completed:false; state:'requested'
+}
+
 const fallback: Record<number, string> = {
   401: 'La clé du service doit être vérifiée côté serveur.', 404: 'Document ou analyse introuvable.',
   413: 'Le fichier dépasse la taille autorisée.', 415: 'Seuls PDF et TXT sont acceptés.',
@@ -50,7 +54,7 @@ export const api = {
   analyze: (id: string, options: Partial<AnalyzeOptions> = {}) => request<Analysis>(`/documents/${encodeURIComponent(id)}/analyze`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(options),
   }),
-  remove: (id: string) => request<void>(`/documents/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  remove: (id: string) => request<ErasureReceipt | void>(`/documents/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 }
 
 export function validateFile(file: File, maximum: number): string | null {

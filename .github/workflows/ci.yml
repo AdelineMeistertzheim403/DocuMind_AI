@@ -73,6 +73,16 @@ jobs:
             tests/test_release_security.py::test_real_postgresql_history_and_disabled_account_guard \
             tests/test_public_beta_approval.py \
             tests/test_public_beta_postgresql_concurrency.py
+      - name: Required isolated root controller and irrevocably non-root erasure API (zero skips)
+        run: |
+          docker exec documind-ci-postgres psql -U lot210 -d postgres -v ON_ERROR_STOP=1 \
+            -c "CREATE ROLE erasure_test LOGIN SUPERUSER PASSWORD 'isolated-test-only';"
+          docker run --rm --user 0:0 --network container:documind-ci-postgres \
+            --security-opt no-new-privileges --read-only \
+            --tmpfs /tmp:rw,size=512m,mode=1777 \
+            --env TEST_ERASURE_POSTGRES_DSN=postgresql://erasure_test:isolated-test-only@127.0.0.1:5432/postgres \
+            documind-ci-isolation python -m pytest -q -p no:cacheprovider --require-no-skips \
+            --basetemp=/tmp/erasure-tests tests/test_standard_erasure.py
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'

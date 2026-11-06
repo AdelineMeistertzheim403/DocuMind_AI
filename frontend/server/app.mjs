@@ -334,7 +334,8 @@ export function createApp(config, upstreamFetch = fetch, {auditSink}={}) {
         res.set('Set-Cookie', `__Host-documind=${data.session_token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${Math.min(3600, Number(data.expires_in) || 1800)}`)
         return res.json({ connected: true })
       }
-      if (['/bff/auth/logout','/bff/account/password','/bff/account/deletion-request'].includes(req.path)) res.set('Set-Cookie', '__Host-documind=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0')
+      if (['/bff/auth/logout','/bff/account/password'].includes(req.path) ||
+          req.path === '/bff/account/deletion-request' && data.state !== 'requested') res.set('Set-Cookie', '__Host-documind=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0')
       // Never forward upstream headers, cookies, redirects, or a supplied client API key.
       return res.status(response.status).json(data)
     } catch {

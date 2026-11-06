@@ -308,6 +308,12 @@ def deletion(body: PasswordInput, request: Request, owner: Owner, session: Sessi
     request.app.state.rate_limiter.check(f'delete:{user.id}',5)
     if not verify_password(body.password.get_secret_value(),user.password_hash):
         raise HTTPException(401,'Identifiants invalides')
+    from . import erasure
+    if erasure.enabled(request.app.state.settings):
+        try:
+            return erasure.submit(session, request.app.state.settings, user)
+        except (ValueError, OSError):
+            raise HTTPException(503, 'Demande non enregistrée ; vérification administrative nécessaire.') from None
     from .lifecycle_registry import configured_registry
     from .lifecycle_durability import configured_coordinator, require_synthetic_mutation
     from .lifecycle_holds import ActiveHoldError, configured_hold_guard

@@ -111,6 +111,23 @@ async function serve(t, upstream, overrides = {}) {
   return `http://127.0.0.1:${server.address().port}`
 }
 
+test('pending account erasure preserves session cookie and never claims physical completion', async t => {
+  const receipt = {operation_id:id, requested:true, completed:false, state:'requested'}
+  const base = await serve(t, async () => Response.json(receipt, {status:202}),
+    {requireLogin:true, csrfProtection:true, gatewayToken:'fictitious-gateway'})
+  const secure = {'x-forwarded-proto':'https', 'x-documind-gateway':'fictitious-gateway',
+    cookie:'__Host-documind='+'A'.repeat(43)}
+  const csrf = await fetch(base+'/bff/auth/csrf', {headers:secure})
+  const {csrf_token} = await csrf.json()
+  const response = await fetch(base+'/bff/account/deletion-request', {method:'POST',
+    headers:{...secure, cookie:secure.cookie+'; '+csrf.headers.get('set-cookie').split(';')[0],
+      'x-csrf-token':csrf_token, 'content-type':'application/json'},
+    body:JSON.stringify({password:'fictitious-only'})})
+  assert.equal(response.status,202)
+  assert.deepEqual(await response.json(),receipt)
+  assert.equal(response.headers.get('set-cookie'),null)
+})
+
 test('disabled AI refusal is sanitized while key deletion and local routes keep HTTPS and CSRF', async t => {
   const calls = []
   const base = await serve(t, async (url, options) => {

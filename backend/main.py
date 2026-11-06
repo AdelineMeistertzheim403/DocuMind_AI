@@ -87,6 +87,13 @@ def create_app(settings=None):
             raise RuntimeError("Configurez API_KEYS avant de démarrer le serveur")
         recovery_state = read_recovery_state(settings.recovery_state_path)
         app.state.recovery_ready_at_start = recovery_state == 'ready'
+        if app.state.recovery_ready_at_start:
+            from .erasure import runtime_guard
+            try:
+                with app.state.authentication_sessions() as session:
+                    runtime_guard(settings, session, startup=True)
+            except Exception:
+                app.state.recovery_ready_at_start = False
         if not app.state.recovery_ready_at_start:
             emit('system.recovery.quarantine', reason_code='recovery_quarantined')
         if app.state.recovery_ready_at_start and settings.extraction_mode == 'sandbox':

@@ -29,8 +29,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       <span className="delete-symbol"><Trash2 size={25}/></span><p>Le document <strong className="break-word">{target.filename}</strong>, son texte et ses analyses seront retirés des données actives. Le nettoyage du fichier peut nécessiter une intervention en cas d’erreur ; les copies de sauvegarde sont traitées séparément.</p>
       {remove.error && <ErrorState error={remove.error}/>}{remove.isPending && <Spinner label="Suppression…"/>}
       <div className="modal-actions"><button className="button secondary" disabled={remove.isPending} onClick={() => setTarget(null)}>Conserver</button>
-        <button className="button danger" disabled={remove.isPending} onClick={() => remove.mutate(target.id, { onSuccess: () => {
-          setTarget(null); setToast('Document supprimé.'); navigate('/documents')
+        <button className="button danger" disabled={remove.isPending} onClick={() => remove.mutate(target.id, { onSuccess: receipt => {
+          setTarget(null); setToast(receipt ? `Demande enregistrée. Aucun effacement confirmé. Référence : ${receipt.operation_id}` : 'Document supprimé.'); navigate('/documents')
         } })}>Demander la suppression</button></div>
     </Modal>}
     {toast && <div className="toast" role="status"><CheckCircle2 size={20}/><span>{toast}</span><button className="icon-button" aria-label="Fermer la notification" onClick={() => setToast('')}><X size={16}/></button></div>}

@@ -93,7 +93,7 @@ def test_public_production_template_requires_explicit_operator_values():
                 'RECOVERY_CONTROL_FILE','SMTP_HOST','SMTP_USERNAME','SMTP_PASSWORD','SMTP_FROM'):
         assert values[key]=='', key
     assert values['AI_ENABLED']=='false' and values['REGISTRATION_MODE']=='disabled'
-    assert values['PUBLIC_LEGAL_READY']=='false' and values['PUBLIC_REGISTRATION_LIMIT']=='0'
+    assert values['PUBLIC_LEGAL_READY']=='false' and values['PUBLIC_REGISTRATION_LIMIT']=='10'
 
 
 @pytest.mark.parametrize('host, origin, accepted', [

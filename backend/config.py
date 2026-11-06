@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     bff_service_key: SecretStr = SecretStr('')
     registration_mode: Literal['disabled', 'invite', 'public'] = 'disabled'
     application_profile: Literal['standard'] = 'standard'
+    erasure_authority_dir: Path | None = None
+    erasure_requests_dir: Path | None = None
+    erasure_instance_id: UUID | None = None
+    erasure_application_uid: int | None = Field(None, ge=1)
     public_registration_limit: int = Field(0, ge=0, le=10000)
     public_registration_requires_approval: bool = True
     public_registration_use_lifecycle_receipts: bool = True
@@ -127,6 +131,13 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_keys(self):
+        erasure = (self.erasure_authority_dir, self.erasure_requests_dir,
+                   self.erasure_instance_id, self.erasure_application_uid)
+        if any(value is not None for value in erasure):
+            if not all(value is not None for value in erasure):
+                raise ValueError('Complete explicit administrative erasure provisioning required')
+            if not self.erasure_authority_dir.is_absolute() or not self.erasure_requests_dir.is_absolute():
+                raise ValueError('Absolute administrative erasure directories required')
         if self.registration_mode == 'public' and self.public_registration_limit > PUBLIC_BETA_MAX_ADMISSIONS:
             raise ValueError('La bêta publique est limitée à 10 admissions cumulatives')
         if self.registration_mode == 'public':

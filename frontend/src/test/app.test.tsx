@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppRoutes, makeQueryClient } from '../App'
 import { api, ApiError } from '../services/api'
+import * as apiServices from '../services/api'
 import { document, analysis } from './fixtures'
 import { ai } from '../services/ai'
 import {account} from '../services/account'
@@ -89,6 +90,23 @@ describe('Parcours documentaire', () => {
     mount('/documents')
     expect(await screen.findByRole('alert')).toHaveTextContent('Service occupé')
     expect(screen.getByRole('button', { name: /Réessayer/ })).toBeInTheDocument()
+  })
+  it('ne présente pas une demande persistante comme un document supprimé', async () => {
+    vi.spyOn(api, 'remove').mockResolvedValue({operation_id: document.id, requested:true, completed:false, state:'requested'})
+    const {user} = mount('/documents')
+    await user.click(await screen.findByRole('button', {name:'Supprimer Exemple.txt'}))
+    await user.click(screen.getByRole('button', {name:'Demander la suppression'}))
+    expect(await screen.findByText(/Demande enregistrée. Aucun effacement confirmé. Référence/)).toBeVisible()
+    expect(screen.queryByText('Document supprimé.')).not.toBeInTheDocument()
+    expect(await screen.findByRole('link', {name:/Exemple.txt Texte extrait/})).toBeVisible()
+  })
+  it('conserve la page et la référence lorsque la demande de compte attend la maintenance', async () => {
+    vi.spyOn(apiServices, 'request').mockResolvedValue({operation_id:document.id, requested:true, completed:false, state:'requested'})
+    const {user} = mount('/settings/privacy')
+    await user.type(await screen.findByLabelText('Mot de passe de confirmation'), 'fictitious-password')
+    await user.click(screen.getByRole('button', {name:'Demander la fermeture puis la suppression du compte'}))
+    expect(await screen.findByText(/Demande enregistrée. Aucun effacement confirmé. Référence/)).toBeVisible()
+    expect(screen.getByLabelText('Mot de passe de confirmation')).toHaveValue('')
   })
   it('ne confirme aucun effacement lorsque la garde serveur refuse la suppression', async () => {
     vi.spyOn(api, 'remove').mockRejectedValue(new ApiError(503, 'Vérification administrative nécessaire.'))

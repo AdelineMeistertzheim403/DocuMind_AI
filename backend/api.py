@@ -101,6 +101,16 @@ def download_document(document_id: UUID, request: Request, owner_id: Owner, sess
 
 @protected.delete("/{document_id}", status_code=204, summary="Supprimer le fichier et toutes ses données")
 def remove_document(document_id: UUID, request: Request, owner_id: Owner, session: Session):
+    from . import erasure
+    if erasure.enabled(request.app.state.settings):
+        from .account_api import current_user
+        from fastapi.responses import JSONResponse
+        try:
+            receipt = erasure.submit(session, request.app.state.settings,
+                                      current_user(request, session, owner_id), document_id)
+            return JSONResponse(receipt, status_code=202)
+        except (ValueError, OSError):
+            raise HTTPException(503, 'Demande non enregistrée ; vérification administrative nécessaire.') from None
     from .resource_limits import lock_workspace
     lock_workspace(session,owner_id)
     delete_document(session, request.app.state.settings, owned_document(session, document_id, owner_id, lock=True))

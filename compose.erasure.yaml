@@ -1,0 +1,21 @@
+# Explicit opt-in; reviewed directories and an existing instance UUID are required.
+# Never adds root, capabilities, host sockets or an administrative HTTP endpoint.
+services:
+  api:
+    environment:
+      ERASURE_AUTHORITY_DIR: /run/docnelo-erasure/authority
+      ERASURE_REQUESTS_DIR: /run/docnelo-erasure/requests
+      ERASURE_INSTANCE_ID: ${ERASURE_INSTANCE_ID:?Supply the explicitly approved installation UUID}
+      ERASURE_APPLICATION_UID: ${ERASURE_APPLICATION_UID:?Verify the actual non-root API UID}
+    volumes:
+      - type: bind
+        source: ${ERASURE_AUTHORITY_HOST_DIR:?Pre-provision the independent root-owned authority directory}
+        target: /run/docnelo-erasure/authority
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${ERASURE_REQUESTS_HOST_DIR:?Pre-provision the private application-owned request directory}
+        target: /run/docnelo-erasure/requests
+        bind:
+          create_host_path: false

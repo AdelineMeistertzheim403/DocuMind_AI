@@ -64,4 +64,16 @@ class RecoveryQuarantine:
             emit('system.recovery.quarantine', reason_code='recovery_quarantined', http_status=503)
             response = JSONResponse({'detail': 'Service en quarantaine de reprise'}, status_code=503)
             return await response(scope, receive, send)
+        from starlette.concurrency import run_in_threadpool
+        from .erasure import enabled, runtime_guard
+        if enabled(app.state.settings):
+            def verify_erasure_state():
+                with app.state.authentication_sessions() as session:
+                    runtime_guard(app.state.settings, session)
+            try:
+                await run_in_threadpool(verify_erasure_state)
+            except Exception:
+                emit('system.recovery.quarantine', reason_code='recovery_quarantined', http_status=503)
+                response = JSONResponse({'detail': 'Vérification administrative des effacements requise'}, status_code=503)
+                return await response(scope, receive, send)
         await self.app(scope, receive, send)
