@@ -105,6 +105,8 @@ Sous Windows, utiliser `.venv\Scripts\python.exe` et sélectionner `python -m py
 
 Les tests PostgreSQL exigent un service **créé pour les tests**, jamais une base existante ou partagée. Leurs contrats distinguent `TEST_DATABASE_URL` pour l'application et `DOCUMIND_TEST_POSTGRES_DSN` pour le protocole de laboratoire. La [CI](.github/workflows/ci.yml) prépare ce service et impose `--require-no-skips` aux groupes requis ; les preuves root/non-root ont des étapes distinctes. Les résultats locaux ne prouvent pas l'exécution d'un workflow GitHub.
 
+La CI automatique cible exclusivement Linux : `python` exécute les suites complètes SQLite/PostgreSQL et les preuves natives de sécurité, migration, restauration et effacement ; `frontend` couvre React, le BFF et la compilation. Windows reste utilisable pour des tests locaux, sans garantie de compatibilité ni contrôle CI obligatoire. La publication sur `main` exige les deux jobs Linux réussis ; le déploiement reste manuel et approuvé. Le [rapport de simplification CI](DOCNELO_CI_WINDOWS_REMOVAL_REPORT.md) décrit le retrait du statut `windows` à effectuer manuellement dans la protection de `main`.
+
 Tests frontend, dans le même environnement de développement isolé :
 
 ```sh

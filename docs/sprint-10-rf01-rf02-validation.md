@@ -1,5 +1,10 @@
 # Sprint 10 — Complément de validation RF10-01 et RF10-02
 
+> Historique : l'obligation Windows décrite ci-dessous est remplacée par le
+> [contrat CI Linux](../DOCNELO_CI_WINDOWS_REMOVAL_REPORT.md). Les résultats de
+> cette campagne restent conservés ; `windows` ne doit plus être un contrôle
+> de branche obligatoire après l'adaptation manuelle décrite dans ce rapport.
+
 ## Verdict et périmètre
 
 **Verdict : prêt pour la préparation des commits sur le périmètre RF10-01/RF10-02.**

@@ -175,8 +175,9 @@ def test_workflows_are_pinned_gated_and_never_deploy_on_push():
     production=yaml.load(Path('.github/workflows/deploy.yml').read_text(),Loader=yaml.BaseLoader)
     assert set(production['on'])=={'workflow_dispatch'}
     assert production['jobs']['deploy']['environment']['name']=='production'
-    assert ci['jobs']['publish']['needs']==['python','windows','frontend']
+    assert ci['jobs']['publish']['needs']==['python','frontend']
     assert "github.event_name != 'pull_request'" in ci['jobs']['publish']['if']
+    assert "github.ref == 'refs/heads/main'" in ci['jobs']['publish']['if']
     import re
     for workflow in (ci,production):
         for job in workflow['jobs'].values():
@@ -187,32 +188,49 @@ def test_workflows_are_pinned_gated_and_never_deploy_on_push():
     assert 'StrictHostKeyChecking=no' not in text and 'ssh-keyscan' not in text
 
 
-def test_windows_ci_runs_portable_suite_without_production_services_or_secrets():
+def test_linux_ci_preserves_full_suites_and_required_production_proofs():
     ci=yaml.load(Path('.github/workflows/ci.yml').read_text(),Loader=yaml.BaseLoader)
-    job=ci['jobs']['windows']
-    assert job['runs-on']=='windows-2022' and job['defaults']['run']['shell']=='pwsh'
+    assert set(ci['jobs'])=={'python','frontend','publish'}
+    assert all(job['runs-on']=='ubuntu-24.04' and not job.get('strategy') for job in ci['jobs'].values())
+    job=ci['jobs']['python']
     assert not job.get('services') and not job.get('environment') and not job.get('if')
-    assert job.get('continue-on-error','false')=='false'
     assert '${{ secrets.' not in json.dumps(job)
     assert job['env']['AI_ENABLED']=='false' and job['env']['OPENAI_API_KEY']==''
-    assert job['env']['REGISTRATION_MODE']=='disabled'
     assert 'OWNER_DEMO_ENABLED' not in job['env']  # Preserve mock-provider fixture behavior.
-    assert job['env']['DATABASE_URL']=='sqlite://' and 'TEST_DATABASE_URL' not in job['env']
+    assert 'TEST_DATABASE_URL' not in job['env']
     setup=next(step for step in job['steps'] if step.get('uses','').startswith('actions/setup-python@'))
-    assert setup['with']=={'python-version':'3.13','architecture':'x64'}
+    assert setup['with']['python-version']=='3.13'
     commands=[step['run'] for step in job['steps'] if 'run' in step]
     tools=next(command for command in commands if 'python -m venv .ci-venv' in command)
     assert '--require-hashes -r requirements.build.lock' in tools
-    assert 'GITHUB_PATH' in tools and tools.count('if ($LASTEXITCODE -ne 0)')==2
-    install=next(command for command in commands if 'tzdata' in command)
+    assert 'GITHUB_PATH' in tools
+    install=next(command for command in commands if 'python -m pip install' in command and '.[test]' in command)
     assert '-c requirements.lock' in install and '--no-build-isolation --check-build-dependencies' in install
-    suite=next(command for command in commands if 'python -m pytest' in command)
-    assert 'Remove-Item Env:TEST_DATABASE_URL -ErrorAction SilentlyContinue' in suite
-    assert '-m "not posix"' in suite and '--ignore' not in suite and ' -k ' not in suite
-    linux_commands=[step['run'] for step in ci['jobs']['python']['steps'] if 'run' in step]
-    assert sum(command.strip()=='python -m pytest -q' for command in linux_commands)==2
-    assert all('not posix' not in command for command in linux_commands)
-    for name in ('python','windows','frontend'):
+    timezone=next(command for command in commands if "ZoneInfo('Europe/Paris')" in command)
+    assert "sys.platform == 'linux'" in timezone and 'sys.version_info[:2] == (3, 13)' in timezone
+    assert sum(command.strip()=='python -m pytest -q' for command in commands)==2
+    assert all('not posix' not in command and '--ignore' not in command and ' -k ' not in command for command in commands)
+    assert all(not step.get('if') for step in job['steps'] if 'run' in step)
+    steps={step.get('name'):step for step in job['steps']}
+    for name in (
+        'Required PostgreSQL qualification (zero skips)',
+        'Required isolated root controller and irrevocably non-root erasure API (zero skips)',
+        'Required public beta browser and mail path (zero skips)',
+        'Required native root ownership proofs (zero skips)',
+        'Required native non-root ownership proof (zero skips)',
+    ):
+        assert '--require-no-skips' in steps[name]['run']
+    assert 'TEST_DATABASE_URL' in steps['Required PostgreSQL qualification (zero skips)']['env']
+    assert 'TEST_DATABASE_URL' in steps['Full PostgreSQL and pgvector integration suite']['env']
+    assert 'tests/test_extraction_linux.py tests/test_extraction_protocol.py' in steps[
+        'Native Linux Landlock and seccomp proofs (no skipped fallback)']['run']
+    isolation=steps['Build and prove the isolated production runtime without network or volumes']['run']
+    assert '--network none' in isolation and '--read-only' in isolation and '--cap-drop ALL' in isolation
+    inventory=steps['Inventory runner dependencies and require exact constraint coverage']['run']
+    assert 'build_materials.py --require-pins' in inventory
+    frontend=[step['run'] for step in ci['jobs']['frontend']['steps'] if 'run' in step]
+    assert all(command in frontend for command in ('npm run test:ui','npm run test:bff','npm run build'))
+    for name in ('python','frontend','publish'):
         required=ci['jobs'][name]
         assert required.get('continue-on-error','false')=='false'
         assert all(step.get('continue-on-error','false')=='false' for step in required['steps'])
