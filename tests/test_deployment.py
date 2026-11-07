@@ -175,7 +175,7 @@ def test_workflows_are_pinned_gated_and_never_deploy_on_push():
     production=yaml.load(Path('.github/workflows/deploy.yml').read_text(),Loader=yaml.BaseLoader)
     assert set(production['on'])=={'workflow_dispatch'}
     assert production['jobs']['deploy']['environment']['name']=='production'
-    assert ci['jobs']['publish']['needs']==['python','frontend']
+    assert ci['jobs']['publish']['needs']==['python','frontend','snapshots']
     assert "github.event_name != 'pull_request'" in ci['jobs']['publish']['if']
     assert "github.ref == 'refs/heads/main'" in ci['jobs']['publish']['if']
     import re
@@ -190,7 +190,7 @@ def test_workflows_are_pinned_gated_and_never_deploy_on_push():
 
 def test_linux_ci_preserves_full_suites_and_required_production_proofs():
     ci=yaml.load(Path('.github/workflows/ci.yml').read_text(),Loader=yaml.BaseLoader)
-    assert set(ci['jobs'])=={'python','frontend','publish'}
+    assert set(ci['jobs'])=={'python','frontend','snapshots','publish'}
     assert all(job['runs-on']=='ubuntu-24.04' and not job.get('strategy') for job in ci['jobs'].values())
     job=ci['jobs']['python']
     assert not job.get('services') and not job.get('environment') and not job.get('if')
@@ -230,10 +230,41 @@ def test_linux_ci_preserves_full_suites_and_required_production_proofs():
     assert 'build_materials.py --require-pins' in inventory
     frontend=[step['run'] for step in ci['jobs']['frontend']['steps'] if 'run' in step]
     assert all(command in frontend for command in ('npm run test:ui','npm run test:bff','npm run build'))
-    for name in ('python','frontend','publish'):
+    for name in ('python','frontend','snapshots','publish'):
         required=ci['jobs'][name]
         assert required.get('continue-on-error','false')=='false'
         assert all(step.get('continue-on-error','false')=='false' for step in required['steps'])
+
+
+def test_snapshot_ci_is_parallel_secretless_and_preserves_failure_evidence():
+    ci=yaml.load(Path('.github/workflows/ci.yml').read_text(),Loader=yaml.BaseLoader)
+    job=ci['jobs']['snapshots']
+    assert not any(job.get(key) for key in ('needs','if','environment','services'))
+    assert '${{ secrets.' not in json.dumps(job)
+    assert job['env']['AI_ENABLED']=='false' and job['env']['OPENAI_API_KEY']==''
+    checkout=next(step for step in job['steps'] if step.get('uses','').startswith('actions/checkout@'))
+    assert checkout['with']['persist-credentials']=='false'
+    commands=[step['run'] for step in job['steps'] if 'run' in step]
+    assert all(command.startswith('set -euo pipefail') for command in commands)
+    build=next(command for command in commands if 'docker build' in command)
+    assert 'ops/testing/Dockerfile.snapshot-lab' in build and 'Dockerfile.db' in build
+    assert 'test -z "$(docker ps -aq)"' in build and 'test -z "$(docker volume ls -q)"' in build
+    qualification=next(command for command in commands if 'run_snapshot_lab.py' in command)
+    assert '--results "$evidence/lab"' in qualification
+    artifact=next(step for step in job['steps'] if step.get('uses','').startswith('actions/upload-artifact@'))
+    assert artifact['if']=='always()' and artifact['with']['if-no-files-found']=='error'
+    assert 'documind-snapshot-qualification' in artifact['with']['path']
+
+
+@pytest.mark.parametrize('invalid', ['skipped','missing-proof'])
+def test_snapshot_runner_rejects_incomplete_physical_evidence(tmp_path, invalid):
+    from ops.testing.run_snapshot_lab import verify_results
+    (tmp_path/'snapshot-proofs.xml').write_text(
+        f'<testsuites><testsuite tests="19" errors="0" failures="0" skipped="{int(invalid=="skipped")}"/></testsuites>')
+    if invalid=='skipped':
+        with pytest.raises(ValueError,match='all 19 snapshot tests'):verify_results(tmp_path)
+    else:
+        with pytest.raises(FileNotFoundError,match='capture-closed-false'):verify_results(tmp_path)
 
 
 def test_new_registry_images_are_limited_to_certified_amd64():

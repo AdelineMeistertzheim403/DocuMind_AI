@@ -1,0 +1,82 @@
+name: ${SNAPSHOT_LAB_PROJECT:?Unique synthetic project required}
+
+services:
+  db:
+    image: ${SNAPSHOT_LAB_DB_IMAGE:?Explicit local image required}
+    pull_policy: never
+    user: "70:70"
+    environment:
+      POSTGRES_USER: documind_snapshot
+      POSTGRES_PASSWORD: fictitious-snapshot-lab-only
+      POSTGRES_DB: snapshot_source
+    command: [postgres, -c, cluster_name=documind-restore-lab]
+    volumes:
+      - source_pg:/var/lib/postgresql/data
+    tmpfs:
+      - /var/run/postgresql:rw,uid=70,gid=70,mode=0700
+      - /tmp:rw,uid=70,gid=70,mode=1777
+    networks: [data]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1g
+    pids_limit: 128
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -h 127.0.0.1 -U documind_snapshot -d snapshot_source"]
+      interval: 1s
+      timeout: 3s
+      retries: 60
+    labels: &labels
+      documind.snapshot-lab: ${SNAPSHOT_LAB_PROJECT}
+  api:
+    image: ${SNAPSHOT_LAB_API_IMAGE:?Explicit local image required}
+    pull_policy: never
+    user: "1000:1000"
+    environment:
+      DOCUMIND_SNAPSHOT_LAB: isolated
+      AI_ENABLED: "false"
+      OPENAI_API_KEY: ""
+      REGISTRATION_MODE: disabled
+      LIFECYCLE_DATA_ROOT: /app/lifecycle
+      LIFECYCLE_BACKUP_LOCK_PATH: /app/lifecycle/.backup.lock
+      LIFECYCLE_REGISTRY_PATH: /app/lifecycle/registry/registry.sqlite
+      LIFECYCLE_CONFIRMATION_PATH: /app/lifecycle/witness/witness.sqlite
+      LIFECYCLE_AUTHENTICATED_CONFIRMATION_PATH: /app/lifecycle/authenticated/authenticated.sqlite
+      LIFECYCLE_HOLDS_PATH: /app/lifecycle/holds/holds.sqlite
+      LIFECYCLE_ADMISSION_ANCHOR_PATH: /app/lifecycle/admission_anchor/admission_anchor.sqlite
+    volumes:
+      - documents:/app/var
+      - lifecycle:/app/lifecycle
+    networks: [data]
+    command: [sleep, "300"]
+    read_only: true
+    tmpfs: ["/tmp:rw,size=128m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    labels: *labels
+  web:
+    image: ${SNAPSHOT_LAB_API_IMAGE:?Explicit local image required}
+    pull_policy: never
+    networks: [data]
+    command: [sleep, "300"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    labels: *labels
+
+volumes:
+  source_pg:
+    labels: *labels
+    driver: local
+    driver_opts: {type: tmpfs, device: tmpfs, o: "size=512m,uid=70,gid=70,mode=0700"}
+  documents:
+    labels: *labels
+    driver: local
+  lifecycle:
+    labels: *labels
+    driver: local
+
+networks:
+  data:
+    internal: true
+    labels: *labels

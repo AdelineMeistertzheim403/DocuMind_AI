@@ -1,0 +1,25 @@
+FROM python:3.13-slim@sha256:d879ed88565a7a3c614b980b369d4a5025a9d057b71f93d09fc6d0b2ca823a18
+RUN sed -i \
+      -e 's|http://deb.debian.org/debian-security|https://snapshot.debian.org/archive/debian-security/20261104T212339Z|' \
+      -e 's|http://deb.debian.org/debian|https://snapshot.debian.org/archive/debian/20261104T212339Z|' \
+      /etc/apt/sources.list.d/debian.sources \
+    && apt-get -o Acquire::Check-Valid-Until=false update \
+    && apt-get install --yes --no-install-recommends \
+      docker-cli=26.1.5+dfsg1-9+deb13u1 docker-compose=2.26.1-4 \
+      postgresql-client-17=17.11-0+deb13u1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && docker compose version \
+    && pg_restore --version
+WORKDIR /workspace
+COPY requirements.build.lock requirements.runtime.lock requirements.test.lock ./
+RUN python -m pip install --no-cache-dir --index-url https://pypi.org/simple --only-binary=:all: \
+      --require-hashes -r requirements.build.lock \
+    && python -m pip install --no-cache-dir --index-url https://pypi.org/simple --only-binary=:all: \
+      --require-hashes -r requirements.runtime.lock -r requirements.test.lock
+COPY backend ./backend
+COPY analyseur_documents ./analyseur_documents
+COPY documind_extractor ./documind_extractor
+COPY ops/testing/lifecycle_lot29_bundle.py ./ops/testing/lifecycle_lot29_bundle.py
+RUN groupadd --gid 1000 snapshot && useradd --create-home --uid 1000 --gid 1000 snapshot
+ENV PYTHONDONTWRITEBYTECODE=1 AI_ENABLED=false REGISTRATION_MODE=disabled
+USER 1000:1000

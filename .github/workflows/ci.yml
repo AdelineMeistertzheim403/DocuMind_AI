@@ -146,8 +146,60 @@ jobs:
       - name: TypeScript and production frontend build
         run: npm run build
 
+  snapshots:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      AI_ENABLED: 'false'
+      OPENAI_API_KEY: ''
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Build pinned synthetic snapshot images on the disposable Linux runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/documind-snapshot-qualification"
+          mkdir -p "$evidence"
+          docker info --format '{{.OSType}}' | tee "$evidence/engine.txt"
+          test "$(cat "$evidence/engine.txt")" = linux
+          test -z "$(docker ps -aq)"
+          test -z "$(docker volume ls -q)"
+          docker version > "$evidence/docker-version.txt"
+          docker compose version > "$evidence/compose-version.txt"
+          docker build --pull --file ops/testing/Dockerfile.snapshot-lab \
+            --tag documind-ci-snapshot-runner . 2>&1 | tee "$evidence/runner-build.log"
+          docker build --pull --file Dockerfile.db \
+            --tag documind-ci-snapshot-postgres . 2>&1 | tee "$evidence/postgres-build.log"
+          docker image inspect documind-ci-snapshot-runner documind-ci-snapshot-postgres \
+            > "$evidence/images.json"
+          sha256sum requirements.build.lock requirements.runtime.lock requirements.test.lock \
+            ops/testing/Dockerfile.snapshot-lab Dockerfile.db build-materials/pgvector.json \
+            > "$evidence/source-materials.sha256"
+      - name: Required physical snapshot and quarantine qualification (zero skips)
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$RUNNER_TEMP/documind-snapshot-qualification"
+          python ops/testing/run_snapshot_lab.py \
+            --runner-image documind-ci-snapshot-runner \
+            --database-image documind-ci-snapshot-postgres \
+            --results "$evidence/lab" 2>&1 | tee "$evidence/qualification.log"
+      - name: Preserve snapshot proofs and cleanup evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: documind-snapshot-proofs-${{ github.sha }}
+          path: ${{ runner.temp }}/documind-snapshot-qualification/
+          if-no-files-found: error
+          retention-days: 90
+
   publish:
-    needs: [python, frontend]
+    needs: [python, frontend, snapshots]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 60

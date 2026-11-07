@@ -390,7 +390,7 @@ def test_workflows_use_current_controller_and_bind_ci_statement():
     ci=yaml.load(Path('.github/workflows/ci.yml').read_text(),Loader=yaml.BaseLoader)
     workflow=yaml.load(Path('.github/workflows/deploy.yml').read_text(),Loader=yaml.BaseLoader)
     publish=ci['jobs']['publish']
-    assert publish['needs']==['python','frontend']
+    assert publish['needs']==['python','frontend','snapshots']
     builds=[s for s in publish['steps'] if s.get('uses','').startswith('docker/build-push-action@')]
     assert len(builds)==3 and all(security.PROFILE in s['with']['labels'] for s in builds)
     creation=next(s['run'] for s in publish['steps'] if s.get('name')=='Create digest-pinned release bundle')
