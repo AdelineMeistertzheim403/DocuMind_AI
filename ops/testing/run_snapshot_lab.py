@@ -22,6 +22,65 @@ def resources(project):
     }
 
 
+def prepare_results(results):
+    results.mkdir(mode=0o700, parents=True, exist_ok=False)
+    if os.name == "posix":
+        assert results.stat().st_uid == os.geteuid(), "New results directory must belong to the caller"
+        gid = os.getegid()
+        if results.stat().st_gid != gid:
+            os.chown(results, -1, gid)
+        results.chmod(0o770)
+        return gid
+    return 0
+
+
+def check_results_access(results, image, gid, project):
+    probe = results / "results-write-probe.txt"
+    assert not probe.exists()
+    script = """
+import json, os
+from pathlib import Path
+os.umask(0o007)
+root = Path('/results')
+probe = root / 'results-write-probe.txt'
+assert not probe.exists()
+probe.write_bytes(b'documind-snapshot-proof-access-v1\\n')
+assert probe.read_bytes() == b'documind-snapshot-proof-access-v1\\n'
+directory, file = root.stat(), probe.stat()
+status = dict(line.split(':', 1) for line in Path('/proc/self/status').read_text().splitlines()
+              if line.startswith(('CapEff:', 'NoNewPrivs:')))
+print(json.dumps({'uid': os.geteuid(), 'gid': os.getegid(),
+                  'directory_uid': directory.st_uid, 'directory_gid': directory.st_gid,
+                  'directory_mode': oct(directory.st_mode & 0o777),
+                  'file_uid': file.st_uid, 'file_gid': file.st_gid,
+                  'file_mode': oct(file.st_mode & 0o777),
+                  'effective_capabilities': status['CapEff'].strip(),
+                  'no_new_privileges': int(status['NoNewPrivs']),
+                  'container_read_verified': True}))
+"""
+    try:
+        proof = json.loads(subprocess.check_output([
+            "docker", "run", "--rm", "--name", project + "-proofs",
+            "--label", "documind.snapshot-lab=" + project,
+            "--network", "none", "--read-only",
+            "--user", f"0:{gid}", "--cap-drop", "ALL",
+            "--security-opt", "no-new-privileges",
+            "--mount", f"type=bind,source={results.resolve()},target=/results",
+            "--entrypoint", "python", image, "-c", script], text=True, timeout=30))
+        assert proof["uid"] == 0 and proof["gid"] == gid
+        assert int(proof["effective_capabilities"], 16) == 0 and proof["no_new_privileges"] == 1
+        assert probe.read_bytes() == b"documind-snapshot-proof-access-v1\n", "Host must read the proof"
+        if os.name == "posix":
+            assert proof["directory_uid"] == os.geteuid() and proof["directory_gid"] == gid
+            assert proof["directory_mode"] == "0o770"
+            assert proof["file_uid"] == 0 and proof["file_gid"] == gid and proof["file_mode"] == "0o660"
+        proof["host_read_verified"] = True
+        return proof
+    finally:
+        if probe.exists():
+            probe.unlink()
+
+
 def verify_results(results):
     suite = ET.parse(results / "snapshot-proofs.xml").getroot().find("testsuite")
     if suite is None or any(int(suite.get(key, "-1")) != expected for key, expected in
@@ -57,7 +116,7 @@ def main():
         images[name] = json.loads(docker("image", "inspect", image))[0]["Id"]
     project = "documind-snapshot-" + uuid4().hex[:12]
     assert not any(resources(project).values()), "Project must not exist"
-    args.results.mkdir(parents=True, exist_ok=False)
+    results_gid = prepare_results(args.results)
     env = {key: value for key, value in os.environ.items()
            if not key.startswith("COMPOSE_")}
     env.update(SNAPSHOT_LAB_PROJECT=project, SNAPSHOT_LAB_API_IMAGE=images["api"],
@@ -93,6 +152,8 @@ def main():
         evidence["config"] = config
         code = 1
         try:
+            evidence["results_permissions"] = check_results_access(
+                args.results, images["api"], results_gid, project)
             subprocess.run(["docker", *compose, "up", "-d", "--wait", "db"],
                            env=env, check=True, timeout=120)
             identifiers = docker(*compose, "ps", "-q", "db", env=env).split()
@@ -103,7 +164,7 @@ def main():
             command = [
                 "docker", "run", "--rm", "--name", project + "-proofs",
                 "--label", "documind.snapshot-lab=" + project,
-                "--user", "0:0", "--read-only", "--cap-drop", "ALL",
+                "--user", f"0:{results_gid}", "--read-only", "--cap-drop", "ALL",
                 "--security-opt", "no-new-privileges", "--memory", "1536m",
                 "--pids-limit", "256", "--network", "container:" + identifiers[0],
                 "--tmpfs", "/tmp:rw,size=512m,mode=1777",
@@ -116,8 +177,9 @@ def main():
                 "--env", "SNAPSHOT_LAB_API_IMAGE=" + images["api"],
                 "--env", "SNAPSHOT_LAB_DB_IMAGE=" + images["db"],
                 "--env", "AI_ENABLED=false", "--env", "OPENAI_API_KEY=",
-                "--env", "REGISTRATION_MODE=disabled", "--entrypoint", "python",
-                images["api"], "-m", "pytest", "-q", "-rs", "-p", "no:cacheprovider",
+                "--env", "REGISTRATION_MODE=disabled", "--entrypoint", "sh",
+                images["api"], "-c", 'umask 007; exec python -m pytest "$@"',
+                "snapshot-pytest", "-q", "-rs", "-p", "no:cacheprovider",
                 "--require-no-skips", "--basetemp=/tmp/snapshot-proofs",
                 "--junitxml=/results/snapshot-proofs.xml",
                 "tests/test_public_beta_snapshot.py",

@@ -267,6 +267,32 @@ def test_snapshot_runner_rejects_incomplete_physical_evidence(tmp_path, invalid)
         with pytest.raises(FileNotFoundError,match='capture-closed-false'):verify_results(tmp_path)
 
 
+def test_snapshot_results_are_private_and_do_not_change_the_parent(tmp_path):
+    import os
+    from ops.testing.run_snapshot_lab import prepare_results
+    parent=tmp_path.stat()
+    results=tmp_path/'new-results'
+    gid=prepare_results(results)
+    assert (tmp_path.stat().st_uid,tmp_path.stat().st_gid,tmp_path.stat().st_mode)==(
+        parent.st_uid,parent.st_gid,parent.st_mode)
+    if os.name=='posix':
+        assert results.stat().st_uid==os.geteuid()
+        assert results.stat().st_gid==gid==os.getegid()
+        assert results.stat().st_mode & 0o777==0o770
+
+
+def test_snapshot_results_refuse_an_existing_directory_without_mutation(tmp_path):
+    from ops.testing.run_snapshot_lab import prepare_results
+    results=tmp_path/'existing'
+    results.mkdir(mode=0o700)
+    (results/'sentinel').write_bytes(b'Never change existing results')
+    before=results.stat()
+    with pytest.raises(FileExistsError):prepare_results(results)
+    assert (results.stat().st_uid,results.stat().st_gid,results.stat().st_mode)==(
+        before.st_uid,before.st_gid,before.st_mode)
+    assert (results/'sentinel').read_bytes()==b'Never change existing results'
+
+
 def test_new_registry_images_are_limited_to_certified_amd64():
     ci=yaml.load(Path('.github/workflows/ci.yml').read_text(),Loader=yaml.BaseLoader)
     publish=ci['jobs']['publish']
