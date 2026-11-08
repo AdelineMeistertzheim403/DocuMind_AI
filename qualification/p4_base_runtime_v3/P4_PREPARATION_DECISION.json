@@ -1,0 +1,17 @@
+{
+  "blockers": [
+    "B1: corrected P3 rootfs bytes,9771-entry manifest and its anchor absent locally",
+    "B2: exact coherent Debian13 libc6/libgcc-s1/libstdc++6/zlib1g packages not supplied",
+    "B3: CPython3.11.18 runtime/source/build/stdlib provenance not supplied",
+    "B4: recursive system closure, loader scopes, symbols/ABI/ISA not qualified",
+    "B5: target bootstrap/imports/pip check/ASGI not executed or authorized",
+    "B6: rootfs/layer/image identity proof and offline builder qualification absent",
+    "B7: no independent component approval or executable recipe issued"
+  ],
+  "build_go": false,
+  "create_go": false,
+  "decision": "BLOCKED",
+  "production_go": false,
+  "review_only": true,
+  "start_go": false
+}

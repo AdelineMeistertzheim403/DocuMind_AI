@@ -1,4 +1,4 @@
-"""Account lifecycle. No provider calls, ownership claims, cookies or secrets in responses."""
+﻿"""Account lifecycle. No provider calls, ownership claims, cookies or secrets in responses."""
 import re
 import secrets
 import smtplib
@@ -24,6 +24,7 @@ from .ai.settings_api import user_session
 from .gateway import secure_gateway, client_ip
 from .models import now
 from .resource_limits import lock_workspace
+from .config import PUBLIC_BETA_MAX_ADMISSIONS
 
 router = APIRouter(prefix='/api/v1', tags=['comptes'], dependencies=[Depends(secure_gateway)])
 
@@ -48,6 +49,8 @@ class Register(EmailInput):
     website: str = Field('', max_length=200)
     terms_accepted: StrictBool = False
     terms_version: str = Field('', max_length=40)
+    adult_declared: StrictBool = False
+    operation_id: UUID | None = None
 
 
 class VerifyEmail(StrictModel):
@@ -107,11 +110,13 @@ def options(request: Request, session: Session):
     availability='closed'
     if settings.registration_mode=='public':
         from .account_models import PublicRegistrationQuota
+        from .public_registration import admission_receipts_required
         quota=session.get(PublicRegistrationQuota,'public')
-        capacity=bool(quota and not quota.closed and 0<=quota.issued_count<settings.public_registration_limit)
+        limit=min(settings.public_registration_limit, PUBLIC_BETA_MAX_ADMISSIONS)
+        capacity=bool(quota and not quota.closed and 0<=quota.issued_count<limit)
         if capacity:availability='available'
-        elif quota and not quota.closed and quota.issued_count>=settings.public_registration_limit:availability='full'
-        if capacity and getattr(settings, 'lifecycle_durable_receipts_required', True):
+        elif quota and not quota.closed and quota.issued_count>=limit:availability='full'
+        if capacity and admission_receipts_required(settings):
             from .lifecycle_admissions import configured_admissions
             from .lifecycle_durability import configured_coordinator, require_synthetic_mutation
             from .lifecycle_registry import configured_registry
@@ -126,7 +131,14 @@ def options(request: Request, session: Session):
                 emit('system.security_config.invalid', reason_code='security_unavailable')
                 capacity, availability = False, 'closed'
     return {'registration_mode':settings.registration_mode,
+            **({'application_profile': 'beta_lite', 'lite_admissions_available': bool(
+                getattr(request.app.state, 'lite_confirmation', None) is not None
+                and request.app.state.lite_confirmation.cohort_id == settings.lite_cohort_id
+                and (not hasattr(request.app.state.lite_confirmation, 'ready') or request.app.state.lite_confirmation.ready()))}
+               if settings.application_profile == 'beta_lite' else {}),
             'public_capacity_configured':capacity,
+            'public_registration_limit':min(settings.public_registration_limit, PUBLIC_BETA_MAX_ADMISSIONS),
+            'public_registration_requires_approval':settings.public_registration_requires_approval,
             'public_registration_availability':availability,
             'terms_version':settings.public_terms_version,
             'legal_notice_url':settings.public_legal_notice_url,'privacy_url':settings.public_privacy_url,
@@ -154,6 +166,12 @@ def resend_verification(body: Register, request: Request, session: Session):
 
 @router.post('/auth/register', status_code=201)
 def register(body: Register, request: Request, session: Session):
+    if request.app.state.settings.application_profile == 'beta_lite':
+        from .lite_admissions import admit
+        from fastapi.responses import JSONResponse
+        request.app.state.rate_limiter.check(f'register:{client_ip(request)}', 5)
+        result, status = admit(request, session, body)
+        return JSONResponse(result, status_code=status)
     if request.app.state.settings.registration_mode=='public':
         from .public_registration import admit
         from fastapi.responses import JSONResponse
@@ -186,10 +204,10 @@ def send_account_link(settings, email, token, *, verification=False):
     if not settings.smtp_host:
         return
     message = EmailMessage()
-    message['From'], message['To'], message['Subject'] = settings.smtp_from, email, 'Vérification DocuMind' if verification else 'Réinitialisation DocuMind'
+    message['From'], message['To'], message['Subject'] = settings.smtp_from, email, 'Vérification Docnelo' if verification else 'Réinitialisation Docnelo'
     # Fragment is never sent to the web server or its access log; UI immediately clears it.
     route='verify-email' if verification else 'reset-password'
-    message.set_content(f"Ouvrez ce lien DocuMind : {settings.account_base_url}/{route}#token={token}\nCe lien est temporaire et à usage unique.\n"+
+    message.set_content(f"Ouvrez ce lien Docnelo : {settings.account_base_url}/{route}#token={token}\nCe lien est temporaire et à usage unique.\n"+
         ('La vérification exige aussi le mot de passe choisi lors de l’inscription.\n' if verification else '')+
         'Si vous n’êtes pas à l’origine de cette demande, ignorez ce message.')
     context = ssl.create_default_context()
@@ -306,6 +324,15 @@ def deletion(body: PasswordInput, request: Request, owner: Owner, session: Sessi
     from .lifecycle_holds import ActiveHoldError, configured_hold_guard
     from .security_audit import emit
     settings = request.app.state.settings
+    if settings.application_profile == 'beta_lite':
+        from .lite_deletions import prepare_request
+        try:
+            return prepare_request(session, settings, request.app.state.lite_confirmation, user)
+        except ActiveHoldError:
+            raise HTTPException(409,'Demande suspendue par un gel de conservation.') from None
+        except (OSError, ValueError):
+            emit('system.security_config.invalid', reason_code='security_unavailable')
+            raise HTTPException(503,'Demande non confirmée ; vérification administrative nécessaire.') from None
     try:
         require_synthetic_mutation(settings)
         lock_workspace(session,owner)

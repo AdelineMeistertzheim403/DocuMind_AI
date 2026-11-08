@@ -1,0 +1,10 @@
+{
+  "verdict": "BLOCKED",
+  "project": "docnelo-signup-lab-7c98f505cd",
+  "containers_stopped": true,
+  "loopback_relay_stopped": true,
+  "volumes_retained": "synthetic lab only",
+  "vps_access": false,
+  "real_quota_modified": false,
+  "worktree_clean": true
+}

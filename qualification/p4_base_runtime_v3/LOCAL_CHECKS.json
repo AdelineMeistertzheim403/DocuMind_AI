@@ -1,0 +1,61 @@
+{
+  "actual_docker_layer_or_image_inspected": false,
+  "asgi_campaign_executed": false,
+  "build_go": false,
+  "create_go": false,
+  "docker_commands": 0,
+  "historical_files_unchanged": 1072,
+  "image_comparison_test_scope": "synthetic tar/config fixtures only",
+  "linux_target_abi_executed": false,
+  "network_downloads": 0,
+  "observed_ns": 1793700825848082100,
+  "packages_installed": 0,
+  "platform": "win32",
+  "preparation_decision": "BLOCKED",
+  "production_go": false,
+  "python": "3.13.7 (tags/v3.13.7:bcee1c3, Aug 14 2025, 14:15:11) [MSC v.1944 64 bit (AMD64)]",
+  "real_linux_posix_rootfs_inventory_executed": false,
+  "real_p3_rootfs_inspected": false,
+  "receipts": {
+    "native-review-command": {
+      "receipt_sha256": "591b490837a79340910e95a520d76fea4da86ee06e988ff113f763baf95b7710",
+      "returncode": 2
+    },
+    "preservation-command": {
+      "receipt_sha256": "c10721412c602d1c7a0ea14d093e82387f3866fe4f30e84399ab625575278dea",
+      "returncode": 0
+    },
+    "review-reproduction": {
+      "receipt_sha256": "337cd578429da61b8c614579904d28e966ff140e21d51a7279f6f4a0a90dc5fe",
+      "returncode": 2
+    },
+    "source-validation": {
+      "receipt_sha256": "9d0b3db42d829bb24ce2ead2f75567531c8f7e901a6cbe584dd6b98f8dda737b",
+      "returncode": 0
+    },
+    "tool-tests": {
+      "receipt_sha256": "11bf923314c64f6640cc340ad9163eba904a10263635446eb3ee6545fd9b15fe",
+      "returncode": 0
+    },
+    "tool-tests-final": {
+      "receipt_sha256": "0701d9d47cd2df91abd178849dabc392d1c041e81425433258ab805db5b5831c",
+      "returncode": 0
+    },
+    "tool-tests-seal": {
+      "receipt_sha256": "8b11e53464bf5f6493a383c8d8e53e780fe65a8503fad9e3ce01d7e5f1ea5003",
+      "returncode": 0
+    },
+    "wheel-recheck": {
+      "receipt_sha256": "e0a1a7a57f6d2d7915610182c36d6514f6e047b049f0b5030fcf105b2143faa6",
+      "returncode": 0
+    }
+  },
+  "reproduced_reports_sha256": {
+    "P4_NATIVE_CLOSURE_REVIEW.json": "1c017894393eb59f96136952622f93c810f1f32a0253f7cdd8d701d453ab488a",
+    "P4_PREPARATION_DECISION.json": "873728e37e79e07921a0a42622f5bdd6bb75d7eb5ed747da9b799cb5b3a39ac4",
+    "P4_RUNTIME_COMPONENTS.json": "755882ea8ad59eec83fb4fb7075d16cc093c656e751a68b32810da0dd6dc20e2"
+  },
+  "start_go": false,
+  "status": "PASS_PREPARATION_TOOLS_ONLY",
+  "tool_tests": 9
+}

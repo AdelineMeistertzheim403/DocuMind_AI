@@ -1,0 +1,20 @@
+{
+  "argv": [
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\.venv\\Scripts\\python.exe",
+    "-I",
+    "-B",
+    ".\\qualification\\p4_asgi_offline_v1\\offline.py",
+    "build-gate",
+    "--inventory",
+    ".\\qualification\\p4_asgi_offline_v1\\DEPENDENCIES_OBSERVED.json",
+    "--approval",
+    ".\\qualification\\p4_asgi_offline_v1\\BUILD_APPROVAL.pending.json"
+  ],
+  "complete": false,
+  "gid": null,
+  "groups": null,
+  "monotonic_start_ns": 4163978449500,
+  "returncode": null,
+  "start_ns": 1793696195174251700,
+  "uid": null
+}

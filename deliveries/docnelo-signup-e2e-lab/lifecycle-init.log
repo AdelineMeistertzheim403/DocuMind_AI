@@ -1,0 +1,9 @@
+[lifecycle-init] pre ids uid=0 gid=0
+[lifecycle-init] post ids uid=1000 gid=1000
+[lifecycle-init] /app/lifecycle/registry/registry.sqlite file=1000:1000 0o600 dir=1000:1000 0o700
+[lifecycle-init] /app/lifecycle/confirmation/confirmation.sqlite file=1000:1000 0o600 dir=1000:1000 0o700
+[lifecycle-init] /app/lifecycle/authenticated/authenticated.sqlite file=1000:1000 0o600 dir=1000:1000 0o700
+[lifecycle-init] /app/lifecycle/holds/holds.sqlite file=1000:1000 0o600 dir=1000:1000 0o700
+[lifecycle-init] /app/lifecycle/admissions/admissions.sqlite file=1000:1000 0o600 dir=1000:1000 0o700
+ Container docnelo-signup-lab-7c98f505cd-lifecycle-init-run-367e5ea8fc88 Creating 
+ Container docnelo-signup-lab-7c98f505cd-lifecycle-init-run-367e5ea8fc88 Created 

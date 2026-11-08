@@ -1,0 +1,32 @@
+{
+  "product": "Docnelo Public Beta backup tooling",
+  "tooling_version": "5.1",
+  "backup_format_version": 5,
+  "date": "2026-10-31",
+  "approved_group_key_owner": {
+    "uid": 0,
+    "gid": 1000
+  },
+  "accepted_modes": [
+    "0400",
+    "0440",
+    "0600",
+    "0640"
+  ],
+  "group_modes_require_recorded_ownership": true,
+  "restore_policy": "restorer_owned_0400_private_lab",
+  "local_test_results": {
+    "passed": 101,
+    "failed": 0,
+    "skipped": 6
+  },
+  "vps_deployment_performed": false,
+  "backup_rerun_performed": false,
+  "local_compatibility_checks": {
+    "python": "3.13.7",
+    "isolated_source_imports_passed": 9,
+    "python311_grammar_passed": 10,
+    "python311_runtime_executed": false,
+    "linux_runtime_executed": false
+  }
+}

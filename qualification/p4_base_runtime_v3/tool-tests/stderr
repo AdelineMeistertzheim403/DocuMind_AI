@@ -1,0 +1,14 @@
+test_real_32_object_review_remains_blocked (test_runtime.ElfTests.test_real_32_object_review_remains_blocked) ... ok
+test_real_symbol_versions_and_unversioned_python_scope (test_runtime.ElfTests.test_real_symbol_versions_and_unversioned_python_scope) ... ok
+test_truncation_wrong_machine_and_section_bounds (test_runtime.ElfTests.test_truncation_wrong_machine_and_section_bounds) ... ok
+test_version_node_alone_does_not_prove_a_symbol (test_runtime.ElfTests.test_version_node_alone_does_not_prove_a_symbol) ... ok
+test_actual_synthetic_docker_save_binds_layer_and_config_not_just_filenames (test_runtime.RootAndImageTests.test_actual_synthetic_docker_save_binds_layer_and_config_not_just_filenames) ... ok
+test_layer_preserves_hardlinks_and_detects_mode_or_mtime_change (test_runtime.RootAndImageTests.test_layer_preserves_hardlinks_and_detects_mode_or_mtime_change) ... ok
+test_unsafe_duplicate_whiteout_and_missing_root_reject (test_runtime.RootAndImageTests.test_unsafe_duplicate_whiteout_and_missing_root_reject) ... ok
+test_virtual_absolute_symlink_is_inside_root_and_cycles_reject (test_runtime.RootAndImageTests.test_virtual_absolute_symlink_is_inside_root_and_cycles_reject) ... ok
+test_roundtrip_rejects_archive_tamper_and_existing_destination (test_runtime.TransferTests.test_roundtrip_rejects_archive_tamper_and_existing_destination) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.383s
+
+OK

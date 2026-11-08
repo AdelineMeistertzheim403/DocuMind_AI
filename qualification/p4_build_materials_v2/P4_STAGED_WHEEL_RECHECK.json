@@ -1,0 +1,710 @@
+{
+  "build_go": false,
+  "inventory_sha256": "60f0d9f0b668409bba75914b5ef40027036c54ac69de96b05b8e813032813c20",
+  "status": "STATIC_WHEEL_INTEGRITY_PASS_NOT_APPROVED",
+  "target_binary_compatibility_approved": false,
+  "wheels": [
+    {
+      "bytes": 268719,
+      "distribution": "alembic",
+      "file": "alembic-1.20.0-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 103,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "77eb101048d95f982c0353e9233404889dcd7a6fc244c107836c0e2fc9cf7d9d",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "1.20.0"
+    },
+    {
+      "bytes": 5302,
+      "distribution": "annotated-doc",
+      "file": "annotated_doc-0.0.5-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 8,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.9",
+      "sha256": "117bac03a25ede5df5440e855b32d556049ca169ead221505badf432fed4b101",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "0.0.5"
+    },
+    {
+      "bytes": 13427,
+      "distribution": "annotated-types",
+      "file": "annotated_types-0.8.0-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 7,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "0.8.0"
+    },
+    {
+      "bytes": 132079,
+      "distribution": "anyio",
+      "file": "anyio-4.15.1-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 53,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "4.15.1"
+    },
+    {
+      "bytes": 14657,
+      "distribution": "argon2-cffi",
+      "file": "argon2_cffi-25.1.0-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 13,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.8",
+      "sha256": "fdc8b074db390fccb6eb4a3604ae7231f219aa669a2652e0f20e16ba513d5741",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "25.1.0"
+    },
+    {
+      "bytes": 26597,
+      "distribution": "argon2-cffi-bindings",
+      "file": "argon2_cffi_bindings-26.1.0-cp310-abi3-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+      "independent_approval": false,
+      "record_files_checked": 6,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "27f1821903e2ceadcb88ec2b45ef190897b7682449c772f4d9b53e42c520cf29",
+      "tags": [
+        "cp310-abi3-manylinux_2_26_x86_64",
+        "cp310-abi3-manylinux_2_28_x86_64"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "26.1.0"
+    },
+    {
+      "bytes": 134093,
+      "distribution": "certifi",
+      "file": "certifi-2026.10.18-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 12,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.7",
+      "sha256": "73191c47aaa79da394e8fee2dbc2ec827432cab56311122c9e47abf79e390f62",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "2026.10.18"
+    },
+    {
+      "bytes": 217807,
+      "distribution": "cffi",
+      "file": "cffi-2.1.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "independent_approval": false,
+      "record_files_checked": 31,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "34e261f78cb6ceaaa36f42f2613f4380d94d9c759a9c73c769ee6e0247364632",
+      "tags": [
+        "cp311-cp311-manylinux2014_x86_64",
+        "cp311-cp311-manylinux_2_17_x86_64"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "2.1.1"
+    },
+    {
+      "bytes": 20277,
+      "distribution": "distro",
+      "file": "distro-1.9.0-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 10,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.6",
+      "sha256": "7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "1.9.0"
+    },
+    {
+      "bytes": 144702,
+      "distribution": "fastapi",
+      "file": "fastapi-0.146.0-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 65,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "0eb9985a7d5bb11ce9a962d4b65e0cf1a2e13d6aca2e14da57bc526370e26748",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "0.146.0"
+    },
+    {
+      "bytes": 624428,
+      "distribution": "greenlet",
+      "file": "greenlet-3.5.6-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+      "independent_approval": false,
+      "record_files_checked": 99,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "1c20ea32a73d17b9b60e3371240e17b0068120c98a5ec01a224a7dd8c89733ba",
+      "tags": [
+        "cp311-cp311-manylinux_2_24_x86_64",
+        "cp311-cp311-manylinux_2_28_x86_64"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "3.5.6"
+    },
+    {
+      "bytes": 37515,
+      "distribution": "h11",
+      "file": "h11-0.16.0-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 17,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.8",
+      "sha256": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "0.16.0"
+    },
+    {
+      "bytes": 78784,
+      "distribution": "httpcore",
+      "file": "httpcore-1.0.9-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 36,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.8",
+      "sha256": "2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "1.0.9"
+    },
+    {
+      "bytes": 73517,
+      "distribution": "httpx",
+      "file": "httpx-0.28.1-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 29,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.8",
+      "sha256": "d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "0.28.1"
+    },
+    {
+      "bytes": 69583,
+      "distribution": "idna",
+      "file": "idna-3.20-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 16,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.9",
+      "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "3.20"
+    },
+    {
+      "bytes": 7552,
+      "distribution": "iniconfig",
+      "file": "iniconfig-2.3.1-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 10,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "9121e2c1fdb355232495be3194c8dfe87ccc2d5dee45947b78e68f499790d7a7",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "2.3.1"
+    },
+    {
+      "bytes": 346052,
+      "distribution": "jiter",
+      "file": "jiter-0.17.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "independent_approval": false,
+      "record_files_checked": 9,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "5888fe5abc1ca2fa834a3e1b4c7ef0dcece286a7d7e95a609ef0934b777b9fc9",
+      "tags": [
+        "cp311-cp311-manylinux2014_x86_64",
+        "cp311-cp311-manylinux_2_17_x86_64"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "0.17.0"
+    },
+    {
+      "bytes": 80164,
+      "distribution": "Mako",
+      "file": "mako-1.4.3-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 39,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "723296007c870bfd6b3f0c3230dba7198096e5269297ebf5e4eff9e7ffa39d4f",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "1.4.3"
+    },
+    {
+      "bytes": 22961,
+      "distribution": "MarkupSafe",
+      "file": "markupsafe-3.0.4-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "independent_approval": false,
+      "record_files_checked": 11,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.9",
+      "sha256": "6da83a088f8ef93b2d483a8232a4dbf4d69d3d8496b568a03c56becac43e1808",
+      "tags": [
+        "cp311-cp311-manylinux2014_x86_64",
+        "cp311-cp311-manylinux_2_17_x86_64",
+        "cp311-cp311-manylinux_2_28_x86_64"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "3.0.4"
+    },
+    {
+      "bytes": 1660351,
+      "distribution": "openai",
+      "file": "openai-2.54.0-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 1507,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "89089789197ccdb87f173a03145ed1598d00795220c93e96cf712b1cbf5e5f2b",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "2.54.0"
+    },
+    {
+      "bytes": 60256,
+      "distribution": "opentelemetry-api",
+      "file": "opentelemetry_api-1.45.1-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 47,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "b31553efa588ae44bc306f863c785c5333a9ecc091248c6ee68b4b6c87fdedfb",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "1.45.1"
+    },
+    {
+      "bytes": 129956,
+      "distribution": "packaging",
+      "file": "packaging-26.3-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 29,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.9",
+      "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "26.3"
+    },
+    {
+      "bytes": 31056,
+      "distribution": "pgvector",
+      "file": "pgvector-0.5.1-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 46,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "ec5bcd5ffaefe6ecb2dcc9564ca921d284564b969183bc837a144604773af8ea",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "0.5.1"
+    },
+    {
+      "bytes": 1752557,
+      "distribution": "pip",
+      "file": "pip-25.2-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 453,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.9",
+      "sha256": "6d67a2b4e7f14d8b31b8b52648866fa717f45a1eb70e83002f4331d07e953717",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "25.2"
+    },
+    {
+      "bytes": 27082,
+      "distribution": "pluggy",
+      "file": "pluggy-1.7.0-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 19,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "7dd7b0d8832ba3cb632c306926ded123429211b83641b35dc5c41ad2d34f9bec",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "1.7.0"
+    },
+    {
+      "bytes": 155560,
+      "distribution": "psutil",
+      "file": "psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl",
+      "independent_approval": false,
+      "record_files_checked": 16,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.6",
+      "sha256": "076a2d2f923fd4821644f5ba89f059523da90dc9014e85f8e45a5774ca5bc6f9",
+      "tags": [
+        "cp36-abi3-manylinux2010_x86_64",
+        "cp36-abi3-manylinux_2_12_x86_64",
+        "cp36-abi3-manylinux_2_28_x86_64"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "7.2.2"
+    },
+    {
+      "bytes": 215490,
+      "distribution": "psycopg",
+      "file": "psycopg-3.3.6-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 90,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "a1db9f7148b06a28606767efaca51fa6f9398c5c0a3810519be69d7000bdb631",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "3.3.6"
+    },
+    {
+      "bytes": 5267985,
+      "distribution": "psycopg-binary",
+      "file": "psycopg_binary-3.3.6-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "independent_approval": false,
+      "record_files_checked": 31,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "a2e44a342d2aee40508e28a563d8961c39d9bbd8cae36d8578f0a3c6658aab0f",
+      "tags": [
+        "cp311-cp311-manylinux2014_x86_64",
+        "cp311-cp311-manylinux_2_17_x86_64"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "3.3.6"
+    },
+    {
+      "bytes": 62600,
+      "distribution": "pycparser",
+      "file": "pycparser-3.12-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 13,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.11",
+      "sha256": "a076f3f489b39b43ed13563a1dafe42447445bec2e294154ec5c57fcdda4c85e",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "3.12"
+    },
+    {
+      "bytes": 488106,
+      "distribution": "pydantic",
+      "file": "pydantic-2.14.1-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 111,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "9195d967ec791692a04438115466764fb8b9a27b31f14a760437694f40d6b454",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "2.14.1"
+    },
+    {
+      "bytes": 2157623,
+      "distribution": "pydantic_core",
+      "file": "pydantic_core-2.50.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "independent_approval": false,
+      "record_files_checked": 11,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "8812592c85d0edf423f10eadcef42716d71e8219085ad9e85b775057b7306133",
+      "tags": [
+        "cp311-cp311-manylinux2014_x86_64",
+        "cp311-cp311-manylinux_2_17_x86_64"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "2.50.1"
+    },
+    {
+      "bytes": 80364,
+      "distribution": "pydantic-settings",
+      "file": "pydantic_settings-2.16.0-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 27,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.11",
+      "sha256": "7e73acf7f61936a15e5a3b6eedaea29f133357faf7272f2607ba479b049dd7f2",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "2.16.0"
+    },
+    {
+      "bytes": 1250147,
+      "distribution": "Pygments",
+      "file": "pygments-2.21.0-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 349,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.9",
+      "sha256": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "2.21.0"
+    },
+    {
+      "bytes": 386536,
+      "distribution": "pytest",
+      "file": "pytest-9.1.1-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 89,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "9.1.1"
+    },
+    {
+      "bytes": 23266,
+      "distribution": "python-dotenv",
+      "file": "python_dotenv-1.2.4-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 15,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "42269a8a5b3fd54ffa6f3d84b18abed50064717576b4ecf03dc4a55d8aa04fdc",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "1.2.4"
+    },
+    {
+      "bytes": 30042,
+      "distribution": "python-multipart",
+      "file": "python_multipart-0.0.32-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 13,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "ff6d3f776f16878c894e52e107296ffc890e913c611b1a4ec6c44e2821fe2e23",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "0.0.32"
+    },
+    {
+      "bytes": 806638,
+      "distribution": "PyYAML",
+      "file": "pyyaml-6.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "independent_approval": false,
+      "record_files_checked": 24,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.8",
+      "sha256": "b8bb0864c5a28024fac8a632c443c87c5aa6f215c0b126c449ae1a150412f31d",
+      "tags": [
+        "cp311-cp311-manylinux2014_x86_64",
+        "cp311-cp311-manylinux_2_17_x86_64",
+        "cp311-cp311-manylinux_2_28_x86_64"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "6.0.3"
+    },
+    {
+      "bytes": 10235,
+      "distribution": "sniffio",
+      "file": "sniffio-1.3.1-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 13,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.7",
+      "sha256": "2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "1.3.1"
+    },
+    {
+      "bytes": 3435913,
+      "distribution": "SQLAlchemy",
+      "file": "sqlalchemy-2.0.55-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "independent_approval": false,
+      "record_files_checked": 276,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.7",
+      "sha256": "7251866982c2bb5a62d900bed7b4b88c1b09f9ff494b9dd152610cb5a99bb4d6",
+      "tags": [
+        "cp311-cp311-manylinux2014_x86_64",
+        "cp311-cp311-manylinux_2_17_x86_64",
+        "cp311-cp311-manylinux_2_28_x86_64"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "2.0.55"
+    },
+    {
+      "bytes": 80335,
+      "distribution": "starlette",
+      "file": "starlette-1.9.0-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 41,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.11",
+      "sha256": "fd3f159936e882d06c1108f84688f7cda2cf85fc6a592a50edbd175e882c2ddc",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "1.9.0"
+    },
+    {
+      "bytes": 80199,
+      "distribution": "tqdm",
+      "file": "tqdm-4.70.1-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 39,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.8",
+      "sha256": "c293e525e6fef9c20e8728fd4612df02a0aa31bb5fe91ecd93e123b1b7bffa73",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "4.70.1"
+    },
+    {
+      "bytes": 45571,
+      "distribution": "typing_extensions",
+      "file": "typing_extensions-4.16.0-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 5,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.9",
+      "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "4.16.0"
+    },
+    {
+      "bytes": 14750,
+      "distribution": "typing-inspection",
+      "file": "typing_inspection-0.4.4-py3-none-any.whl",
+      "independent_approval": false,
+      "record_files_checked": 9,
+      "record_integrity": "PASS",
+      "requires_python": ">=3.10",
+      "sha256": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147",
+      "tags": [
+        "py3-none-any"
+      ],
+      "target_abi_and_imports": "NOT_EXECUTED",
+      "target_tag_compatibility": "PASS_STATIC_ONLY",
+      "version": "0.4.4"
+    }
+  ]
+}

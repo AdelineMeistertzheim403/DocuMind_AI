@@ -1,0 +1,54 @@
+{
+  "argv": [
+    "/usr/bin/python3.11",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/mnt/c/Users/Adeline/Documents/DocuMind_AI/deliveries/docnelo-v51-p4-b1-p3-layer-contents-v1",
+    "-p",
+    "test_*.py",
+    "-v"
+  ],
+  "code_sha256": {
+    "comparator.py": "63225aec80a257a246ca492acbaf1dcc73c66a0c49123ffaffc9ad73ee6c383a",
+    "layer_contents.py": "0dca2348e9b8de9ca105e41fa05ed463d01da69ed7b92b8fb4c0e8e0884a4b66",
+    "record_tests.py": "a948c2ed342527dc7633d6ec603208947691ac0a21d9b81140cd958f47974476",
+    "seal.py": "6a275d0188afb19212e642bff867b1ad94cb53ef8db4de493c56f25449c9624a",
+    "test_comparator.py": "c47dc8de96e46cfb015ce890abb628c3852cfc7d2ff18d1c1551994418003b0c",
+    "test_layer_contents.py": "8eab59153a9efd0d5bcb2e592f29e8d36d762f4c0696fd6bdccbdd6eebc0ec1a"
+  },
+  "complete": true,
+  "cwd": "/mnt/c/Users/Adeline/Documents/DocuMind_AI/deliveries/docnelo-v51-p4-b1-p3-layer-contents-v1",
+  "end_ns": 1793876868039230526,
+  "os_release": {
+    "BUG_REPORT_URL": "https://bugs.debian.org/",
+    "HOME_URL": "https://www.debian.org/",
+    "ID": "debian",
+    "NAME": "Debian GNU/Linux",
+    "PRETTY_NAME": "Debian GNU/Linux 12 (bookworm)",
+    "SUPPORT_URL": "https://www.debian.org/support",
+    "VERSION": "12 (bookworm)",
+    "VERSION_CODENAME": "bookworm",
+    "VERSION_ID": "12"
+  },
+  "platform": "Linux-6.18.54.1-microsoft-standard-WSL2-x86_64-with-glibc2.36",
+  "python": "3.11.2 (main, Oct  7 2026, 12:35:07) [GCC 12.2.0]",
+  "recorder_argv": [
+    "python3.11",
+    "-I",
+    "-B",
+    "-c",
+    "import pathlib,runpy,sys; sys.argv=['record_tests.py','--release-anchor','4c99f2ff46fbfa6854982078018a5f9364eda77e1ba74a2a0b8e3aa29fa1b5d1','--out',str(pathlib.Path.cwd().parents[1].joinpath('qualification','p4_b1_p3_layer_contents_v1','sealed-tests-03'))]; runpy.run_path('record_tests.py',run_name='__main__')"
+  ],
+  "release_anchor": "4c99f2ff46fbfa6854982078018a5f9364eda77e1ba74a2a0b8e3aa29fa1b5d1",
+  "returncode": 0,
+  "sha256": {
+    "stderr": "89513a55f5a04e074b408239a57389f4606af87274e333b18bd30ceee4eee7bb",
+    "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "start_ns": 1793876867141827205,
+  "timeout": 120
+}

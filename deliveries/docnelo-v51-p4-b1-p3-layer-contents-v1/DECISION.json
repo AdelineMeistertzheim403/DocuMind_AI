@@ -1,0 +1,24 @@
+{
+  "delivery": "P4 B1 P3 Layer Regular Contents v1",
+  "decision": "REVIEW_ONLY_BLOCKED",
+  "formal_b1_contents_closed": false,
+  "go": {"production": false, "runtime": false, "p4": false, "c5": false},
+  "A_regular_layer_contents": "TO_BE_MEASURED_ON_HISTORICAL_BYTES",
+  "B_strict_whole_archive": "BLOCKED_PERSISTENT_UNREFERENCED_BLOB",
+  "C_p4_and_provenance": "NOT_GRANTED",
+  "historical_v2": {
+    "source": "operator-reported Debian 13.7 and Python 3.11.18; raw receipts absent here",
+    "returncode": 20,
+    "status": "ERROR",
+    "complete": true,
+    "evidence_manifest_sha256": "da22ccae43b1eb4df9906993015fc666bb454e7bdb0cdcc41ea1ba65d780cd0c",
+    "tests_passed": 35,
+    "tests_skipped": 0,
+    "tests_manifest_sha256": "80f0435b6d5eddfd724660359c1cfd7ec0ef76aa13ea01484855c370188067ea"
+  },
+  "oci_manifest_sha256_independently_confirmed_by_operator": "c4c9b897d2e3dea6bbcc3da95b078ce5ffa556f5e4c52020a40da8be784ccc44",
+  "manifest_hash_exit_reported": 0,
+  "historical_manifest_json_is_reformatted_not_original_bytes": true,
+  "historical_inputs_opened_here": false,
+  "v1_or_v2_modified": false
+}

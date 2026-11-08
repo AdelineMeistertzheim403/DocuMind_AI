@@ -1,0 +1,77 @@
+diff --git a/tools/backup_local.py b/tools/backup_local.py
+--- a/tools/backup_local.py
++++ b/tools/backup_local.py
+@@
+-BACKUP_FORMAT_VERSION = 4
++BACKUP_FORMAT_VERSION = 5
+ RECOVERY_STATE_MAX_BYTES = 1024
+ RECOVERY_STATE_ALLOWED = {'ready', 'quarantined', 'serving_closed'}
++
++LIFECYCLE_KEYS_ARCHIVE = 'lifecycle-keys.tar.gz'
++LIFECYCLE_KEY_PATHS = ('keys/authentication.key', 'keys/admission.key')
+@@
+ BACKUP_FILES = (
+     'database.dump',
+     'documents.tar.gz',
+     'lifecycle.sqlite.tar.gz',
++    LIFECYCLE_KEYS_ARCHIVE,
+     'recovery-state.json',
+     'integrity.json',
+ )
+@@
+     commands = {
+         'database.dump': ['docker', 'compose', 'exec', '-T', 'db', 'sh', '-c',
+             'exec pg_dump -U \"\" -d \"\" -Fc'],
+         'documents.tar.gz': ['docker', 'compose', 'run', '--rm', '--no-deps', '-T',
+             '--entrypoint', 'tar', 'api', '-C', '/app/var', '-czf', '-', 'documents'],
+         'lifecycle.sqlite.tar.gz': ['docker', 'compose', 'run', '--rm', '--no-deps', '-T',
+             '-e', 'LIFECYCLE_CAPTURE_ID=' + capture_id,
+             '--entrypoint', 'python', 'api', '-m', 'backend.lifecycle_snapshot'],
++        'lifecycle-keys.tar.gz': ['docker', 'compose', 'run', '--rm', '--no-deps', '-T',
++            '--entrypoint', 'tar', 'api', '-C', '/app/lifecycle',
++            '-czf', '-', '--no-recursion', 'keys/authentication.key', 'keys/admission.key'],
+         'recovery-state.json': ['docker', 'compose', 'run', '--rm', '--no-deps', '-T',
+             '--entrypoint', 'cat', 'api', recovery_path],
+     }
+@@
+     if lifecycle_metadata.get('capture_id') != capture_id or set(lifecycle_metadata.get('stores', {})) != {
+         'registry', 'witness', 'authenticated', 'holds', 'admission_anchor'
+     }:
+         raise ValueError('Lifecycle capture identity or store inventory mismatch')
++
++    lifecycle_keys = {}
++    with tarfile.open(destination / LIFECYCLE_KEYS_ARCHIVE, 'r:gz') as archive:
++        members = archive.getmembers()
++        names = {member.name for member in members}
++        if (names != set(LIFECYCLE_KEY_PATHS)
++                or any(not member.isfile() or member.issym() or member.islnk() for member in members)):
++            raise ValueError('Lifecycle key archive must contain exactly the two key files')
++        for member in members:
++            path = PurePosixPath(member.name)
++            if path.is_absolute() or '..' in path.parts or not path.parts:
++                raise ValueError('Unsafe lifecycle key archive member')
++            mode = member.mode & 0o777
++            if mode & 0o077 or not mode & 0o400:
++                raise ValueError('Lifecycle key permissions are not restrictive')
++            source = archive.extractfile(member)
++            if source is None:
++                raise ValueError('Lifecycle key archive entry is unreadable')
++            payload = source.read()
++            if len(payload) != member.size:
++                raise ValueError('Lifecycle key archive payload size mismatch')
++            lifecycle_keys[member.name] = {
++                'size': int(member.size),
++                'mode': int(mode),
++                'sha256': hashlib.sha256(payload).hexdigest(),
++            }
+@@
+-        'capture_scope': ['postgresql', 'documents', 'lifecycle_sqlite', 'recovery_state'],
++        'capture_scope': ['postgresql', 'documents', 'lifecycle_sqlite', 'lifecycle_keys', 'recovery_state'],
+@@
+         'lifecycle_stores': lifecycle_metadata['stores'],
+         'lifecycle_store_sha256': sqlite_metadata_hashes,
++        'lifecycle_keys': lifecycle_keys,
+         'files': list(BACKUP_FILES),
+         'sha256': checksums,
+     }, indent=2), encoding='utf-8')
+     return destination

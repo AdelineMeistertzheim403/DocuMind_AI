@@ -1,0 +1,22 @@
+test_all_standard_routes_and_valid_atomic_commit (test_offline_tools.EvidenceTests.test_all_standard_routes_and_valid_atomic_commit) ... ok
+test_bad_http_missing_probe_wrong_inode_and_false_initial_state (test_offline_tools.EvidenceTests.test_bad_http_missing_probe_wrong_inode_and_false_initial_state) ... ok
+test_complete_synthetic_evidence_then_tampered_wait_command (test_offline_tools.EvidenceTests.test_complete_synthetic_evidence_then_tampered_wait_command) ... ok
+test_interruption_and_nonzero_refusal_never_become_pass (test_offline_tools.EvidenceTests.test_interruption_and_nonzero_refusal_never_become_pass) ... ok
+test_lite_403_cannot_replace_quarantine_503 (test_offline_tools.EvidenceTests.test_lite_403_cannot_replace_quarantine_503) ... ok
+test_probe_before_publication_and_missing_capture_are_not_pass (test_offline_tools.EvidenceTests.test_probe_before_publication_and_missing_capture_are_not_pass) ... ok
+test_confinement_mutations_are_rejected (test_offline_tools.InspectTests.test_confinement_mutations_are_rejected) ... ok
+test_exact_created_configuration_and_explicit_entrypoint (test_offline_tools.InspectTests.test_exact_created_configuration_and_explicit_entrypoint) ... ok
+test_mount_alias_socket_and_rw_mutations (test_offline_tools.InspectTests.test_mount_alias_socket_and_rw_mutations) ... ok
+test_other_container_parent_alias_is_rejected_but_historical_namespace_is_not (test_offline_tools.InspectTests.test_other_container_parent_alias_is_rejected_but_historical_namespace_is_not) ... ok
+test_pending_plan_and_unreviewed_image_refuse (test_offline_tools.InspectTests.test_pending_plan_and_unreviewed_image_refuse) ... ok
+test_even_filled_approval_cannot_unlock_this_proposal (test_offline_tools.InventoryTests.test_even_filled_approval_cannot_unlock_this_proposal) ... ok
+test_exact_manifest_and_no_overwrite (test_offline_tools.InventoryTests.test_exact_manifest_and_no_overwrite) ... ok
+test_historical_namespace_cannot_be_provisioned (test_offline_tools.InventoryTests.test_historical_namespace_cannot_be_provisioned) ... ok
+test_observed_closure_and_missing_dependency (test_offline_tools.InventoryTests.test_observed_closure_and_missing_dependency) ... ok
+test_path_traversal_and_duplicate_zip_members (test_offline_tools.InventoryTests.test_path_traversal_and_duplicate_zip_members) ... ok
+test_preservation_detects_changes_and_added_files (test_offline_tools.InventoryTests.test_preservation_detects_changes_and_added_files) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 0.211s
+
+OK

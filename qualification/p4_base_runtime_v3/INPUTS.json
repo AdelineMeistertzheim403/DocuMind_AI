@@ -1,0 +1,33 @@
+{
+  "docker_commands": 0,
+  "network_requests": 0,
+  "p3_metadata_source": "current operator message; not independently re-observed",
+  "p3_rootfs_bytes_available_for_this_preparation": false,
+  "packages_installed": 0,
+  "status": "OBSERVED_NOT_APPROVED",
+  "tools_copied_exactly": {
+    "common.py": {
+      "copied_without_modification": true,
+      "sha256": "c814691da99458de23e6477265f34db0ba6faf290b6d31e4d9c94a032cae3f99",
+      "source": "qualification/p4_build_materials_v2/common.py"
+    },
+    "preserve.py": {
+      "copied_without_modification": true,
+      "sha256": "cb42b66101bb7e9579b6d66b2256a591c4dc7661dca0737aed44133c3e6d4bd9",
+      "source": "qualification/p4_build_materials_v2/preserve.py"
+    },
+    "record.py": {
+      "copied_without_modification": true,
+      "sha256": "aee02c071fdaec51372873b582b1e4956ecb4ef1f182fcf13cb30dfef3427e38",
+      "source": "qualification/p4_build_materials_v2/record.py"
+    },
+    "wheels.py": {
+      "copied_without_modification": true,
+      "sha256": "2f7d75c1da333b99378d1ed60730fc7f35e5959994855d591b6f599e5dbd55bc",
+      "source": "qualification/p4_build_materials_v2/wheels.py"
+    }
+  },
+  "v2_inventory_sha256": "60f0d9f0b668409bba75914b5ef40027036c54ac69de96b05b8e813032813c20",
+  "v2_native_review_sha256": "4712e353bcf4f94f48cb0b16a40a357468e72bf414560419bd3392158144ff84",
+  "v2_sha256sums_anchor": "2c40bfed4b6662a8abd6cce9197b790e62722ba0d5d32b64d2b251335dbf7cbb"
+}

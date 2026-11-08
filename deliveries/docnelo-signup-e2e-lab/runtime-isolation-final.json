@@ -1,0 +1,166 @@
+{
+  "internal": true,
+  "containers": [
+    {
+      "id": "4a277ec7b7bb326dcab4deac17a2f26c2c284ecc05417b9508e0425078d2b5f9",
+      "image": "sha256:4aa850b6fb8d16b32fd731d94b232b2f817f461892b3f39a28e7557a25a5eb3d",
+      "service": "api",
+      "networks": [
+        "docnelo-signup-lab-7c98f505cd_isolated"
+      ],
+      "mounts": [
+        {
+          "type": "bind",
+          "source": "/run/desktop/mnt/host/c/Users/Adeline/Documents/DocuMind_AI/deliveries/docnelo-signup-e2e-lab/tls",
+          "destination": "/certs",
+          "rw": false
+        },
+        {
+          "type": "volume",
+          "source": "docnelo-signup-lab-7c98f505cd_lifecycle",
+          "destination": "/app/lifecycle",
+          "rw": true
+        },
+        {
+          "type": "volume",
+          "source": "docnelo-signup-lab-7c98f505cd_documents",
+          "destination": "/app/var",
+          "rw": true
+        },
+        {
+          "type": "bind",
+          "source": "/run/desktop/mnt/host/c/Users/Adeline/Documents/DocuMind_AI/deliveries/docnelo-signup-e2e-lab/recovery.json",
+          "destination": "/control/recovery.json",
+          "rw": false
+        }
+      ],
+      "ports": {
+        "8000/tcp": null
+      },
+      "configured_ports": {},
+      "inherited_sensitive_env_names": []
+    },
+    {
+      "id": "595b2368e4da04a96a1fdfb0fdceecb6e5dc763a53851b5212ab0bce5dc99a12",
+      "image": "sha256:d2e0a72a9da278610fc926cc8d125827c0069f33feaafa011aae890572ec95c3",
+      "service": "db",
+      "networks": [
+        "docnelo-signup-lab-7c98f505cd_isolated"
+      ],
+      "mounts": [
+        {
+          "type": "volume",
+          "source": "docnelo-signup-lab-7c98f505cd_database_retry",
+          "destination": "/var/lib/postgresql/data",
+          "rw": true
+        }
+      ],
+      "ports": {
+        "5432/tcp": null
+      },
+      "configured_ports": {},
+      "inherited_sensitive_env_names": []
+    },
+    {
+      "id": "75c42e166893d37a6ca66c5cbb3a69290fadd7d9e9f9724ea20483b9ca9681b3",
+      "image": "sha256:4aa850b6fb8d16b32fd731d94b232b2f817f461892b3f39a28e7557a25a5eb3d",
+      "service": "legal",
+      "networks": [
+        "docnelo-signup-lab-7c98f505cd_isolated"
+      ],
+      "mounts": [
+        {
+          "type": "bind",
+          "source": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-signup-e2e-lab\\legal",
+          "destination": "/legal",
+          "rw": false
+        }
+      ],
+      "ports": {
+        "8000/tcp": null
+      },
+      "configured_ports": {},
+      "inherited_sensitive_env_names": []
+    },
+    {
+      "id": "f6e777f0d263d27eb0348e97846b3c92890d778ca5f9a8d1f62df955221879db",
+      "image": "sha256:ff8877338069e690053302ba9a8d8eeb47259467774ea90826f77a32e787a488",
+      "service": "proxy",
+      "networks": [
+        "docnelo-signup-lab-7c98f505cd_isolated"
+      ],
+      "mounts": [
+        {
+          "type": "bind",
+          "source": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-signup-e2e-lab\\tls",
+          "destination": "/certs",
+          "rw": false
+        },
+        {
+          "type": "bind",
+          "source": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-signup-e2e-lab\\proxy.json",
+          "destination": "/config/proxy.json",
+          "rw": false
+        }
+      ],
+      "ports": {
+        "80/tcp": null
+      },
+      "configured_ports": {},
+      "inherited_sensitive_env_names": []
+    },
+    {
+      "id": "b89990d429e6ea83adccad49ffd52be4dda3f1200bbb0b200560a6afe36a93d8",
+      "image": "sha256:526917bd27ecc837a7b683c0ca396fcdf315dde81c879100bffda874a3abeb1d",
+      "service": "smtp",
+      "networks": [
+        "docnelo-signup-lab-7c98f505cd_isolated"
+      ],
+      "mounts": [
+        {
+          "type": "volume",
+          "source": "docnelo-signup-lab-7c98f505cd_capture",
+          "destination": "/capture",
+          "rw": true
+        },
+        {
+          "type": "bind",
+          "source": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-signup-e2e-lab\\fixtures",
+          "destination": "/fixture",
+          "rw": false
+        },
+        {
+          "type": "bind",
+          "source": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-signup-e2e-lab\\tls\\lab.crt",
+          "destination": "/certs/recipe.crt",
+          "rw": false
+        },
+        {
+          "type": "bind",
+          "source": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-signup-e2e-lab\\tls\\lab.key",
+          "destination": "/certs/recipe.key",
+          "rw": false
+        }
+      ],
+      "ports": {
+        "8000/tcp": null
+      },
+      "configured_ports": {},
+      "inherited_sensitive_env_names": []
+    },
+    {
+      "id": "57b5f834a242030b48e044634ee4dc6d43251c729d9611ad5d873b0cc725e6bd",
+      "image": "sha256:ebdbc7fba1c61c03349088ca093470c78eec9dd91c5e2aa92ab1d8c0db5be362",
+      "service": "web",
+      "networks": [
+        "docnelo-signup-lab-7c98f505cd_isolated"
+      ],
+      "mounts": [],
+      "ports": {
+        "3000/tcp": null
+      },
+      "configured_ports": {},
+      "inherited_sensitive_env_names": []
+    }
+  ]
+}

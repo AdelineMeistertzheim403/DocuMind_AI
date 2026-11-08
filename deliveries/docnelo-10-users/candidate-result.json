@@ -1,0 +1,18 @@
+{
+  "exit_code": 1,
+  "network": "internal-only",
+  "postgres": "17/vector, fresh tmpfs, no host ports or volumes",
+  "tests": [
+    "tests/test_ten_users_preparation.py",
+    "tests/test_public_beta.py",
+    "tests/test_public_beta_state.py",
+    "tests/test_public_beta_postgresql_concurrency.py",
+    "tests/test_public_beta_email_abuse.py",
+    "tests/test_accounts_saas.py",
+    "tests/test_documents.py",
+    "tests/test_public_beta_authorization.py",
+    "tests/test_upload_admission.py"
+  ],
+  "scope": "exported candidate API",
+  "strict_lifecycle_ten_qualified": false
+}

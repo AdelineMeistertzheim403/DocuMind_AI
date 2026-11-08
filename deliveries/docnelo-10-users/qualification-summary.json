@@ -1,0 +1,50 @@
+{
+  "verdict": "NO-GO_OPENING",
+  "deployment_performed": false,
+  "vps_access_performed": false,
+  "runtime_changes_applied": false,
+  "active_api_attested": false,
+  "r2_source_files_unchanged": 345,
+  "candidate_source_files_unchanged": 65,
+  "r2_payload_integrity_verified": true,
+  "strict_lifecycle_ten_qualified": false,
+  "postgres_test_image": "sha256:d2e0a72a9da278610fc926cc8d125827c0069f33feaafa011aae890572ec95c3",
+  "tests_image": "sha256:526917bd27ecc837a7b683c0ca396fcdf315dde81c879100bffda874a3abeb1d",
+  "final_results": {
+    "git_r2_api": {
+      "passed": 188,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "candidate_api": {
+      "passed_call_phases": 188,
+      "failed_assertions": 0,
+      "teardown_errors": 10,
+      "exit_code": 1
+    },
+    "new_process_restart_git_r2": {
+      "passed": 1,
+      "failed": 0
+    },
+    "new_process_restart_candidate": {
+      "passed": 1,
+      "failed": 0
+    },
+    "bff_r2": {
+      "passed": 50,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "earlier_restart_harness_attempts": {
+    "setup_error_fixed": 1,
+    "masked_synthetic_key_failure_fixed": 1
+  },
+  "safety": {
+    "network": "new internal Docker networks",
+    "database": "fresh PostgreSQL 17 tmpfs",
+    "real_data_used": false,
+    "existing_volumes_touched": false
+  }
+}

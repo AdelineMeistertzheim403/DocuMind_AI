@@ -1,0 +1,13 @@
+{
+  "frozen_candidates_files_verified": {
+    "recovery-control-directory-v1": 248,
+    "recovery-control-directory-v1-r2": 257
+  },
+  "previous_artifacts_verified": 70,
+  "unaffected_r2_files_byte_identical": 248,
+  "original_119_P1_and_51_r2_tests_unchanged": true,
+  "docker_commands_executed": false,
+  "debian_namespaces_accessed": false,
+  "existing_permissions_changed": false,
+  "p3_go": false
+}

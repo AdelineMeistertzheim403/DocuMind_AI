@@ -1,0 +1,26 @@
+{
+  "argv": [
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\.venv\\Scripts\\python.exe",
+    "-I",
+    "-B",
+    ".\\qualification\\p4_asgi_offline_v1\\offline.py",
+    "build-gate",
+    "--inventory",
+    ".\\qualification\\p4_asgi_offline_v1\\DEPENDENCIES_OBSERVED.json",
+    "--approval",
+    ".\\qualification\\p4_asgi_offline_v1\\BUILD_APPROVAL.pending.json"
+  ],
+  "complete": true,
+  "end_ns": 1793696195257225000,
+  "gid": null,
+  "groups": null,
+  "monotonic_end_ns": 4164061423300,
+  "monotonic_start_ns": 4163978449500,
+  "returncode": 1,
+  "sha256": {
+    "stderr": "7ab78cc5ab057b84159084b31934f71ae2947679d263eb51a655536b1160e7f5",
+    "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "start_ns": 1793696195174251700,
+  "uid": null
+}

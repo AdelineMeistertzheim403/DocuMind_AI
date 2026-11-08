@@ -1,0 +1,338 @@
+﻿# Local recipe only. Always supply a unique -p and an explicit fictitious --env-file.
+services:
+  db:
+    image: documind-postgres-vector:17
+    pull_policy: never
+    labels: {documind.test: sprint-14-6}
+    user: '70:70'
+    environment: {POSTGRES_USER: documind_test, POSTGRES_PASSWORD: fictitious-s14-6-only, POSTGRES_DB: documind_beta_recipe}
+    networks: [data]
+    tmpfs: ['/var/lib/postgresql/data:rw,noexec,nosuid,size=768m,uid=70,gid=70,mode=0700']
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 1g
+    cpus: 1
+    pids_limit: 128
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U documind_test -d documind_beta_recipe']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    logging: &logs {driver: json-file, options: {max-size: 10m, max-file: '3'}}
+  api:
+    image: documind-s14-6-api:local
+    pull_policy: never
+    labels: {documind.test: sprint-14-6}
+    env_file: ${BETA_RECIPE_ENV:?Provide the newly generated fictitious recipe env}
+    environment:
+      DATABASE_URL: postgresql+psycopg://documind_test:fictitious-s14-6-only@db:5432/documind_beta_recipe
+      STORAGE_DIR: /app/var/documents
+      EXTRACTION_MODE: sandbox
+      WORKER_MEMORY_MB: '512'
+      WORKER_TIMEOUT_SECONDS: '30'
+      MAX_CONCURRENT_WORKERS: '2'
+      API_KEYS: '{}'
+      LEGACY_API_ENABLED: 'false'
+      AI_ENABLED: 'false'
+      OWNER_DEMO_ENABLED: 'false'
+      SSL_CERT_FILE: /certs/recipe.crt
+      RECOVERY_CONTROL_VERSION: '1'
+      RECOVERY_CONTROL_DIR: /run/documind-control
+      RECOVERY_CONTROL_SOURCE_DIR: ${RECOVERY_CONTROL_DIR:?Set the absolute preprovisioned control directory}
+      RECOVERY_READER_GID: ${RECOVERY_READER_GID:?Set a verified numeric reader GID}
+      RECOVERY_STATE_PATH: /run/documind-control/recovery-state.json
+    volumes:
+      - recipe_documents:/app/var
+      - recipe_lifecycle:/app/lifecycle
+      - '${BETA_RECIPE_DIR:?}/tls:/certs:ro'
+      - type: bind
+        source: ${RECOVERY_CONTROL_DIR:?Set the absolute preprovisioned control directory}
+        target: /run/documind-control
+        read_only: true
+        bind:
+          create_host_path: false
+    group_add: ['${RECOVERY_READER_GID:?Set a verified numeric reader GID}']
+    networks: [data,application]
+    depends_on: {db: {condition: service_healthy}}
+    command: [uvicorn, 'backend.main:app', --host, '0.0.0.0', --port, '8000', --workers, '1', --no-access-log, --limit-concurrency, '32']
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    init: true
+    stop_grace_period: 150s
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=256m,mode=1777']
+    mem_limit: 1536m
+    cpus: 2
+    pids_limit: 64
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health',timeout=3)"]
+      interval: 3s
+      timeout: 5s
+      start_period: 30s
+      retries: 20
+    logging: *logs
+  lifecycle-init:
+    image: documind-s14-6-api:local
+    pull_policy: never
+    labels: {documind.test: sprint-14-6}
+    user: '0:0'
+    env_file: ${BETA_RECIPE_ENV:?Provide the newly generated fictitious recipe env}
+    environment:
+      DATABASE_URL: postgresql+psycopg://documind_test:fictitious-s14-6-only@db:5432/documind_beta_recipe
+      STORAGE_DIR: /app/var/documents
+      EXTRACTION_MODE: sandbox
+      WORKER_MEMORY_MB: '512'
+      WORKER_TIMEOUT_SECONDS: '30'
+      MAX_CONCURRENT_WORKERS: '2'
+      API_KEYS: '{}'
+      LEGACY_API_ENABLED: 'false'
+      AI_ENABLED: 'false'
+      OWNER_DEMO_ENABLED: 'false'
+      SSL_CERT_FILE: /certs/recipe.crt
+    volumes: ['recipe_lifecycle:/app/lifecycle', '${BETA_RECIPE_DIR:?}/tls:/certs:ro']
+    networks: [data]
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE]
+    security_opt: ['no-new-privileges:true']
+    init: true
+    entrypoint: [python]
+    command:
+      - -c
+      - |
+        import json
+        import os
+        import secrets
+        from pathlib import Path
+        import pwd
+
+        from backend.lifecycle_admissions import AdmissionAnchor
+        from backend.lifecycle_authenticated import AuthenticatedConfirmationStore
+        from backend.lifecycle_durability import ConfirmationStore
+        from backend.lifecycle_holds import HoldStore
+        from backend.lifecycle_registry import Registry
+
+        app = pwd.getpwnam('app')
+        app_uid, app_gid = app.pw_uid, app.pw_gid
+        root = Path(os.environ['LIFECYCLE_DATA_ROOT'])
+        lock_path = Path(os.environ['LIFECYCLE_BACKUP_LOCK_PATH'])
+
+        root.mkdir(parents=True, exist_ok=True)
+        os.chown(root, app_uid, app_gid)
+        os.chmod(root, 0o700)
+
+        store_paths = [
+            Path(os.environ['LIFECYCLE_REGISTRY_PATH']),
+            Path(os.environ['LIFECYCLE_CONFIRMATION_PATH']),
+            Path(os.environ['LIFECYCLE_AUTHENTICATED_CONFIRMATION_PATH']),
+            Path(os.environ['LIFECYCLE_HOLDS_PATH']),
+            Path(os.environ['LIFECYCLE_ADMISSION_ANCHOR_PATH']),
+        ]
+        for path in store_paths:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            os.chmod(path.parent, 0o700)
+
+        keys_dir = Path(os.environ['LIFECYCLE_AUTHENTICATION_KEY_PATH']).parent
+        keys_dir.mkdir(parents=True, exist_ok=True)
+        os.chown(keys_dir, 0, app_gid)
+        os.chmod(keys_dir, 0o750)
+
+        def ensure_key(path: Path) -> None:
+            if path.exists():
+                return
+            descriptor = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            try:
+                os.write(descriptor, secrets.token_bytes(32))
+            finally:
+                os.close(descriptor)
+            os.chown(path, 0, app_gid)
+            os.chmod(path, 0o440)
+
+        ensure_key(Path(os.environ['LIFECYCLE_AUTHENTICATION_KEY_PATH']))
+        ensure_key(Path(os.environ['LIFECYCLE_ADMISSION_KEY_PATH']))
+
+        created = []
+        registry = Path(os.environ['LIFECYCLE_REGISTRY_PATH'])
+        witness = Path(os.environ['LIFECYCLE_CONFIRMATION_PATH'])
+        auth_path = Path(os.environ['LIFECYCLE_AUTHENTICATED_CONFIRMATION_PATH'])
+        holds = Path(os.environ['LIFECYCLE_HOLDS_PATH'])
+        anchor = Path(os.environ['LIFECYCLE_ADMISSION_ANCHOR_PATH'])
+
+        if not registry.exists():
+            Registry(registry).initialize()
+            created.append('registry')
+        if not witness.exists():
+            ConfirmationStore(witness).initialize()
+            created.append('witness')
+
+        auth = AuthenticatedConfirmationStore(
+            auth_path,
+            Path(os.environ['LIFECYCLE_AUTHENTICATION_KEY_PATH']).read_bytes(),
+            'documind-local-v2',
+        )
+        if not auth_path.exists():
+            auth.initialize()
+            created.append('authenticated')
+        if not holds.exists():
+            HoldStore(holds, auth).initialize()
+            created.append('holds')
+        if not anchor.exists():
+            AdmissionAnchor(anchor, Path(os.environ['LIFECYCLE_ADMISSION_KEY_PATH']).read_bytes()).initialize()
+            created.append('admission_anchor')
+
+        for path in store_paths:
+            os.chown(path, app_uid, app_gid)
+            os.chown(path.parent, app_uid, app_gid)
+            os.chmod(path, 0o600)
+            os.chmod(path.parent, 0o700)
+
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        if not lock_path.exists():
+            lock_path.touch()
+        os.chown(lock_path, app_uid, app_gid)
+        os.chmod(lock_path, 0o600)
+
+        os.chmod(root, 0o500)
+
+        print(json.dumps({'created': created}, sort_keys=True))
+    logging: *logs
+  web:
+    image: documind-s14-6-web:local
+    pull_policy: never
+    labels: {documind.test: sprint-14-6}
+    environment:
+      BFF_SERVICE_KEY: fictitious-s14-6-service-key-no-real-secret-0001
+      BFF_BACKEND_URL: http://api:8000
+      BFF_HOST: '0.0.0.0'
+      BFF_PORT: '3000'
+      BFF_ALLOWED_HOSTS: documind.test
+      BFF_TRUSTED_PROXY_IPS: 172.30.247.10
+    networks: [application,proxy]
+    depends_on: {api: {condition: service_healthy}}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    init: true
+    tmpfs: ['/tmp:size=32m']
+    mem_limit: 512m
+    cpus: 1
+    pids_limit: 64
+    healthcheck:
+      test: [CMD, node, server/healthcheck.mjs]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+    logging: *logs
+  smtp:
+    image: documind-s14-6-proofs:local
+    pull_policy: never
+    labels: {documind.test: sprint-14-6}
+    init: true
+    environment: {DOCUMIND_TEST_ONLY: sprint-14-6}
+    command: [python, -m, tests.fixtures.public_beta_smtp]
+    volumes: ['${BETA_RECIPE_DIR:?}/tls:/certs:ro', '${BETA_RECIPE_DIR:?}/capture:/capture']
+    networks: [application]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 128m
+    cpus: .5
+    pids_limit: 32
+    logging: *logs
+  traefik:
+    image: traefik:v3.3
+    pull_policy: never
+    labels: {documind.test: sprint-14-6}
+    user: '1000:1000'
+    command:
+      - --entrypoints.alpha.address=:8443
+      - --entrypoints.beta.address=:8444
+      - --entrypoints.gamma.address=:8445
+      - --entrypoints.alpha.transport.respondingtimeouts.readtimeout=60s
+      - --entrypoints.alpha.transport.respondingtimeouts.writetimeout=90s
+      - --entrypoints.beta.transport.respondingtimeouts.readtimeout=60s
+      - --entrypoints.beta.transport.respondingtimeouts.writetimeout=90s
+      - --entrypoints.gamma.transport.respondingtimeouts.readtimeout=60s
+      - --entrypoints.gamma.transport.respondingtimeouts.writetimeout=90s
+      - --providers.file.filename=/etc/traefik/recipe.yaml
+      - --api=false
+      - --accesslog=true
+      - --accesslog.format=json
+      - --accesslog.fields.defaultmode=drop
+      - --accesslog.fields.headers.defaultmode=drop
+      - --accesslog.fields.names.DownstreamStatus=keep
+      - --accesslog.fields.names.Duration=keep
+    volumes: ['./ops/testing/traefik-public-beta-test.yaml:/etc/traefik/recipe.yaml:ro', '${BETA_RECIPE_DIR:?}/tls:/certs:ro']
+    networks:
+      proxy: {ipv4_address: 172.30.247.10}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 256m
+    cpus: 1
+    pids_limit: 64
+    logging: *logs
+  relay-alpha: &relay
+    image: documind-s14-6-proofs:local
+    pull_policy: never
+    labels: {documind.test: sprint-14-6}
+    init: true
+    environment: {DOCUMIND_TEST_ONLY: sprint-14-6, RELAY_TARGET_PORT: '8443'}
+    command: [python, -m, tests.fixtures.public_beta_tcp_relay]
+    ports: ['127.0.0.1:19443:8443']
+    networks: [proxy]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 128m
+    cpus: .5
+    pids_limit: 64
+    logging: *logs
+  relay-beta:
+    image: documind-s14-6-proofs:local
+    pull_policy: never
+    labels: {documind.test: sprint-14-6}
+    init: true
+    environment: {DOCUMIND_TEST_ONLY: sprint-14-6, RELAY_TARGET_PORT: '8444'}
+    command: [python, -m, tests.fixtures.public_beta_tcp_relay]
+    ports: ['127.0.0.1:19444:8443']
+    networks: [proxy]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 128m
+    cpus: .5
+    pids_limit: 64
+    logging: *logs
+  relay-gamma:
+    image: documind-s14-6-proofs:local
+    pull_policy: never
+    labels: {documind.test: sprint-14-6}
+    init: true
+    environment: {DOCUMIND_TEST_ONLY: sprint-14-6, RELAY_TARGET_PORT: '8445'}
+    command: [python, -m, tests.fixtures.public_beta_tcp_relay]
+    ports: ['127.0.0.1:19445:8443']
+    networks: [proxy]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 128m
+    cpus: .5
+    pids_limit: 64
+    logging: *logs
+networks:
+  data: {internal: true, labels: {documind.test: sprint-14-6}}
+  application: {internal: true, labels: {documind.test: sprint-14-6}}
+  proxy:
+    driver_opts: {com.docker.network.bridge.enable_ip_masquerade: 'false'}
+    ipam: {config: [{subnet: 172.30.247.0/24}]}
+    labels: {documind.test: sprint-14-6}
+volumes:
+  recipe_documents: {labels: {documind.test: sprint-14-6}}
+  recipe_lifecycle: {labels: {documind.test: sprint-14-6}}
+
+
+
+
+
+

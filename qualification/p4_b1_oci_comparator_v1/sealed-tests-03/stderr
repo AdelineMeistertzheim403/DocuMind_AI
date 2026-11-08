@@ -1,0 +1,34 @@
+test_altered_inventories (test_comparator.ComparatorTests.test_altered_inventories) ... ok
+test_archive_hash_before_tar_parse (test_comparator.ComparatorTests.test_archive_hash_before_tar_parse) ... ok
+test_cli_differences_error_incomplete_and_input_directory_guard (test_comparator.ComparatorTests.test_cli_differences_error_incomplete_and_input_directory_guard) ... ok
+test_cli_evidence_receipt_and_existing_directory (test_comparator.ComparatorTests.test_cli_evidence_receipt_and_existing_directory) ... ok
+test_corrupt_header_padding_and_nonregular_payload (test_comparator.ComparatorTests.test_corrupt_header_padding_and_nonregular_payload) ... ok
+test_dangerous_paths (test_comparator.ComparatorTests.test_dangerous_paths) ... ok
+test_duplicate_layer (test_comparator.ComparatorTests.test_duplicate_layer) ... ok
+test_duplicate_metadata_and_parent_alias (test_comparator.ComparatorTests.test_duplicate_metadata_and_parent_alias) ... ok
+test_duplicate_outer_unclaimed_and_unsafe_outer (test_comparator.ComparatorTests.test_duplicate_outer_unclaimed_and_unsafe_outer) ... ok
+test_equal_and_deterministic (test_comparator.ComparatorTests.test_equal_and_deterministic) ... ok
+test_gnu_long_path_and_pax_path_duplicate (test_comparator.ComparatorTests.test_gnu_long_path_and_pax_path_duplicate) ... ok
+test_historical_root_and_ownership_pattern (test_comparator.ComparatorTests.test_historical_root_and_ownership_pattern) ... ok
+test_incorrect_layer_anchor (test_comparator.ComparatorTests.test_incorrect_layer_anchor) ... ok
+test_invalid_anchored_inventory_sets_and_duplicates (test_comparator.ComparatorTests.test_invalid_anchored_inventory_sets_and_duplicates) ... ok
+test_manifest_wrong_binding_and_duplicate_json (test_comparator.ComparatorTests.test_manifest_wrong_binding_and_duplicate_json) ... ok
+test_missing_file (test_comparator.ComparatorTests.test_missing_file) ... ok
+test_modified_content (test_comparator.ComparatorTests.test_modified_content) ... ok
+test_oci_layout_and_legacy_ancillary (test_comparator.ComparatorTests.test_oci_layout_and_legacy_ancillary) ... ok
+test_pax_timestamp_recorded_xattr_incomplete (test_comparator.ComparatorTests.test_pax_timestamp_recorded_xattr_incomplete) ... ok
+test_permissions_type_and_links (test_comparator.ComparatorTests.test_permissions_type_and_links) ... ok
+test_release_manifest_and_no_overwrite (test_comparator.ComparatorTests.test_release_manifest_and_no_overwrite) ... ok
+test_same_count_different_path (test_comparator.ComparatorTests.test_same_count_different_path) ... ok
+test_special_file (test_comparator.ComparatorTests.test_special_file) ... ok
+test_stream_reads_are_bounded (test_comparator.ComparatorTests.test_stream_reads_are_bounded) ... ok
+test_symlink_input_and_release_refused (test_comparator.ComparatorTests.test_symlink_input_and_release_refused) ... ok
+test_trailing_data_and_truncation (test_comparator.ComparatorTests.test_trailing_data_and_truncation) ... ok
+test_unknown_metadata_format (test_comparator.ComparatorTests.test_unknown_metadata_format) ... ok
+test_unsafe_symlink_and_cyclic_hardlinks (test_comparator.ComparatorTests.test_unsafe_symlink_and_cyclic_hardlinks) ... ok
+test_wrong_config_and_diff_id (test_comparator.ComparatorTests.test_wrong_config_and_diff_id) ... ok
+
+----------------------------------------------------------------------
+Ran 29 tests in 0.453s
+
+OK

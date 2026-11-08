@@ -1,0 +1,81 @@
+{
+  "build_go": false,
+  "debian_p4_executed": false,
+  "decision": "BLOCKED",
+  "docker_build_pull_load_create_start_exec_stop_operations": 0,
+  "docker_readonly_list_attempts": 1,
+  "historical_repository_files_unchanged": 927,
+  "observed_ns": 1793698659070888300,
+  "packages_installed": 0,
+  "platform": "win32",
+  "production_go": false,
+  "public_https_metadata_gets_windows_only": 2,
+  "python": "3.13.7 (tags/v3.13.7:bcee1c3, Aug 14 2025, 14:15:11) [MSC v.1944 64 bit (AMD64)]",
+  "python311_grammar_files": 12,
+  "receipts": {
+    "archive-catalog": {
+      "receipt_sha256": "0bcc01f3b4ec19764f8263bd1e3f85268a6f909fbf64b5324a35b517b8ac1707",
+      "returncode": 0
+    },
+    "bootstrap-verification": {
+      "receipt_sha256": "70c89d6d94957715392a41a1dd66e03bf2932942815fd17652c58570b1ffa2a3",
+      "returncode": 1
+    },
+    "bootstrap-verification-final": {
+      "receipt_sha256": "3750cec5c1013c71f18e685c22db7e2121c830e6795e6dab107e5752c47175ca",
+      "returncode": 0
+    },
+    "local-image-list": {
+      "receipt_sha256": "a753d0c1f8d25bed86a7a65d11f31cca3d133fab505cc6682dc7b46db0aa1d20",
+      "returncode": 1
+    },
+    "material-gate": {
+      "receipt_sha256": "2e8bf5a1a916dbe48ce39cf571e0e5baa42db3ccc8cecd138595e357fe0fbda9",
+      "returncode": 2
+    },
+    "native-verification": {
+      "receipt_sha256": "964921360cdec47c76eab3df11809bd4e67df432e9de0f8351472b727b3bac6f",
+      "returncode": 0
+    },
+    "pip-upstream": {
+      "receipt_sha256": "760f047af1936fb39c4f746fe046df993c48b266ff76c8b071b6c8b609d661e2",
+      "returncode": 0
+    },
+    "pyyaml-upstream": {
+      "receipt_sha256": "c9c57488f1de83d618721ad28be373c0ac7c3776a7418a63d612342813d836ab",
+      "returncode": 0
+    },
+    "report-reproduction": {
+      "receipt_sha256": "8c29d24187e059e388bb44b6ffd1936f513ad14f1fc78a435766f25e6a43789c",
+      "returncode": 0
+    },
+    "source-validation": {
+      "receipt_sha256": "6feedebd53b8f1f887cc485187a284ad933c6c47c094845547d457cb662ba555",
+      "returncode": 0
+    },
+    "staged-wheel-verification": {
+      "receipt_sha256": "29496ee3ed9ff9d57da09b88631aae7cf8a8a269297fa948d9faa4027354be95",
+      "returncode": 0
+    },
+    "static-reproduction": {
+      "receipt_sha256": "82cd785a4354f97cd39f0232a718a5aa1fb18fe0c774b72e61896ffa02fc6e39",
+      "returncode": 0
+    },
+    "tool-tests-final": {
+      "receipt_sha256": "8e341218add2389d5d52bb9ee6c2a3c1b93bf02c02d1e4aa59bd4bb8d9708c10",
+      "returncode": 0
+    },
+    "wheel-verification": {
+      "receipt_sha256": "fbb2417e622d4ed7fca04675ac6fb111d2ec99e1a3dc3afbd090d2aca2e01bdf",
+      "returncode": 0
+    }
+  },
+  "reproduced_reports_sha256": {
+    "P4_IMAGE_COMPONENTS.json": "1c4ae0f9fa0a722ef43bac151284fc92e8f0a46549c0755cc4ab945cc2ea977e",
+    "P4_PIP_BOOTSTRAP.json": "ab4712e2d44a8c8c98ae2c9b04cbc2b55199a28b468baa984f68f1244430a28c",
+    "P4_WHEEL_APPROVAL_MATRIX.md": "3aaa47dd8efd92e0ea246569bd3e4e611bf83c3780a6ead4d9be2916a245bcee"
+  },
+  "status": "PASS_PREPARATION_TOOL_CHECKS_NOT_P4",
+  "target_abi_executed": false,
+  "tool_tests": 15
+}

@@ -1,0 +1,16 @@
+{
+  "comparator_sha256": "63225aec80a257a246ca492acbaf1dcc73c66a0c49123ffaffc9ad73ee6c383a",
+  "decision": "REVIEW_ONLY_BLOCKED",
+  "delivery": "docnelo-v51-p4-b1-p3-layer-contents-v1",
+  "external_trusted_channel_required": true,
+  "formal_b1_contents_closed": false,
+  "go": {
+    "c5": false,
+    "production": false,
+    "runtime": false
+  },
+  "layer_contents_sha256": "0dca2348e9b8de9ca105e41fa05ed463d01da69ed7b92b8fb4c0e8e0884a4b66",
+  "payload_files": 13,
+  "sha256sums": "4c99f2ff46fbfa6854982078018a5f9364eda77e1ba74a2a0b8e3aa29fa1b5d1",
+  "signature": false
+}

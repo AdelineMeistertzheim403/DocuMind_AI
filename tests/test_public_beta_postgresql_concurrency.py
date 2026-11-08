@@ -150,9 +150,13 @@ def wait_for_lock(app, pid):
 
 
 @pytest.mark.parametrize('same_email', [False, True])
-def test_two_real_admissions_are_atomic_without_shared_ram_semaphore(pg_beta, same_email):
+@pytest.mark.parametrize('limit', [5, 10])
+def test_two_real_admissions_are_atomic_without_shared_ram_semaphore(pg_beta, same_email, limit):
     client, parent, sent = pg_beta
-    seed(pg_beta, 3 if same_email else 4)
+    parent.state.settings.public_registration_limit = limit
+    parent.state.settings.public_registration_requires_approval = limit == 10
+    parent.state.settings.public_registration_use_lifecycle_receipts = False
+    seed(pg_beta, limit - (2 if same_email else 1))
     original = counts(parent)
     with actors(pg_beta) as (instances, output):
         bodies = [signup_body(client, 'shared@example.test' if same_email else f'new-{index}@example.test')

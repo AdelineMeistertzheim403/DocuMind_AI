@@ -5,6 +5,7 @@ import { UploadDialog } from './UploadDialog'
 import { ErrorState, Modal, Spinner } from './ui'
 import { useRemove } from '../hooks/useDocuments'
 import type { DocumentSummary } from '../types/api'
+import { api, deletionMessage } from '../services/api'
 
 interface Workspace {
   openUpload: () => void; confirmDelete: (document: DocumentSummary) => void; notify: (text: string) => void
@@ -20,6 +21,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [upload, setUpload] = useState(false)
   const [target, setTarget] = useState<DocumentSummary | null>(null)
   const [toast, setToast] = useState('')
+  const [pendingDeletion, setPendingDeletion] = useState<string | null>(null)
+  const [statusError, setStatusError] = useState<unknown>(null)
   const remove = useRemove()
   useEffect(() => { if (toast) { const timer = setTimeout(() => setToast(''), 6000); return () => clearTimeout(timer) } }, [toast])
   return <Context.Provider value={{ openUpload: () => setUpload(true), confirmDelete: document => { remove.reset(); setTarget(document) }, notify: setToast }}>
@@ -29,10 +32,18 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       <span className="delete-symbol"><Trash2 size={25}/></span><p>Le document <strong className="break-word">{target.filename}</strong>, son texte et ses analyses seront retirés des données actives. Le nettoyage du fichier peut nécessiter une intervention en cas d’erreur ; les copies de sauvegarde sont traitées séparément.</p>
       {remove.error && <ErrorState error={remove.error}/>}{remove.isPending && <Spinner label="Suppression…"/>}
       <div className="modal-actions"><button className="button secondary" disabled={remove.isPending} onClick={() => setTarget(null)}>Conserver</button>
-        <button className="button danger" disabled={remove.isPending} onClick={() => remove.mutate(target.id, { onSuccess: () => {
-          setTarget(null); setToast('Document supprimé.'); navigate('/documents')
-        } })}>Supprimer définitivement</button></div>
+        <button className="button danger" disabled={remove.isPending} onClick={() => remove.mutate(target.id, { onSuccess: result => {
+          setTarget(null); setToast(result ? deletionMessage(result) : 'Document supprimé.'); setPendingDeletion(result ? target.id : null); navigate('/documents')
+        } })}>Demander la suppression</button></div>
     </Modal>}
+    {pendingDeletion && <section className="notice" role="status">Une demande documentaire est suivie administrativement.
+      <button className="button secondary" onClick={async () => {
+        setStatusError(null)
+        try { const result = await api.deletionStatus(pendingDeletion); setToast(deletionMessage(result)); if (result.completed) setPendingDeletion(null) }
+        catch (error) { setStatusError(error) }
+      }}>Actualiser le statut de suppression</button>
+      {statusError != null && <ErrorState error={statusError}/>}
+    </section>}
     {toast && <div className="toast" role="status"><CheckCircle2 size={20}/><span>{toast}</span><button className="icon-button" aria-label="Fermer la notification" onClick={() => setToast('')}><X size={16}/></button></div>}
   </Context.Provider>
 }

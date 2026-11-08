@@ -1,0 +1,44 @@
+{
+  "source": "operator report in the current request; not locally re-observed raw evidence",
+  "raw_b1_evidence_received_here": false,
+  "measurement_timestamp": null,
+  "v3_static_reproduction": "THREE_REPORTS_IDENTICAL_REPORTED",
+  "image": {
+    "config_id": "sha256:bbe90dab376fcd41b3495cad1264c017323ed68ed0915c601ea5fd229cbf6abd",
+    "layer_diff_id": "sha256:7b1b9ae269d164c3b88d386714f2def703acb15812a6d6f813c10064f57c766e",
+    "docker_save_archive_sha256": "ffec209c1b5eb3a8861e60585266c18069896adf05c8fe8f98c558d682351c2d",
+    "config_and_layer_sha256_verified": "REPORTED"
+  },
+  "artifact_sha256": {
+    "Dockerfile": "605418eb09c102b5757dab88ad3ecbd1a70eb750bfea22615784ede4d9259e47",
+    "ROOTFS-SHA256SUMS": "a37f1847df7c7212c2d1b004e5ab3b0d654323a8ab2d425e20d89c551279527f",
+    "ROOTFS-METADATA.txt": "64863f4ebc2aaddb717d83147e623e37942716728736afa40f5bd39d1083db36",
+    "p3-layer-comparison.json": "2e7eef48a5b66d82e03e59f9c936d935d8317670d647d00917cec51813db7cf0"
+  },
+  "source_rootfs": {
+    "regular_files": 9771,
+    "directories_including_root": 564,
+    "inventoried_symlinks": 0,
+    "uid_gid_reported": [1000, 1000],
+    "sha256sum_status_returncode_reported": 0
+  },
+  "layer_comparison": {
+    "regular_files": 9771,
+    "directories": 563,
+    "content_mismatches": 0,
+    "permission_mismatches": 0,
+    "type_mismatches": 0,
+    "extra_entries": 0,
+    "special_entries": 0,
+    "missing_entries": ["."],
+    "uid_gid_mismatches": 10334,
+    "uid_gid_reported": [0, 0],
+    "comparator_returncode": null,
+    "comparison_tool_sha256": null,
+    "mtime_comparison": "NOT_REPORTED",
+    "hardlink_topology": "NOT_REPORTED",
+    "normalized_from_operator_message_not_parsed_from_raw_report": true
+  },
+  "v3_source_sha256sums_anchor": "be64e25c43b33255c2d6a9172faa574fad9c7c749ccb5a0ed048befb2d015fc7",
+  "v3_delivery_sha256sums_anchor": "23f817a08cc8844ae3a53a4e51bf7b55a88fd555f9590342f8f379388514d6ca"
+}

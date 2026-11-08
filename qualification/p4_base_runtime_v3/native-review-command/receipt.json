@@ -1,0 +1,22 @@
+{
+  "argv": [
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\.venv\\Scripts\\python.exe",
+    "-I",
+    "-B",
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\qualification\\p4_base_runtime_v3\\review.py",
+    "--root",
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\qualification\\p4_base_runtime_v3",
+    "--out-dir",
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\qualification\\p4_base_runtime_v3\\generated"
+  ],
+  "complete": true,
+  "end_ns": 1793700391066564000,
+  "python": "3.13.7 (tags/v3.13.7:bcee1c3, Aug 14 2025, 14:15:11) [MSC v.1944 64 bit (AMD64)]",
+  "python_executable": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\.venv\\Scripts\\python.exe",
+  "returncode": 2,
+  "sha256": {
+    "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stdout": "19a86809534c7b9a1b3ee82e056261691e916a30bf96c889ed270545d1fb9d7a"
+  },
+  "start_ns": 1793700390574677100
+}

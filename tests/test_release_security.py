@@ -72,6 +72,37 @@ def test_controller_helper_must_match_attested_bundle(approved,tmp_path):
         deploy.verify_controller_bundle_compatibility(controller,bundle,candidate)
 
 
+def test_schema_0008_attestation_is_pinned_and_cannot_authorize_old_application(tmp_path, monkeypatch):
+    trust={'format':1,'releases':{}}
+    bundle=tmp_path/'release'
+    candidate=approved_bundle(bundle, release('0008'), trust)
+    validate_release(candidate)
+    monkeypatch.setattr(security, 'load_trust', lambda:trust)
+    assert security.authorize(bundle, candidate)['independently_approved']
+    assert not deploy.can_rollback(release('0007'), '0008', security_verified=True)
+    with pytest.raises(security.SecurityError, match='identity mismatch'):
+        security.validate_statement(bundle, {**candidate, 'schema_revision':'0007'})
+
+
+def test_previous_complete_bundle_remains_rollback_only(tmp_path):
+    trust={'format':1,'releases':{}}
+    bundle=tmp_path/'release'
+    candidate=approved_bundle(bundle, release('0007'), trust)
+    statement=json.loads((bundle/security.STATEMENT).read_text())
+    for name in security.BUNDLE_FILES-security.PREVIOUS_BUNDLE_FILES:
+        (bundle/name).unlink()
+        del statement['bundle_sha256'][name]
+    (bundle/security.STATEMENT).write_text(json.dumps(statement))
+    assert security.validate_operational_bundle(bundle, candidate, rollback=True)
+    with pytest.raises(security.SecurityError, match='rollback-only'):
+        security.validate_operational_bundle(bundle, candidate)
+    controller=tmp_path/'controller'
+    controller.mkdir()
+    for name in deploy.CONTROLLER_FILES-{'lifecycle_key_policy.py'}:
+        shutil.copyfile(bundle/name, controller/name)
+    deploy.verify_controller_bundle_compatibility(controller, bundle, candidate, rollback=True)
+
+
 @pytest.mark.parametrize('tamper',['missing_file','systemd_missing_script'])
 def test_operational_inventory_requires_every_attested_file_and_unit_target(approved,tamper):
     bundle,candidate,_=approved

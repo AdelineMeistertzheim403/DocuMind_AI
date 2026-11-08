@@ -1,0 +1,127 @@
+{
+  "historical_source_candidate": "f3c92eb8ba2bb69b83a9798ebc3df8a70f48fbb2",
+  "active_vps_image_id": null,
+  "historical_export_image_id": "sha256:f15855942fb4382375648841bbcdc486fd39d252e80e8fdf8eb42999d6590019",
+  "historical_export_image_platform": "linux/amd64",
+  "oci_revision_label": "uncommitted-sprint-14-6",
+  "server_comparisons": [
+    {
+      "file": "frontend/server/app.mjs",
+      "byte_identical": true,
+      "text_identical": true
+    },
+    {
+      "file": "frontend/server/app.test.mjs",
+      "byte_identical": true,
+      "text_identical": true
+    },
+    {
+      "file": "frontend/server/config.mjs",
+      "byte_identical": true,
+      "text_identical": true
+    },
+    {
+      "file": "frontend/server/healthcheck.mjs",
+      "byte_identical": true,
+      "text_identical": true
+    },
+    {
+      "file": "frontend/server/http-server.mjs",
+      "byte_identical": true,
+      "text_identical": true
+    },
+    {
+      "file": "frontend/server/index.mjs",
+      "byte_identical": true,
+      "text_identical": true
+    },
+    {
+      "file": "frontend/server/security-audit.mjs",
+      "byte_identical": true,
+      "text_identical": true
+    },
+    {
+      "file": "frontend/server/security-audit.test.mjs",
+      "byte_identical": true,
+      "text_identical": true
+    },
+    {
+      "file": "frontend/server/upload-admission.test.mjs",
+      "byte_identical": true,
+      "text_identical": true
+    }
+  ],
+  "export_manifest_frontend": {
+    "checked": 75,
+    "mismatches": 0,
+    "missing": 0
+  },
+  "baseline_reproduction": {
+    "node": "22.12.0",
+    "platform": "Windows",
+    "files": [
+      {
+        "path": "assets/Analysis-DH7bL-mu.js",
+        "present_in_both": true,
+        "byte_identical": true,
+        "sha256": "dd6200c8c4e0766082d055ead1647bd299e2020dae80feb278fe497ee674329a"
+      },
+      {
+        "path": "assets/index-C9-hkbxL.js",
+        "present_in_both": true,
+        "byte_identical": true,
+        "sha256": "c711c315cc1bbdb7299f94b1f2156410ad85ce6399cbc5d4ceebf8578c3dd981"
+      },
+      {
+        "path": "assets/index-CGwBGTsa.css",
+        "present_in_both": true,
+        "byte_identical": true,
+        "sha256": "97c12290a31e190d78ccee88ec7c28036fc1627e2c97d5a1b7cedf638d0dd36b"
+      },
+      {
+        "path": "favicon.svg",
+        "present_in_both": true,
+        "byte_identical": true,
+        "sha256": "2113501d9de800348e6441f103cee301c45aeab3da4d5b4d65d95163f2cd3d10"
+      },
+      {
+        "path": "index.html",
+        "present_in_both": true,
+        "byte_identical": true,
+        "sha256": "a2f57980e9d600c67c55a9961e91df92c40a1c662177188173d13c8397b22980"
+      }
+    ],
+    "all_compared_files_identical": true
+  },
+  "actual_local_image_dist": {
+    "reference_id": "sha256:f15855942fb4382375648841bbcdc486fd39d252e80e8fdf8eb42999d6590019",
+    "files": [
+      {
+        "path": "assets/Analysis-DH7bL-mu.js",
+        "sha256": "dd6200c8c4e0766082d055ead1647bd299e2020dae80feb278fe497ee674329a",
+        "matches_actual_image": true
+      },
+      {
+        "path": "assets/index-C9-hkbxL.js",
+        "sha256": "c711c315cc1bbdb7299f94b1f2156410ad85ce6399cbc5d4ceebf8578c3dd981",
+        "matches_actual_image": true
+      },
+      {
+        "path": "assets/index-CGwBGTsa.css",
+        "sha256": "97c12290a31e190d78ccee88ec7c28036fc1627e2c97d5a1b7cedf638d0dd36b",
+        "matches_actual_image": true
+      },
+      {
+        "path": "favicon.svg",
+        "sha256": "2113501d9de800348e6441f103cee301c45aeab3da4d5b4d65d95163f2cd3d10",
+        "matches_actual_image": true
+      },
+      {
+        "path": "index.html",
+        "sha256": "a2f57980e9d600c67c55a9961e91df92c40a1c662177188173d13c8397b22980",
+        "matches_actual_image": true
+      }
+    ],
+    "all_identical": true
+  }
+}

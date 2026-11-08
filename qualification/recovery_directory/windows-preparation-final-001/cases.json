@@ -1,0 +1,372 @@
+[
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_complete_candidates_replace_file_bind_and_preserve_security[compose.yaml]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_complete_candidates_replace_file_bind_and_preserve_security[compose.production.yaml]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_complete_candidates_replace_file_bind_and_preserve_security[compose.public-beta.vps.yaml]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_complete_candidates_replace_file_bind_and_preserve_security[compose.public-beta-test.yaml]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[old-bind]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[old-short-bind]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[rw]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[auto-create]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[extra-bind-option]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[duplicate]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[nested]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[ancestor-target]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[rw-alias]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[ro-alias]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[other-service-alias]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[child-alias]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[relative]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[dot-dot]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[double-slash]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[file-source]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[old-env]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[wrong-path]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[wrong-version]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[root-gid]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[ambiguous-gid]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[missing-group]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[root-user]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[unknown-mount]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[tmpfs-mask]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[inherited]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[secret-mount]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_compose_rejects_legacy_aliases_and_ambiguity[driver-alias]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_yaml_duplicates_and_merges_fail",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_actual_inspect_model_and_diagnostic_only_legacy",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_inspect_model_rejects_unsafe_running_mounts[rw]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_inspect_model_rejects_unsafe_running_mounts[old]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_inspect_model_rejects_unsafe_running_mounts[nested]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_inspect_model_rejects_unsafe_running_mounts[alias]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_inspect_model_rejects_unsafe_running_mounts[other-container-alias]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_inspect_model_rejects_unsafe_running_mounts[user]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_inspect_model_rejects_unsafe_running_mounts[group]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_inspect_model_rejects_unsafe_running_mounts[environment]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_inspect_model_rejects_unsafe_running_mounts[duplicate-env]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_inspect_model_rejects_unsafe_running_mounts[missing-api]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_inspect_model_rejects_unsafe_running_mounts[duplicate-api]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_posix_metadata_model_accepts_and_pins_directory",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_posix_metadata_model_rejects_unsafe_sources[dir-mode]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_posix_metadata_model_rejects_unsafe_sources[dir-owner]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_posix_metadata_model_rejects_unsafe_sources[dir-group]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_posix_metadata_model_rejects_unsafe_sources[dir-symlink]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_posix_metadata_model_rejects_unsafe_sources[file-mode]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_posix_metadata_model_rejects_unsafe_sources[file-owner]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_posix_metadata_model_rejects_unsafe_sources[file-group]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_posix_metadata_model_rejects_unsafe_sources[file-hardlink]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_posix_metadata_model_rejects_unsafe_sources[file-symlink]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_posix_metadata_model_rejects_unsafe_sources[fifo]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_posix_metadata_model_rejects_unsafe_sources[device]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_posix_metadata_model_rejects_unsafe_sources[oversized]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_posix_metadata_model_rejects_unsafe_sources[parent-symlink]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_posix_metadata_model_rejects_unsafe_sources[parent-writable]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_posix_metadata_model_rejects_unsafe_sources[parent-owner]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_posix_metadata_model_rejects_unsafe_sources[deployment]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_posix_metadata_model_rejects_unsafe_sources[data-root]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_posix_metadata_model_rejects_unsafe_sources[control-parent-of-release]",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_missing_source_and_extra_entries_fail",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_atomic_publisher_order_and_failure_boundaries",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_publisher_sets_owner_then_mode_before_accepting_metadata",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_operational_entry_points_are_disabled_and_helpers_attested",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_beta_lock_location_is_independent_of_control_directory",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_backup_local_rejects_old_contract_before_external_work",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_deploy_and_beta_guards_accept_new_shape_and_reject_old",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_candidate_backend_and_harness_unchanged",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_static_lab_recipe_cannot_start_application_or_network",
+    "outcome": "passed",
+    "properties": {}
+  },
+  {
+    "nodeid": "tests/test_recovery_directory.py::test_backup_preflight_reaches_new_host_policy_before_container_commands",
+    "outcome": "failed",
+    "properties": {}
+  }
+]

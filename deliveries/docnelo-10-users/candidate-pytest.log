@@ -1,0 +1,1736 @@
+.........{"timestamp":"2026-10-31T16:26:19.077Z","level":"INFO","service":"documind-api","event":"auth.login.success","operation":"login","outcome":"success","request_id":"5b4e0c83893645c9be4767f0d09d09bc","http_status":200,"reason_code":"completed"}
+...........{"timestamp":"2026-10-31T16:26:27.203Z","level":"INFO","service":"documind-api","event":"account.registration.requested","operation":"register","outcome":"success","request_id":"6e69d35b24a247b9813f07fcaccdc3b6","http_status":202,"reason_code":"completed"}
+....{"timestamp":"2026-10-31T16:26:35.833Z","level":"INFO","service":"documind-api","event":"account.registration.requested","operation":"register","outcome":"success","request_id":"07d2b97c294b49f2980b1e14d690d3f2","http_status":202,"reason_code":"completed"}
+.{"timestamp":"2026-10-31T16:26:37.474Z","level":"INFO","service":"documind-api","event":"auth.login.success","operation":"login","outcome":"success","request_id":"7e29bf3f39544e729ab00b696f98c6c5","http_status":200,"reason_code":"completed"}
+.........{"timestamp":"2026-10-31T16:26:44.166Z","level":"INFO","service":"documind-api","event":"account.registration.requested","operation":"register","outcome":"success","request_id":"29fdcced74944e7db400e30ba480e08f","http_status":202,"reason_code":"quota"}
+....{"timestamp":"2026-10-31T16:26:47.531Z","level":"INFO","service":"documind-api","event":"account.email.verified","operation":"account","outcome":"success","request_id":"1ad19510c07c4eb7b1c0c008d84224f3","http_status":200,"reason_code":"completed"}
+...............................E.E [ 37%]
+.E.E.E.E.E.E.E{"timestamp":"2026-10-31T16:27:39.046Z","level":"WARNING","service":"documind-api","event":"rate_limit.exceeded","operation":"documents","outcome":"denied","request_id":"26c21b284dfa4e97a5a995453e5b53bd","http_status":429,"reason_code":"rate_limit"}
+.E........................................................ [ 71%]
+......................................................                   [100%]
+==================================== ERRORS ====================================
+_ ERROR at teardown of test_invitation_only_registration_email_login_ownership_and_one_use _
+
+app = <fastapi.applications.FastAPI object at 0x79617579ae90>
+
+    @pytest.fixture
+    def client(app):
+>       with TestClient(app) as connection:
+             ^^^^^^^^^^^^^^^
+
+tests/conftest.py:86: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:584: in __exit__
+    self.exit_stack.close()
+/usr/local/lib/python3.13/contextlib.py:627: in close
+    self.__exit__(None, None, None)
+/usr/local/lib/python3.13/contextlib.py:619: in __exit__
+    raise exc
+/usr/local/lib/python3.13/contextlib.py:604: in __exit__
+    if cb(*exc_details):
+       ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:482: in _exit_wrapper
+    callback(*args, **kwds)
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:576: in wait_shutdown
+    portal.call(self.wait_shutdown)
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:340: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:460: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:402: in __get_result
+    raise self._exception
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:624: in wait_shutdown
+    await receive()
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:614: in receive
+    self.task.result()
+/usr/local/lib/python3.13/concurrent/futures/_base.py:453: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:402: in __get_result
+    raise self._exception
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:589: in lifespan
+    await self.app(scope, self.stream_receive.receive, self.stream_send.send)
+/usr/local/lib/python3.13/site-packages/fastapi/applications.py:1181: in __call__
+    await lifespan(
+/usr/local/lib/python3.13/site-packages/fastapi/telemetry/_runtime.py:238: in lifespan
+    await app(scope, wrapped_receive, wrapped_send)
+/usr/local/lib/python3.13/site-packages/starlette/applications.py:96: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/middleware/errors.py:151: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/telemetry/_asgi.py:151: in __call__
+    await self.app(scope, receive, send)
+backend/lite_admissions.py:244: in __call__
+    await self.app(scope, receive, send)
+backend/recovery_quarantine.py:60: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/audit_middleware.py:76: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/upload_admission.py:84: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/upload_admission.py:93: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/main.py:36: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/middleware/exceptions.py:49: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/routing.py:678: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:2796: in app
+    await self.lifespan(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/routing.py:656: in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+backend/main.py:152: in lifespan
+    await asyncio.to_thread(app.state.summary_worker.stop)
+/usr/local/lib/python3.13/asyncio/threads.py:26: in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/thread.py:59: in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/ai/long_summary.py:177: in stop
+    self.thread.join(timeout=self.app.state.settings.ai_timeout_seconds+5)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Thread(documind-long-summary, initial daemon)>, timeout = 35.0
+
+    def join(self, timeout=None):
+        """Wait until the thread terminates.
+    
+        This blocks the calling thread until the thread whose join() method is
+        called terminates -- either normally or through an unhandled exception
+        or until the optional timeout occurs.
+    
+        When the timeout argument is present and not None, it should be a
+        floating-point number specifying a timeout for the operation in seconds
+        (or fractions thereof). As join() always returns None, you must call
+        is_alive() after join() to decide whether a timeout happened -- if the
+        thread is still alive, the join() call timed out.
+    
+        When the timeout argument is not present or None, the operation will
+        block until the thread terminates.
+    
+        A thread can be join()ed many times.
+    
+        join() raises a RuntimeError if an attempt is made to join the current
+        thread as that would cause a deadlock. It is also an error to join() a
+        thread before it has been started and attempts to do so raises the same
+        exception.
+    
+        """
+        if not self._initialized:
+            raise RuntimeError("Thread.__init__() not called")
+        if not self._started.is_set():
+>           raise RuntimeError("cannot join thread before it is started")
+E           RuntimeError: cannot join thread before it is started
+
+/usr/local/lib/python3.13/threading.py:1086: RuntimeError
+----------------------------- Captured stdout call -----------------------------
+{"timestamp":"2026-10-31T16:27:14.454Z","level":"WARNING","service":"documind-api","event":"account.registration.denied","operation":"register","outcome":"denied","request_id":"cb216cb1b8a04fb1ac060d7c3a03f21a","http_status":403,"reason_code":"invalid_request"}
+{"timestamp":"2026-10-31T16:27:14.461Z","level":"WARNING","service":"documind-api","event":"account.registration.denied","operation":"register","outcome":"denied","request_id":"a6dc36d59c7646afbf1dc9a544f5dcd1","http_status":400,"reason_code":"invalid_request"}
+{"timestamp":"2026-10-31T16:27:14.464Z","level":"WARNING","service":"documind-api","event":"account.registration.denied","operation":"register","outcome":"denied","request_id":"06376577366e4fdb8406707fa2a0d1a8","http_status":422,"reason_code":"invalid_request"}
+{"timestamp":"2026-10-31T16:27:14.584Z","level":"INFO","service":"documind-api","event":"account.created","operation":"register","outcome":"success","request_id":"5a2d976ba18142c8a67ef3179dea125f","http_status":201,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:27:14.589Z","level":"WARNING","service":"documind-api","event":"account.registration.denied","operation":"register","outcome":"denied","request_id":"1cf3be3ed6b4483ba7899e174db6e50c","http_status":400,"reason_code":"invalid_request"}
+{"timestamp":"2026-10-31T16:27:14.703Z","level":"INFO","service":"documind-api","event":"auth.login.success","operation":"login","outcome":"success","request_id":"2bea75424ac84cfca5d48d7fad058d20","http_status":200,"reason_code":"completed"}
+____ ERROR at teardown of test_legacy_scrypt_upgrade_without_changing_owner ____
+
+app = <fastapi.applications.FastAPI object at 0x7961764d7890>
+
+    @pytest.fixture
+    def client(app):
+>       with TestClient(app) as connection:
+             ^^^^^^^^^^^^^^^
+
+tests/conftest.py:86: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:584: in __exit__
+    self.exit_stack.close()
+/usr/local/lib/python3.13/contextlib.py:627: in close
+    self.__exit__(None, None, None)
+/usr/local/lib/python3.13/contextlib.py:619: in __exit__
+    raise exc
+/usr/local/lib/python3.13/contextlib.py:604: in __exit__
+    if cb(*exc_details):
+       ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:482: in _exit_wrapper
+    callback(*args, **kwds)
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:576: in wait_shutdown
+    portal.call(self.wait_shutdown)
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:340: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:460: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:402: in __get_result
+    raise self._exception
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:624: in wait_shutdown
+    await receive()
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:614: in receive
+    self.task.result()
+/usr/local/lib/python3.13/concurrent/futures/_base.py:453: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:402: in __get_result
+    raise self._exception
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:589: in lifespan
+    await self.app(scope, self.stream_receive.receive, self.stream_send.send)
+/usr/local/lib/python3.13/site-packages/fastapi/applications.py:1181: in __call__
+    await lifespan(
+/usr/local/lib/python3.13/site-packages/fastapi/telemetry/_runtime.py:238: in lifespan
+    await app(scope, wrapped_receive, wrapped_send)
+/usr/local/lib/python3.13/site-packages/starlette/applications.py:96: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/middleware/errors.py:151: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/telemetry/_asgi.py:151: in __call__
+    await self.app(scope, receive, send)
+backend/lite_admissions.py:244: in __call__
+    await self.app(scope, receive, send)
+backend/recovery_quarantine.py:60: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/audit_middleware.py:76: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/upload_admission.py:84: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/upload_admission.py:93: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/main.py:36: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/middleware/exceptions.py:49: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/routing.py:678: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:2796: in app
+    await self.lifespan(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/routing.py:656: in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+backend/main.py:152: in lifespan
+    await asyncio.to_thread(app.state.summary_worker.stop)
+/usr/local/lib/python3.13/asyncio/threads.py:26: in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/thread.py:59: in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/ai/long_summary.py:177: in stop
+    self.thread.join(timeout=self.app.state.settings.ai_timeout_seconds+5)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Thread(documind-long-summary, initial daemon)>, timeout = 35.0
+
+    def join(self, timeout=None):
+        """Wait until the thread terminates.
+    
+        This blocks the calling thread until the thread whose join() method is
+        called terminates -- either normally or through an unhandled exception
+        or until the optional timeout occurs.
+    
+        When the timeout argument is present and not None, it should be a
+        floating-point number specifying a timeout for the operation in seconds
+        (or fractions thereof). As join() always returns None, you must call
+        is_alive() after join() to decide whether a timeout happened -- if the
+        thread is still alive, the join() call timed out.
+    
+        When the timeout argument is not present or None, the operation will
+        block until the thread terminates.
+    
+        A thread can be join()ed many times.
+    
+        join() raises a RuntimeError if an attempt is made to join the current
+        thread as that would cause a deadlock. It is also an error to join() a
+        thread before it has been started and attempts to do so raises the same
+        exception.
+    
+        """
+        if not self._initialized:
+            raise RuntimeError("Thread.__init__() not called")
+        if not self._started.is_set():
+>           raise RuntimeError("cannot join thread before it is started")
+E           RuntimeError: cannot join thread before it is started
+
+/usr/local/lib/python3.13/threading.py:1086: RuntimeError
+----------------------------- Captured stdout call -----------------------------
+{"timestamp":"2026-10-31T16:27:16.507Z","level":"INFO","service":"documind-api","event":"auth.login.success","operation":"login","outcome":"success","request_id":"9ea4f96192e94cdd813e1f6d558cf0c1","http_status":200,"reason_code":"completed"}
+_ ERROR at teardown of test_wrong_password_generic_recovery_expired_and_single_use_reset _
+
+app = <fastapi.applications.FastAPI object at 0x7961758a4a50>
+
+    @pytest.fixture
+    def client(app):
+>       with TestClient(app) as connection:
+             ^^^^^^^^^^^^^^^
+
+tests/conftest.py:86: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:584: in __exit__
+    self.exit_stack.close()
+/usr/local/lib/python3.13/contextlib.py:627: in close
+    self.__exit__(None, None, None)
+/usr/local/lib/python3.13/contextlib.py:619: in __exit__
+    raise exc
+/usr/local/lib/python3.13/contextlib.py:604: in __exit__
+    if cb(*exc_details):
+       ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:482: in _exit_wrapper
+    callback(*args, **kwds)
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:576: in wait_shutdown
+    portal.call(self.wait_shutdown)
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:340: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:460: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:402: in __get_result
+    raise self._exception
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:624: in wait_shutdown
+    await receive()
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:614: in receive
+    self.task.result()
+/usr/local/lib/python3.13/concurrent/futures/_base.py:453: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:402: in __get_result
+    raise self._exception
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:589: in lifespan
+    await self.app(scope, self.stream_receive.receive, self.stream_send.send)
+/usr/local/lib/python3.13/site-packages/fastapi/applications.py:1181: in __call__
+    await lifespan(
+/usr/local/lib/python3.13/site-packages/fastapi/telemetry/_runtime.py:238: in lifespan
+    await app(scope, wrapped_receive, wrapped_send)
+/usr/local/lib/python3.13/site-packages/starlette/applications.py:96: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/middleware/errors.py:151: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/telemetry/_asgi.py:151: in __call__
+    await self.app(scope, receive, send)
+backend/lite_admissions.py:244: in __call__
+    await self.app(scope, receive, send)
+backend/recovery_quarantine.py:60: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/audit_middleware.py:76: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/upload_admission.py:84: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/upload_admission.py:93: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/main.py:36: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/middleware/exceptions.py:49: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/routing.py:678: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:2796: in app
+    await self.lifespan(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/routing.py:656: in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+backend/main.py:152: in lifespan
+    await asyncio.to_thread(app.state.summary_worker.stop)
+/usr/local/lib/python3.13/asyncio/threads.py:26: in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/thread.py:59: in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/ai/long_summary.py:177: in stop
+    self.thread.join(timeout=self.app.state.settings.ai_timeout_seconds+5)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Thread(documind-long-summary, initial daemon)>, timeout = 35.0
+
+    def join(self, timeout=None):
+        """Wait until the thread terminates.
+    
+        This blocks the calling thread until the thread whose join() method is
+        called terminates -- either normally or through an unhandled exception
+        or until the optional timeout occurs.
+    
+        When the timeout argument is present and not None, it should be a
+        floating-point number specifying a timeout for the operation in seconds
+        (or fractions thereof). As join() always returns None, you must call
+        is_alive() after join() to decide whether a timeout happened -- if the
+        thread is still alive, the join() call timed out.
+    
+        When the timeout argument is not present or None, the operation will
+        block until the thread terminates.
+    
+        A thread can be join()ed many times.
+    
+        join() raises a RuntimeError if an attempt is made to join the current
+        thread as that would cause a deadlock. It is also an error to join() a
+        thread before it has been started and attempts to do so raises the same
+        exception.
+    
+        """
+        if not self._initialized:
+            raise RuntimeError("Thread.__init__() not called")
+        if not self._started.is_set():
+>           raise RuntimeError("cannot join thread before it is started")
+E           RuntimeError: cannot join thread before it is started
+
+/usr/local/lib/python3.13/threading.py:1086: RuntimeError
+----------------------------- Captured stdout call -----------------------------
+{"timestamp":"2026-10-31T16:27:17.683Z","level":"WARNING","service":"documind-api","event":"auth.login.failure","operation":"login","outcome":"denied","request_id":"69df33b943204abd9ea52dc0777dc4dc","http_status":401,"reason_code":"invalid_identity"}
+{"timestamp":"2026-10-31T16:27:17.703Z","level":"INFO","service":"documind-api","event":"auth.password_reset.requested","operation":"reset_request","outcome":"success","request_id":"7f45b18172754af6a0c2be30a15aecab","http_status":202,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:27:17.707Z","level":"INFO","service":"documind-api","event":"auth.password_reset.requested","operation":"reset_request","outcome":"success","request_id":"5f1f1a7967a946d2b769dab01b110cba","http_status":202,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:27:17.821Z","level":"INFO","service":"documind-api","event":"auth.login.success","operation":"login","outcome":"success","request_id":"8634954f37114d6097362381688e2372","http_status":200,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:27:17.948Z","level":"INFO","service":"documind-api","event":"auth.password_reset.completed","operation":"reset_complete","outcome":"success","request_id":"54093ca8e2524395a00e79d2dcc72fc2","http_status":200,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:27:17.951Z","level":"WARNING","service":"documind-api","event":"auth.session.invalid","operation":"account","outcome":"denied","request_id":"22f6851ee14a4abcb67ddfce8ca2e822","http_status":401,"reason_code":"invalid_session"}
+_ ERROR at teardown of test_session_revocation_scoped_to_account_and_password_change _
+
+app = <fastapi.applications.FastAPI object at 0x79617572e0d0>
+
+    @pytest.fixture
+    def client(app):
+>       with TestClient(app) as connection:
+             ^^^^^^^^^^^^^^^
+
+tests/conftest.py:86: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:584: in __exit__
+    self.exit_stack.close()
+/usr/local/lib/python3.13/contextlib.py:627: in close
+    self.__exit__(None, None, None)
+/usr/local/lib/python3.13/contextlib.py:619: in __exit__
+    raise exc
+/usr/local/lib/python3.13/contextlib.py:604: in __exit__
+    if cb(*exc_details):
+       ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:482: in _exit_wrapper
+    callback(*args, **kwds)
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:576: in wait_shutdown
+    portal.call(self.wait_shutdown)
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:340: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:460: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:402: in __get_result
+    raise self._exception
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:624: in wait_shutdown
+    await receive()
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:614: in receive
+    self.task.result()
+/usr/local/lib/python3.13/concurrent/futures/_base.py:453: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:402: in __get_result
+    raise self._exception
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:589: in lifespan
+    await self.app(scope, self.stream_receive.receive, self.stream_send.send)
+/usr/local/lib/python3.13/site-packages/fastapi/applications.py:1181: in __call__
+    await lifespan(
+/usr/local/lib/python3.13/site-packages/fastapi/telemetry/_runtime.py:238: in lifespan
+    await app(scope, wrapped_receive, wrapped_send)
+/usr/local/lib/python3.13/site-packages/starlette/applications.py:96: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/middleware/errors.py:151: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/telemetry/_asgi.py:151: in __call__
+    await self.app(scope, receive, send)
+backend/lite_admissions.py:244: in __call__
+    await self.app(scope, receive, send)
+backend/recovery_quarantine.py:60: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/audit_middleware.py:76: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/upload_admission.py:84: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/upload_admission.py:93: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/main.py:36: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/middleware/exceptions.py:49: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/routing.py:678: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:2796: in app
+    await self.lifespan(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/routing.py:656: in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+backend/main.py:152: in lifespan
+    await asyncio.to_thread(app.state.summary_worker.stop)
+/usr/local/lib/python3.13/asyncio/threads.py:26: in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/thread.py:59: in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/ai/long_summary.py:177: in stop
+    self.thread.join(timeout=self.app.state.settings.ai_timeout_seconds+5)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Thread(documind-long-summary, initial daemon)>, timeout = 35.0
+
+    def join(self, timeout=None):
+        """Wait until the thread terminates.
+    
+        This blocks the calling thread until the thread whose join() method is
+        called terminates -- either normally or through an unhandled exception
+        or until the optional timeout occurs.
+    
+        When the timeout argument is present and not None, it should be a
+        floating-point number specifying a timeout for the operation in seconds
+        (or fractions thereof). As join() always returns None, you must call
+        is_alive() after join() to decide whether a timeout happened -- if the
+        thread is still alive, the join() call timed out.
+    
+        When the timeout argument is not present or None, the operation will
+        block until the thread terminates.
+    
+        A thread can be join()ed many times.
+    
+        join() raises a RuntimeError if an attempt is made to join the current
+        thread as that would cause a deadlock. It is also an error to join() a
+        thread before it has been started and attempts to do so raises the same
+        exception.
+    
+        """
+        if not self._initialized:
+            raise RuntimeError("Thread.__init__() not called")
+        if not self._started.is_set():
+>           raise RuntimeError("cannot join thread before it is started")
+E           RuntimeError: cannot join thread before it is started
+
+/usr/local/lib/python3.13/threading.py:1086: RuntimeError
+----------------------------- Captured stdout call -----------------------------
+{"timestamp":"2026-10-31T16:27:19.093Z","level":"INFO","service":"documind-api","event":"auth.login.success","operation":"login","outcome":"success","request_id":"6d9ba4de955640f0afa3b54ed6f867c0","http_status":200,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:27:19.207Z","level":"INFO","service":"documind-api","event":"auth.login.success","operation":"login","outcome":"success","request_id":"4cdcf21e624846a49c5740777bce10b6","http_status":200,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:27:19.359Z","level":"INFO","service":"documind-api","event":"auth.login.success","operation":"login","outcome":"success","request_id":"78359b3da09c410fb52be976095254f5","http_status":200,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:27:19.366Z","level":"WARNING","service":"documind-api","event":"access.denied","operation":"session_revoke","outcome":"denied","request_id":"26b33dee496f4edc821474577aaa8989","http_status":404,"reason_code":"denied"}
+{"timestamp":"2026-10-31T16:27:19.372Z","level":"WARNING","service":"documind-api","event":"auth.session.revoked","operation":"session_revoke","outcome":"success","request_id":"eb63aedea76549c79f0f13e0cef8c6cf","http_status":200,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:27:19.374Z","level":"WARNING","service":"documind-api","event":"auth.session.invalid","operation":"account","outcome":"denied","request_id":"4386ad03679042209d19ac7d8d416ebb","http_status":401,"reason_code":"invalid_session"}
+{"timestamp":"2026-10-31T16:27:19.606Z","level":"INFO","service":"documind-api","event":"auth.password.changed","operation":"password_change","outcome":"success","request_id":"bd3e7382f93d457385aa2384c7352b8b","http_status":200,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:27:19.609Z","level":"WARNING","service":"documind-api","event":"auth.session.invalid","operation":"account","outcome":"denied","request_id":"339f34dc8a5149dc993136218ab12fa3","http_status":401,"reason_code":"invalid_session"}
+_ ERROR at teardown of test_document_quota_legacy_switch_and_cross_owner_access _
+
+app = <fastapi.applications.FastAPI object at 0x796167d9e350>
+
+    @pytest.fixture
+    def client(app):
+>       with TestClient(app) as connection:
+             ^^^^^^^^^^^^^^^
+
+tests/conftest.py:86: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:584: in __exit__
+    self.exit_stack.close()
+/usr/local/lib/python3.13/contextlib.py:627: in close
+    self.__exit__(None, None, None)
+/usr/local/lib/python3.13/contextlib.py:619: in __exit__
+    raise exc
+/usr/local/lib/python3.13/contextlib.py:604: in __exit__
+    if cb(*exc_details):
+       ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:482: in _exit_wrapper
+    callback(*args, **kwds)
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:576: in wait_shutdown
+    portal.call(self.wait_shutdown)
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:340: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:460: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:402: in __get_result
+    raise self._exception
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:624: in wait_shutdown
+    await receive()
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:614: in receive
+    self.task.result()
+/usr/local/lib/python3.13/concurrent/futures/_base.py:453: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:402: in __get_result
+    raise self._exception
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:589: in lifespan
+    await self.app(scope, self.stream_receive.receive, self.stream_send.send)
+/usr/local/lib/python3.13/site-packages/fastapi/applications.py:1181: in __call__
+    await lifespan(
+/usr/local/lib/python3.13/site-packages/fastapi/telemetry/_runtime.py:238: in lifespan
+    await app(scope, wrapped_receive, wrapped_send)
+/usr/local/lib/python3.13/site-packages/starlette/applications.py:96: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/middleware/errors.py:151: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/telemetry/_asgi.py:151: in __call__
+    await self.app(scope, receive, send)
+backend/lite_admissions.py:244: in __call__
+    await self.app(scope, receive, send)
+backend/recovery_quarantine.py:60: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/audit_middleware.py:76: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/upload_admission.py:84: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/upload_admission.py:93: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/main.py:36: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/middleware/exceptions.py:49: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/routing.py:678: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:2796: in app
+    await self.lifespan(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/routing.py:656: in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+backend/main.py:152: in lifespan
+    await asyncio.to_thread(app.state.summary_worker.stop)
+/usr/local/lib/python3.13/asyncio/threads.py:26: in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/thread.py:59: in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/ai/long_summary.py:177: in stop
+    self.thread.join(timeout=self.app.state.settings.ai_timeout_seconds+5)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Thread(documind-long-summary, initial daemon)>, timeout = 35.0
+
+    def join(self, timeout=None):
+        """Wait until the thread terminates.
+    
+        This blocks the calling thread until the thread whose join() method is
+        called terminates -- either normally or through an unhandled exception
+        or until the optional timeout occurs.
+    
+        When the timeout argument is present and not None, it should be a
+        floating-point number specifying a timeout for the operation in seconds
+        (or fractions thereof). As join() always returns None, you must call
+        is_alive() after join() to decide whether a timeout happened -- if the
+        thread is still alive, the join() call timed out.
+    
+        When the timeout argument is not present or None, the operation will
+        block until the thread terminates.
+    
+        A thread can be join()ed many times.
+    
+        join() raises a RuntimeError if an attempt is made to join the current
+        thread as that would cause a deadlock. It is also an error to join() a
+        thread before it has been started and attempts to do so raises the same
+        exception.
+    
+        """
+        if not self._initialized:
+            raise RuntimeError("Thread.__init__() not called")
+        if not self._started.is_set():
+>           raise RuntimeError("cannot join thread before it is started")
+E           RuntimeError: cannot join thread before it is started
+
+/usr/local/lib/python3.13/threading.py:1086: RuntimeError
+----------------------------- Captured stdout call -----------------------------
+{"timestamp":"2026-10-31T16:27:20.760Z","level":"INFO","service":"documind-api","event":"auth.login.success","operation":"login","outcome":"success","request_id":"baca9d7c8a3148c2b4173b5bcf67a4ee","http_status":200,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:27:23.356Z","level":"INFO","service":"documind-api","event":"upload.completed","operation":"upload","outcome":"success","request_id":"fe82c08674b94a659b07e38f3c3af942","http_status":201,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:27:25.984Z","level":"WARNING","service":"documind-api","event":"quota.exceeded","operation":"upload","outcome":"denied","request_id":"6dbeed58f5334e6caecd58c825ef3922","http_status":413,"reason_code":"quota"}
+{"timestamp":"2026-10-31T16:27:26.099Z","level":"INFO","service":"documind-api","event":"auth.login.success","operation":"login","outcome":"success","request_id":"da1d6ad3910e469180a0e5a734faf4ea","http_status":200,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:27:26.106Z","level":"WARNING","service":"documind-api","event":"access.cross_owner.denied","operation":"documents","outcome":"denied","request_id":"df192cbf065f40e4ad586470f9da99ab","http_status":404,"reason_code":"not_owner"}
+{"timestamp":"2026-10-31T16:27:26.114Z","level":"WARNING","service":"documind-api","event":"access.cross_owner.denied","operation":"documents","outcome":"denied","request_id":"2b6941a448044d3ab8f840f7e87da281","http_status":404,"reason_code":"not_owner"}
+{"timestamp":"2026-10-31T16:27:26.137Z","level":"WARNING","service":"documind-api","event":"access.cross_owner.denied","operation":"documents","outcome":"denied","request_id":"a6c7a42a1a83494d9ca02c54bdaf8bb2","http_status":404,"reason_code":"not_owner"}
+{"timestamp":"2026-10-31T16:27:26.146Z","level":"WARNING","service":"documind-api","event":"access.cross_owner.denied","operation":"documents","outcome":"denied","request_id":"0e6a46a781fb47c18fba53af5784592c","http_status":404,"reason_code":"not_owner"}
+{"timestamp":"2026-10-31T16:27:26.148Z","level":"WARNING","service":"documind-api","event":"auth.session.invalid","operation":"documents","outcome":"denied","request_id":"d22004dabafa49ee8a65a07735cc0c1f","http_status":401,"reason_code":"invalid_session"}
+_ ERROR at teardown of test_deletion_request_revokes_keys_and_purge_removes_content _
+
+app = <fastapi.applications.FastAPI object at 0x796167b13d90>
+
+    @pytest.fixture
+    def client(app):
+>       with TestClient(app) as connection:
+             ^^^^^^^^^^^^^^^
+
+tests/conftest.py:86: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:584: in __exit__
+    self.exit_stack.close()
+/usr/local/lib/python3.13/contextlib.py:627: in close
+    self.__exit__(None, None, None)
+/usr/local/lib/python3.13/contextlib.py:619: in __exit__
+    raise exc
+/usr/local/lib/python3.13/contextlib.py:604: in __exit__
+    if cb(*exc_details):
+       ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:482: in _exit_wrapper
+    callback(*args, **kwds)
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:576: in wait_shutdown
+    portal.call(self.wait_shutdown)
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:340: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:460: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:402: in __get_result
+    raise self._exception
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:624: in wait_shutdown
+    await receive()
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:614: in receive
+    self.task.result()
+/usr/local/lib/python3.13/concurrent/futures/_base.py:453: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:402: in __get_result
+    raise self._exception
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:589: in lifespan
+    await self.app(scope, self.stream_receive.receive, self.stream_send.send)
+/usr/local/lib/python3.13/site-packages/fastapi/applications.py:1181: in __call__
+    await lifespan(
+/usr/local/lib/python3.13/site-packages/fastapi/telemetry/_runtime.py:238: in lifespan
+    await app(scope, wrapped_receive, wrapped_send)
+/usr/local/lib/python3.13/site-packages/starlette/applications.py:96: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/middleware/errors.py:151: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/telemetry/_asgi.py:151: in __call__
+    await self.app(scope, receive, send)
+backend/lite_admissions.py:244: in __call__
+    await self.app(scope, receive, send)
+backend/recovery_quarantine.py:60: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/audit_middleware.py:76: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/upload_admission.py:84: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/upload_admission.py:93: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/main.py:36: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/middleware/exceptions.py:49: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/routing.py:678: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:2796: in app
+    await self.lifespan(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/routing.py:656: in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+backend/main.py:152: in lifespan
+    await asyncio.to_thread(app.state.summary_worker.stop)
+/usr/local/lib/python3.13/asyncio/threads.py:26: in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/thread.py:59: in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/ai/long_summary.py:177: in stop
+    self.thread.join(timeout=self.app.state.settings.ai_timeout_seconds+5)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Thread(documind-long-summary, initial daemon)>, timeout = 35.0
+
+    def join(self, timeout=None):
+        """Wait until the thread terminates.
+    
+        This blocks the calling thread until the thread whose join() method is
+        called terminates -- either normally or through an unhandled exception
+        or until the optional timeout occurs.
+    
+        When the timeout argument is present and not None, it should be a
+        floating-point number specifying a timeout for the operation in seconds
+        (or fractions thereof). As join() always returns None, you must call
+        is_alive() after join() to decide whether a timeout happened -- if the
+        thread is still alive, the join() call timed out.
+    
+        When the timeout argument is not present or None, the operation will
+        block until the thread terminates.
+    
+        A thread can be join()ed many times.
+    
+        join() raises a RuntimeError if an attempt is made to join the current
+        thread as that would cause a deadlock. It is also an error to join() a
+        thread before it has been started and attempts to do so raises the same
+        exception.
+    
+        """
+        if not self._initialized:
+            raise RuntimeError("Thread.__init__() not called")
+        if not self._started.is_set():
+>           raise RuntimeError("cannot join thread before it is started")
+E           RuntimeError: cannot join thread before it is started
+
+/usr/local/lib/python3.13/threading.py:1086: RuntimeError
+----------------------------- Captured stdout call -----------------------------
+{"timestamp":"2026-10-31T16:27:27.325Z","level":"INFO","service":"documind-api","event":"auth.login.success","operation":"login","outcome":"success","request_id":"8ad445234ae94fc1a135df4d323900fc","http_status":200,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:27:29.982Z","level":"INFO","service":"documind-api","event":"upload.completed","operation":"upload","outcome":"success","request_id":"10382a7300db42d99481abf58cca647b","http_status":201,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:27:30.109Z","level":"WARNING","service":"documind-api","event":"access.denied","operation":"deletion_request","outcome":"denied","request_id":"f46b2a3754314a2984d9e42bcd1659c1","http_status":401,"reason_code":"invalid_identity"}
+{"timestamp":"2026-10-31T16:27:30.230Z","level":"INFO","service":"documind-api","event":"account.deletion.requested","operation":"deletion_request","outcome":"success","request_id":"cf36f80ccabe42eaa6a8ea04050ccb74","http_status":202,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:27:30.232Z","level":"WARNING","service":"documind-api","event":"auth.session.invalid","operation":"documents","outcome":"denied","request_id":"7844a8c1b4e54c6bbcfb38209438ea78","http_status":401,"reason_code":"invalid_session"}
+{"timestamp":"2026-10-31T16:27:30.257Z","level":"INFO","service":"documind-api","event":"account.deletion.completed","operation":"system","outcome":"success","reason_code":"completed"}
+_ ERROR at teardown of test_clear_ai_results_and_embeddings_preserves_document_and_billing _
+
+app = <fastapi.applications.FastAPI object at 0x796166e865d0>
+
+    @pytest.fixture
+    def client(app):
+>       with TestClient(app) as connection:
+             ^^^^^^^^^^^^^^^
+
+tests/conftest.py:86: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:584: in __exit__
+    self.exit_stack.close()
+/usr/local/lib/python3.13/contextlib.py:627: in close
+    self.__exit__(None, None, None)
+/usr/local/lib/python3.13/contextlib.py:619: in __exit__
+    raise exc
+/usr/local/lib/python3.13/contextlib.py:604: in __exit__
+    if cb(*exc_details):
+       ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:482: in _exit_wrapper
+    callback(*args, **kwds)
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:576: in wait_shutdown
+    portal.call(self.wait_shutdown)
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:340: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:460: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:402: in __get_result
+    raise self._exception
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:624: in wait_shutdown
+    await receive()
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:614: in receive
+    self.task.result()
+/usr/local/lib/python3.13/concurrent/futures/_base.py:453: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:402: in __get_result
+    raise self._exception
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:589: in lifespan
+    await self.app(scope, self.stream_receive.receive, self.stream_send.send)
+/usr/local/lib/python3.13/site-packages/fastapi/applications.py:1181: in __call__
+    await lifespan(
+/usr/local/lib/python3.13/site-packages/fastapi/telemetry/_runtime.py:238: in lifespan
+    await app(scope, wrapped_receive, wrapped_send)
+/usr/local/lib/python3.13/site-packages/starlette/applications.py:96: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/middleware/errors.py:151: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/telemetry/_asgi.py:151: in __call__
+    await self.app(scope, receive, send)
+backend/lite_admissions.py:244: in __call__
+    await self.app(scope, receive, send)
+backend/recovery_quarantine.py:60: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/audit_middleware.py:76: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/upload_admission.py:84: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/upload_admission.py:93: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/main.py:36: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/middleware/exceptions.py:49: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/routing.py:678: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:2796: in app
+    await self.lifespan(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/routing.py:656: in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+backend/main.py:152: in lifespan
+    await asyncio.to_thread(app.state.summary_worker.stop)
+/usr/local/lib/python3.13/asyncio/threads.py:26: in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/thread.py:59: in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/ai/long_summary.py:177: in stop
+    self.thread.join(timeout=self.app.state.settings.ai_timeout_seconds+5)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Thread(documind-long-summary, initial daemon)>, timeout = 35.0
+
+    def join(self, timeout=None):
+        """Wait until the thread terminates.
+    
+        This blocks the calling thread until the thread whose join() method is
+        called terminates -- either normally or through an unhandled exception
+        or until the optional timeout occurs.
+    
+        When the timeout argument is present and not None, it should be a
+        floating-point number specifying a timeout for the operation in seconds
+        (or fractions thereof). As join() always returns None, you must call
+        is_alive() after join() to decide whether a timeout happened -- if the
+        thread is still alive, the join() call timed out.
+    
+        When the timeout argument is not present or None, the operation will
+        block until the thread terminates.
+    
+        A thread can be join()ed many times.
+    
+        join() raises a RuntimeError if an attempt is made to join the current
+        thread as that would cause a deadlock. It is also an error to join() a
+        thread before it has been started and attempts to do so raises the same
+        exception.
+    
+        """
+        if not self._initialized:
+            raise RuntimeError("Thread.__init__() not called")
+        if not self._started.is_set():
+>           raise RuntimeError("cannot join thread before it is started")
+E           RuntimeError: cannot join thread before it is started
+
+/usr/local/lib/python3.13/threading.py:1086: RuntimeError
+----------------------------- Captured stdout call -----------------------------
+{"timestamp":"2026-10-31T16:27:31.304Z","level":"INFO","service":"documind-api","event":"auth.login.success","operation":"login","outcome":"success","request_id":"f88f2c6d40eb45dd95d873c2ff82f744","http_status":200,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:27:34.004Z","level":"INFO","service":"documind-api","event":"upload.completed","operation":"upload","outcome":"success","request_id":"ba961eab87e04fa68331794cb6b452f8","http_status":201,"reason_code":"completed"}
+_ ERROR at teardown of test_concurrent_imports_cannot_bypass_personal_document_quota _
+
+app = <fastapi.applications.FastAPI object at 0x796165d30f50>
+
+    @pytest.fixture
+    def client(app):
+>       with TestClient(app) as connection:
+             ^^^^^^^^^^^^^^^
+
+tests/conftest.py:86: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:584: in __exit__
+    self.exit_stack.close()
+/usr/local/lib/python3.13/contextlib.py:627: in close
+    self.__exit__(None, None, None)
+/usr/local/lib/python3.13/contextlib.py:619: in __exit__
+    raise exc
+/usr/local/lib/python3.13/contextlib.py:604: in __exit__
+    if cb(*exc_details):
+       ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:482: in _exit_wrapper
+    callback(*args, **kwds)
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:576: in wait_shutdown
+    portal.call(self.wait_shutdown)
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:340: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:460: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:402: in __get_result
+    raise self._exception
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:624: in wait_shutdown
+    await receive()
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:614: in receive
+    self.task.result()
+/usr/local/lib/python3.13/concurrent/futures/_base.py:453: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:402: in __get_result
+    raise self._exception
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:589: in lifespan
+    await self.app(scope, self.stream_receive.receive, self.stream_send.send)
+/usr/local/lib/python3.13/site-packages/fastapi/applications.py:1181: in __call__
+    await lifespan(
+/usr/local/lib/python3.13/site-packages/fastapi/telemetry/_runtime.py:238: in lifespan
+    await app(scope, wrapped_receive, wrapped_send)
+/usr/local/lib/python3.13/site-packages/starlette/applications.py:96: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/middleware/errors.py:151: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/telemetry/_asgi.py:151: in __call__
+    await self.app(scope, receive, send)
+backend/lite_admissions.py:244: in __call__
+    await self.app(scope, receive, send)
+backend/recovery_quarantine.py:60: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/audit_middleware.py:76: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/upload_admission.py:84: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/upload_admission.py:93: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/main.py:36: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/middleware/exceptions.py:49: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/routing.py:678: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:2796: in app
+    await self.lifespan(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/routing.py:656: in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+backend/main.py:152: in lifespan
+    await asyncio.to_thread(app.state.summary_worker.stop)
+/usr/local/lib/python3.13/asyncio/threads.py:26: in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/thread.py:59: in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/ai/long_summary.py:177: in stop
+    self.thread.join(timeout=self.app.state.settings.ai_timeout_seconds+5)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Thread(documind-long-summary, initial daemon)>, timeout = 35.0
+
+    def join(self, timeout=None):
+        """Wait until the thread terminates.
+    
+        This blocks the calling thread until the thread whose join() method is
+        called terminates -- either normally or through an unhandled exception
+        or until the optional timeout occurs.
+    
+        When the timeout argument is present and not None, it should be a
+        floating-point number specifying a timeout for the operation in seconds
+        (or fractions thereof). As join() always returns None, you must call
+        is_alive() after join() to decide whether a timeout happened -- if the
+        thread is still alive, the join() call timed out.
+    
+        When the timeout argument is not present or None, the operation will
+        block until the thread terminates.
+    
+        A thread can be join()ed many times.
+    
+        join() raises a RuntimeError if an attempt is made to join the current
+        thread as that would cause a deadlock. It is also an error to join() a
+        thread before it has been started and attempts to do so raises the same
+        exception.
+    
+        """
+        if not self._initialized:
+            raise RuntimeError("Thread.__init__() not called")
+        if not self._started.is_set():
+>           raise RuntimeError("cannot join thread before it is started")
+E           RuntimeError: cannot join thread before it is started
+
+/usr/local/lib/python3.13/threading.py:1086: RuntimeError
+----------------------------- Captured stdout call -----------------------------
+{"timestamp":"2026-10-31T16:27:35.552Z","level":"INFO","service":"documind-api","event":"auth.login.success","operation":"login","outcome":"success","request_id":"5f1a958d15174b04bba33a94837959d7","http_status":200,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:27:35.586Z","level":"INFO","service":"documind-api","event":"upload.completed","operation":"upload","outcome":"success","request_id":"a2155badb1a443d29574428ef50112cb","http_status":201,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:27:35.613Z","level":"WARNING","service":"documind-api","event":"quota.exceeded","operation":"upload","outcome":"denied","request_id":"588b41f14cea4f1ba870f2a10c022d2c","http_status":413,"reason_code":"quota"}
+_ ERROR at teardown of test_login_ip_limit_applies_across_different_usernames __
+
+app = <fastapi.applications.FastAPI object at 0x796165c09590>
+
+    @pytest.fixture
+    def client(app):
+>       with TestClient(app) as connection:
+             ^^^^^^^^^^^^^^^
+
+tests/conftest.py:86: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:584: in __exit__
+    self.exit_stack.close()
+/usr/local/lib/python3.13/contextlib.py:627: in close
+    self.__exit__(None, None, None)
+/usr/local/lib/python3.13/contextlib.py:619: in __exit__
+    raise exc
+/usr/local/lib/python3.13/contextlib.py:604: in __exit__
+    if cb(*exc_details):
+       ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:482: in _exit_wrapper
+    callback(*args, **kwds)
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:576: in wait_shutdown
+    portal.call(self.wait_shutdown)
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:340: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:460: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:402: in __get_result
+    raise self._exception
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:624: in wait_shutdown
+    await receive()
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:614: in receive
+    self.task.result()
+/usr/local/lib/python3.13/concurrent/futures/_base.py:453: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:402: in __get_result
+    raise self._exception
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:589: in lifespan
+    await self.app(scope, self.stream_receive.receive, self.stream_send.send)
+/usr/local/lib/python3.13/site-packages/fastapi/applications.py:1181: in __call__
+    await lifespan(
+/usr/local/lib/python3.13/site-packages/fastapi/telemetry/_runtime.py:238: in lifespan
+    await app(scope, wrapped_receive, wrapped_send)
+/usr/local/lib/python3.13/site-packages/starlette/applications.py:96: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/middleware/errors.py:151: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/telemetry/_asgi.py:151: in __call__
+    await self.app(scope, receive, send)
+backend/lite_admissions.py:244: in __call__
+    await self.app(scope, receive, send)
+backend/recovery_quarantine.py:60: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/audit_middleware.py:76: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/upload_admission.py:84: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/upload_admission.py:93: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/main.py:36: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/middleware/exceptions.py:49: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/routing.py:678: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:2796: in app
+    await self.lifespan(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/routing.py:656: in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+backend/main.py:152: in lifespan
+    await asyncio.to_thread(app.state.summary_worker.stop)
+/usr/local/lib/python3.13/asyncio/threads.py:26: in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/thread.py:59: in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/ai/long_summary.py:177: in stop
+    self.thread.join(timeout=self.app.state.settings.ai_timeout_seconds+5)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Thread(documind-long-summary, initial daemon)>, timeout = 35.0
+
+    def join(self, timeout=None):
+        """Wait until the thread terminates.
+    
+        This blocks the calling thread until the thread whose join() method is
+        called terminates -- either normally or through an unhandled exception
+        or until the optional timeout occurs.
+    
+        When the timeout argument is present and not None, it should be a
+        floating-point number specifying a timeout for the operation in seconds
+        (or fractions thereof). As join() always returns None, you must call
+        is_alive() after join() to decide whether a timeout happened -- if the
+        thread is still alive, the join() call timed out.
+    
+        When the timeout argument is not present or None, the operation will
+        block until the thread terminates.
+    
+        A thread can be join()ed many times.
+    
+        join() raises a RuntimeError if an attempt is made to join the current
+        thread as that would cause a deadlock. It is also an error to join() a
+        thread before it has been started and attempts to do so raises the same
+        exception.
+    
+        """
+        if not self._initialized:
+            raise RuntimeError("Thread.__init__() not called")
+        if not self._started.is_set():
+>           raise RuntimeError("cannot join thread before it is started")
+E           RuntimeError: cannot join thread before it is started
+
+/usr/local/lib/python3.13/threading.py:1086: RuntimeError
+----------------------------- Captured stdout call -----------------------------
+{"timestamp":"2026-10-31T16:27:36.768Z","level":"WARNING","service":"documind-api","event":"auth.login.failure","operation":"login","outcome":"denied","request_id":"1f71cfde5f2e403d97a07e29af83329f","http_status":401,"reason_code":"invalid_identity"}
+{"timestamp":"2026-10-31T16:27:36.885Z","level":"WARNING","service":"documind-api","event":"auth.login.failure","operation":"login","outcome":"denied","request_id":"bf1213a0f8eb4f459b4c721375fc68a0","http_status":401,"reason_code":"invalid_identity"}
+{"timestamp":"2026-10-31T16:27:37.010Z","level":"WARNING","service":"documind-api","event":"auth.login.failure","operation":"login","outcome":"denied","request_id":"191119fe6ae442949dc7be9c8e2ed606","http_status":401,"reason_code":"invalid_identity"}
+{"timestamp":"2026-10-31T16:27:37.131Z","level":"WARNING","service":"documind-api","event":"auth.login.failure","operation":"login","outcome":"denied","request_id":"545a5ce341064af48a5f00d3faeefa4a","http_status":401,"reason_code":"invalid_identity"}
+{"timestamp":"2026-10-31T16:27:37.255Z","level":"WARNING","service":"documind-api","event":"auth.login.failure","operation":"login","outcome":"denied","request_id":"87efca3c28494038a0f52ddccd5e3d0a","http_status":401,"reason_code":"invalid_identity"}
+{"timestamp":"2026-10-31T16:27:37.374Z","level":"WARNING","service":"documind-api","event":"auth.login.failure","operation":"login","outcome":"denied","request_id":"1f040942179c46389cf9d35454a113f2","http_status":401,"reason_code":"invalid_identity"}
+{"timestamp":"2026-10-31T16:27:37.489Z","level":"WARNING","service":"documind-api","event":"auth.login.failure","operation":"login","outcome":"denied","request_id":"dd21e10648ff4f84ac26989bc7949e08","http_status":401,"reason_code":"invalid_identity"}
+{"timestamp":"2026-10-31T16:27:37.607Z","level":"WARNING","service":"documind-api","event":"auth.login.failure","operation":"login","outcome":"denied","request_id":"cbdd7e26faad4c80ba08d2597895fca9","http_status":401,"reason_code":"invalid_identity"}
+{"timestamp":"2026-10-31T16:27:37.724Z","level":"WARNING","service":"documind-api","event":"auth.login.failure","operation":"login","outcome":"denied","request_id":"81689bbe4e934a16a286251919f6dd5f","http_status":401,"reason_code":"invalid_identity"}
+{"timestamp":"2026-10-31T16:27:37.844Z","level":"WARNING","service":"documind-api","event":"auth.login.failure","operation":"login","outcome":"denied","request_id":"ee2b0575f3c24330a7eda966b7f2abce","http_status":401,"reason_code":"invalid_identity"}
+{"timestamp":"2026-10-31T16:27:37.847Z","level":"WARNING","service":"documind-api","event":"rate_limit.exceeded","operation":"login","outcome":"denied","request_id":"157d1ab12031465590981760580d9e6f","http_status":429,"reason_code":"rate_limit"}
+________ ERROR at teardown of test_general_user_rate_limit_is_enforced _________
+
+app = <fastapi.applications.FastAPI object at 0x796165a40b90>
+
+    @pytest.fixture
+    def client(app):
+>       with TestClient(app) as connection:
+             ^^^^^^^^^^^^^^^
+
+tests/conftest.py:86: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:584: in __exit__
+    self.exit_stack.close()
+/usr/local/lib/python3.13/contextlib.py:627: in close
+    self.__exit__(None, None, None)
+/usr/local/lib/python3.13/contextlib.py:619: in __exit__
+    raise exc
+/usr/local/lib/python3.13/contextlib.py:604: in __exit__
+    if cb(*exc_details):
+       ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:482: in _exit_wrapper
+    callback(*args, **kwds)
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:576: in wait_shutdown
+    portal.call(self.wait_shutdown)
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:340: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:460: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:402: in __get_result
+    raise self._exception
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:624: in wait_shutdown
+    await receive()
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:614: in receive
+    self.task.result()
+/usr/local/lib/python3.13/concurrent/futures/_base.py:453: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/_base.py:402: in __get_result
+    raise self._exception
+/usr/local/lib/python3.13/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/testclient.py:589: in lifespan
+    await self.app(scope, self.stream_receive.receive, self.stream_send.send)
+/usr/local/lib/python3.13/site-packages/fastapi/applications.py:1181: in __call__
+    await lifespan(
+/usr/local/lib/python3.13/site-packages/fastapi/telemetry/_runtime.py:238: in lifespan
+    await app(scope, wrapped_receive, wrapped_send)
+/usr/local/lib/python3.13/site-packages/starlette/applications.py:96: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/middleware/errors.py:151: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/telemetry/_asgi.py:151: in __call__
+    await self.app(scope, receive, send)
+backend/lite_admissions.py:244: in __call__
+    await self.app(scope, receive, send)
+backend/recovery_quarantine.py:60: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/audit_middleware.py:76: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/upload_admission.py:84: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/upload_admission.py:93: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/main.py:36: in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/site-packages/starlette/middleware/exceptions.py:49: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/routing.py:678: in __call__
+    await self.middleware_stack(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:2796: in app
+    await self.lifespan(scope, receive, send)
+/usr/local/lib/python3.13/site-packages/starlette/routing.py:656: in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+/usr/local/lib/python3.13/site-packages/fastapi/routing.py:248: in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+               ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/contextlib.py:221: in __aexit__
+    await anext(self.gen)
+backend/main.py:152: in lifespan
+    await asyncio.to_thread(app.state.summary_worker.stop)
+/usr/local/lib/python3.13/asyncio/threads.py:26: in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/concurrent/futures/thread.py:59: in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/ai/long_summary.py:177: in stop
+    self.thread.join(timeout=self.app.state.settings.ai_timeout_seconds+5)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Thread(documind-long-summary, initial daemon)>, timeout = 35.0
+
+    def join(self, timeout=None):
+        """Wait until the thread terminates.
+    
+        This blocks the calling thread until the thread whose join() method is
+        called terminates -- either normally or through an unhandled exception
+        or until the optional timeout occurs.
+    
+        When the timeout argument is present and not None, it should be a
+        floating-point number specifying a timeout for the operation in seconds
+        (or fractions thereof). As join() always returns None, you must call
+        is_alive() after join() to decide whether a timeout happened -- if the
+        thread is still alive, the join() call timed out.
+    
+        When the timeout argument is not present or None, the operation will
+        block until the thread terminates.
+    
+        A thread can be join()ed many times.
+    
+        join() raises a RuntimeError if an attempt is made to join the current
+        thread as that would cause a deadlock. It is also an error to join() a
+        thread before it has been started and attempts to do so raises the same
+        exception.
+    
+        """
+        if not self._initialized:
+            raise RuntimeError("Thread.__init__() not called")
+        if not self._started.is_set():
+>           raise RuntimeError("cannot join thread before it is started")
+E           RuntimeError: cannot join thread before it is started
+
+/usr/local/lib/python3.13/threading.py:1086: RuntimeError
+----------------------------- Captured stdout call -----------------------------
+{"timestamp":"2026-10-31T16:27:39.023Z","level":"INFO","service":"documind-api","event":"auth.login.success","operation":"login","outcome":"success","request_id":"24741b991bd9446a8fbbb370ef02c1b7","http_status":200,"reason_code":"completed"}
+=============================== warnings summary ===============================
+../usr/local/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /usr/local/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+tests/test_public_beta_postgresql_concurrency.py::test_email_operations_serialize_on_the_actual_user_row[verify]
+  /usr/local/lib/python3.13/site-packages/pydantic/_internal/_generate_schema.py:2346: UnsupportedFieldAttributeWarning: The 'alias' attribute with value 'body' was provided to the `Field()` function, which has no effect in the context it was used. 'alias' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+ERROR tests/test_accounts_saas.py::test_invitation_only_registration_email_login_ownership_and_one_use
+ERROR tests/test_accounts_saas.py::test_legacy_scrypt_upgrade_without_changing_owner
+ERROR tests/test_accounts_saas.py::test_wrong_password_generic_recovery_expired_and_single_use_reset
+ERROR tests/test_accounts_saas.py::test_session_revocation_scoped_to_account_and_password_change
+ERROR tests/test_accounts_saas.py::test_document_quota_legacy_switch_and_cross_owner_access
+ERROR tests/test_accounts_saas.py::test_deletion_request_revokes_keys_and_purge_removes_content
+ERROR tests/test_accounts_saas.py::test_clear_ai_results_and_embeddings_preserves_document_and_billing
+ERROR tests/test_accounts_saas.py::test_concurrent_imports_cannot_bypass_personal_document_quota
+ERROR tests/test_accounts_saas.py::test_login_ip_limit_applies_across_different_usernames
+ERROR tests/test_accounts_saas.py::test_general_user_rate_limit_is_enforced
+188 passed, 2 warnings, 10 errors in 206.31s (0:03:26)

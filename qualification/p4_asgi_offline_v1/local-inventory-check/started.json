@@ -1,0 +1,24 @@
+{
+  "argv": [
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\.venv\\Scripts\\python.exe",
+    "-I",
+    "-B",
+    ".\\qualification\\p4_asgi_offline_v1\\offline.py",
+    "inventory",
+    "--candidate",
+    ".\\candidates\\recovery-control-directory-v1-r3",
+    "--historical-transfer",
+    ".\\deliveries\\docnelo-v51-restored-latch-fastapi-20261102",
+    "--pyyaml-wheel",
+    ".\\deliveries\\docnelo-v51-pyyaml-wheel-cp311\\pyyaml-6.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "--out",
+    ".\\qualification\\p4_asgi_offline_v1\\DEPENDENCIES_RECHECK.json"
+  ],
+  "complete": false,
+  "gid": null,
+  "groups": null,
+  "monotonic_start_ns": 4239934959400,
+  "returncode": null,
+  "start_ns": 1793696271130761500,
+  "uid": null
+}

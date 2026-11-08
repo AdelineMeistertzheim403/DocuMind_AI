@@ -1,0 +1,17 @@
+{
+  "purpose": "P4_ASGI_ONLY",
+  "profile": "standard",
+  "case": "D03",
+  "name": null,
+  "image": null,
+  "python": "/opt/p4-venv/bin/python",
+  "uid": null,
+  "gid": null,
+  "reader_gid": null,
+  "candidate": null,
+  "root": null,
+  "image_env": [],
+  "image_review_sha256": null,
+  "initial_ready": true,
+  "probes": ["closed"]
+}

@@ -1,0 +1,20 @@
+{
+  "argv": [
+    "python",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    ".\\qualification\\p4_asgi_offline_v1\\tests",
+    "-v"
+  ],
+  "complete": false,
+  "gid": null,
+  "groups": null,
+  "monotonic_start_ns": 4094148747400,
+  "returncode": null,
+  "start_ns": 1793696125344548400,
+  "uid": null
+}

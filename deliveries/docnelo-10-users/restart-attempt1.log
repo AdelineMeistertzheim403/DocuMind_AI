@@ -1,0 +1,22 @@
+E                                                                        [100%]
+==================================== ERRORS ====================================
+_ ERROR at setup of test_new_python_api_process_keeps_ten_and_login_after_closure _
+file /work/tests/test_ten_users_process_restart.py, line 13
+  def test_new_python_api_process_keeps_ten_and_login_after_closure(ten):
+file /work/tests/test_ten_users_preparation.py, line 24
+  @pytest.fixture
+  def ten(beta, monkeypatch):
+E       fixture 'beta' not found
+>       available fixtures: anyio_backend, anyio_backend_name, anyio_backend_options, app, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, client, doctest_namespace, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, gateway_client, monkeypatch, prohibit_real_openai_clients, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, ten, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/work/tests/test_ten_users_preparation.py:24
+=============================== warnings summary ===============================
+../usr/local/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /usr/local/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+ERROR tests/test_ten_users_process_restart.py::test_new_python_api_process_keeps_ten_and_login_after_closure
+1 warning, 1 error in 0.99s

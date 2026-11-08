@@ -1,10 +1,11 @@
-import {LegalNavigation} from './Legal'
+﻿import {LegalNavigation} from './Legal'
 import {useEffect,useState,type FormEvent} from 'react'
 import {Link,Navigate,Outlet,useLocation} from 'react-router-dom'
 import {useQuery} from '@tanstack/react-query'
-import {account,accountPost} from '../services/account'
-import {api,ApiError,request} from '../services/api'
+import {account,accountPost,liteAdmissionResult} from '../services/account'
+import {api,ApiError,request,deletionMessage,type DeletionStatus} from '../services/api'
 import {ErrorState,SectionTitle,Spinner} from '../components/ui'
+import {BrandMark} from '../components/Brand'
 import {registrationProof} from '../services/registration'
 
 export function RequireAccount(){
@@ -20,12 +21,14 @@ export function AccountAccess({mode}:{mode:'login'|'register'|'forgot'|'reset'|'
   const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[invitation,setInvitation]=useState('')
   const [token,setToken]=useState(()=>new URLSearchParams(location.hash.slice(1)).get('token')||'')
   const [website,setWebsite]=useState(''),[terms,setTerms]=useState(false)
+  const [adult,setAdult]=useState(false),[operation,setOperation]=useState<string|undefined>()
   const [busy,setBusy]=useState(false),[error,setError]=useState<unknown>(null),[message,setMessage]=useState('')
   const secure=location.protocol==='https:'
   const options=useQuery({queryKey:['account-options'],queryFn:account.options,retry:false,enabled:secure})
   useEffect(()=>{if(['reset','verify'].includes(mode)&&location.hash)history.replaceState(null,'',location.pathname)},[mode])
   const isPublic=options.data?.registration_mode==='public'
-  const canRegister=options.data?.registration_mode==='invite'||(isPublic&&options.data?.public_capacity_configured===true)
+  const isLite=options.data?.application_profile==='beta_lite'
+  const canRegister=isLite?options.data?.lite_admissions_available===true:options.data?.registration_mode==='invite'||(isPublic&&options.data?.public_capacity_configured===true)
   const title={login:'Connexion',register:'Inscription',forgot:'Mot de passe oublié',reset:'Réinitialiser le mot de passe',verify:'Vérifier mon adresse e-mail',resend:'Renvoyer le lien de vérification'}[mode]
   async function submit(event:FormEvent){
     event.preventDefault();setBusy(true);setError(null);setMessage('')
@@ -36,17 +39,21 @@ export function AccountAccess({mode}:{mode:'login'|'register'|'forgot'|'reset'|'
       }
       if(mode==='register'){
         const code=invitation;setInvitation('')
-        const body=isPublic?{email,password:entered,website,terms_accepted:terms,terms_version:options.data?.terms_version,...await registrationProof()}:{email,password:entered,invitation:code}
-        await accountPost('/auth/register',body)
-        setMessage(isPublic?'Demande reçue. Cette réponse ne confirme ni l’admission ni l’envoi d’un e-mail. Vérifiez vos courriers indésirables ; vous pouvez demander un nouveau lien.':'Compte créé. Vous pouvez vous connecter.')
+        const body=isPublic?{email,password:entered,website,terms_accepted:terms,terms_version:options.data?.terms_version,...await registrationProof()}:{email,password:entered,invitation:code,...(isLite?{adult_declared:adult,terms_accepted:terms,terms_version:options.data?.terms_version,operation_id:operation}: {})}
+        const result=await accountPost('/auth/register',body)
+        if(isLite){
+          const lite=liteAdmissionResult(result)
+          setOperation(lite.operation_id)
+          setMessage(lite.state==='admitted'?'Compte admis après confirmation. Vous pouvez vous connecter.':lite.state==='result_pending'?'Admission enregistrée, résultat en attente de confirmation administrative. La connexion reste fermée. Ressaisissez vos secrets lors du réessai.':'Préparation en attente de confirmation administrative ; elle ne confirme pas une admission durable. Ressaisissez le mot de passe et l’invitation pour réessayer la même opération.')
+        }else setMessage(isPublic?'Demande reçue. Cette réponse ne confirme ni l’admission ni l’envoi d’un e-mail. Vérifiez vos courriers indésirables ; vous pouvez demander un nouveau lien.':'Compte créé. Vous pouvez vous connecter.')
       }
       if(mode==='resend'){
         await accountPost('/auth/resend-verification',{email,password:entered,website,...await registrationProof()})
         setMessage('Demande reçue. Si elle est éligible, un nouveau lien pourra être envoyé. Cette réponse ne confirme pas l’envoi. Seul le dernier lien émis reste valable.')
       }
       if(mode==='verify'){
-        await accountPost('/auth/verify-email',{token,password:entered});setToken('')
-        setMessage('Adresse vérifiée. Vous pouvez maintenant vous connecter.')
+        const result=await accountPost('/auth/verify-email',{token,password:entered});setToken('')
+        setMessage(result.approval_required?'Adresse vérifiée. Votre compte attend une approbation administrative avant la connexion.':'Adresse vérifiée. Vous pouvez maintenant vous connecter.')
       }
       if(mode==='forgot'){
         await accountPost('/auth/forgot-password',{email})
@@ -58,11 +65,13 @@ export function AccountAccess({mode}:{mode:'login'|'register'|'forgot'|'reset'|'
       }
     }catch(failure){setError(failure)}finally{setBusy(false)}
   }
-  return <main className="page account-access"><section className="panel settings-card"><Link className="brand" to="/login">DocuMind AI</Link><SectionTitle eyebrow="VOTRE ESPACE PERSONNEL" title={title}/>
+  return <main className="page account-access"><section className="panel settings-card"><Link className="brand" to="/login"><BrandMark/></Link><SectionTitle eyebrow="VOTRE ESPACE PERSONNEL" title={title}/>
     {!secure&&<p className="notice">Une connexion HTTPS est nécessaire. <a href="https://localhost:8443/login">Ouvrir la connexion locale sécurisée</a>.</p>}
     {options.error&&<ErrorState error={options.error}/>}
-    {mode==='register'&&<p className="notice" role="status">{options.isPending?'Vérification de la disponibilité des inscriptions…':options.error?'La disponibilité des inscriptions ne peut pas être confirmée. Réessayez ultérieurement.':options.data?.registration_mode==='invite'?'Inscription sur invitation personnelle, valable 24 heures.':canRegister?'Bêta limitée à cinq admissions cumulatives. Une admission consomme une place avant la vérification de l’e-mail.':options.data?.public_registration_availability==='full'?'Le plafond d’admissions de cette bêta est atteint. Les comptes existants restent accessibles.':'Les nouvelles inscriptions sont fermées. Les comptes existants restent accessibles.'}</p>}
-    {['register','login'].includes(mode)&&<p>Les fonctionnalités IA seront disponibles ultérieurement. Les comptes vérifiés conservent les fonctions documentaires classiques.</p>}
+    {mode==='register'&&<p className="notice" role="status">{options.isPending?'Vérification de la disponibilité des inscriptions…':options.error?'La disponibilité des inscriptions ne peut pas être confirmée. Réessayez ultérieurement.':options.data?.registration_mode==='invite'?'Inscription sur invitation personnelle, valable 24 heures.':canRegister?`Bêta limitée à ${options.data?.public_registration_limit??10} admissions publiques cumulatives. Une admission consomme une place avant la vérification de l’e-mail.`:options.data?.public_registration_availability==='full'?'Le plafond d’admissions de cette bêta est atteint. Les comptes existants restent accessibles.':'Les nouvelles inscriptions sont fermées. Les comptes existants restent accessibles.'}</p>}
+    {mode==='register'&&isPublic&&options.data?.public_registration_requires_approval&&<p className="notice">La vérification de l’e-mail ne suffit pas : une approbation administrative est nécessaire avant la connexion.</p>}
+    {mode==='register'&&isLite&&<p className="notice">Beta Lite : cinq admissions cumulatives, sans place rendue après suppression. Confirmation administrative nécessaire.{!canRegister&&' Les admissions sont fermées : confirmation indépendante indisponible.'} Version des CGU : {options.data?.terms_version}.</p>}
+    {['register','login'].includes(mode)&&<p>Les fonctionnalités IA seront disponibles ultérieurement. Les comptes autorisés conservent les fonctions documentaires classiques.</p>}
     {mode==='resend'&&<p className="notice">Utilisez le mot de passe choisi à l’inscription. Le renvoi reste possible après fermeture des nouvelles inscriptions, selon les limites de sécurité. Attendez avant une nouvelle demande, notamment sur un réseau partagé.</p>}
     {mode==='verify'&&<p className="notice">Saisissez le mot de passe choisi lors de votre inscription. N’activez pas une inscription que vous n’avez pas demandée.</p>}
     <form onSubmit={submit} aria-busy={busy}>
@@ -70,7 +79,8 @@ export function AccountAccess({mode}:{mode:'login'|'register'|'forgot'|'reset'|'
       {mode!=='forgot'&&<><label className="field-label" htmlFor="account-password">Mot de passe</label><input id="account-password" className="text-input" type="password" autoComplete={mode==='login'?'current-password':'new-password'} required minLength={mode==='login'?1:12} maxLength={256} value={password} onChange={e=>setPassword(e.target.value)} disabled={busy||!secure}/></>}
       {mode==='register'&&options.data?.registration_mode==='invite'&&<><label className="field-label" htmlFor="account-invitation">Invitation</label><input id="account-invitation" type="password" className="text-input" autoComplete="off" required value={invitation} onChange={e=>setInvitation(e.target.value)} disabled={busy||!secure}/></>}
       {(mode==='resend'||(mode==='register'&&isPublic))&&<div aria-hidden="true" style={{position:'absolute',left:'-10000px'}}><label htmlFor="account-website">Site internet</label><input id="account-website" name="website" tabIndex={-1} autoComplete="off" maxLength={200} value={website} onChange={e=>setWebsite(e.target.value)}/></div>}
-      {mode==='register'&&isPublic&&<label><input type="checkbox" required checked={terms} onChange={e=>setTerms(e.target.checked)} disabled={busy||!secure}/> J’ai consulté les <LegalLink url={options.data?.terms_url}>conditions d’utilisation</LegalLink> et les <LegalLink url={options.data?.privacy_url}>informations de confidentialité</LegalLink>, et j’accepte les conditions.</label>}
+      {mode==='register'&&(isPublic||isLite)&&<label><input type="checkbox" required checked={terms} onChange={e=>setTerms(e.target.checked)} disabled={busy||!secure}/> J’ai consulté les <LegalLink url={options.data?.terms_url}>conditions d’utilisation</LegalLink> et les <LegalLink url={options.data?.privacy_url}>informations de confidentialité</LegalLink>, et j’accepte les conditions.</label>}
+      {mode==='register'&&isLite&&<label><input type="checkbox" required checked={adult} onChange={e=>setAdult(e.target.checked)} disabled={busy||!secure}/> Je déclare être majeur.</label>}
       {mode==='reset'&&!token&&<p className="notice">Ouvrez le lien de réinitialisation reçu par email. Les liens sont temporaires et à usage unique.</p>}
       {mode==='verify'&&!token&&!message&&<p className="notice">Ouvrez le lien reçu par e-mail. Il expire et ne peut être utilisé qu’une fois.</p>}
       <button className="button primary" disabled={busy||!secure||(mode==='register'&&!canRegister)||(['reset','verify'].includes(mode)&&!token)}>{busy?'Traitement…':title}</button>
@@ -79,7 +89,7 @@ export function AccountAccess({mode}:{mode:'login'|'register'|'forgot'|'reset'|'
     {error instanceof ApiError&&error.status===400&&['verify','reset'].includes(mode)&&<p>Le lien peut être invalide, expiré ou déjà utilisé, ou la vérification incorrecte. Demandez un nouveau lien et utilisez uniquement le plus récent.</p>}
     <LegalNavigation/>
     <nav className="settings-actions"><Link to="/login">Connexion</Link><Link to="/register">Inscription</Link><Link to="/forgot-password">Mot de passe oublié</Link><Link to="/resend-verification">Renvoyer la vérification</Link><Link to="/legal">Informations et confidentialité</Link></nav>
-    <p>Vos identifiants DocuMind restent indépendants de votre clé OpenAI.</p>
+    <p>Vos identifiants Docnelo restent indépendants de votre clé OpenAI.</p>
   </section></main>
 }
 
@@ -90,13 +100,13 @@ function LegalLink({url,children}:{url?:string;children:React.ReactNode}){
 
 export function PublicInformationPage(){
   const options=useQuery({queryKey:['account-options'],queryFn:account.options,retry:false,enabled:location.protocol==='https:'})
-  return <main className="page account-access"><section className="panel settings-card"><h1>Informations sur la bêta DocuMind AI</h1><p>Cette application analyse des documents privés. Une session personnelle est nécessaire pour consulter vos contenus.</p>
+  return <main className="page account-access"><section className="panel settings-card"><h1>Informations sur la bêta Docnelo</h1><p>Cette application analyse des documents privés. Une session personnelle est nécessaire pour consulter vos contenus.</p>
     <p>Exploitant : {options.data?.operator_name||'à renseigner avant ouverture publique'}. Contact : {options.data?.contact_email||'à renseigner avant ouverture publique'}.</p>
     <p className="notice">Les pages locales sont des brouillons non approuvés, distincts des documents configurés pour une inscription.</p><LegalNavigation/>
     {options.error&&<p role="status">Les informations configurées sont indisponibles. Les brouillons locaux restent consultables.</p>}
     <h2>Documents configurés par l’exploitant</h2><ul><li><LegalLink url={options.data?.legal_notice_url}>Mentions de l’exploitant</LegalLink></li><li><LegalLink url={options.data?.privacy_url}>Politique de confidentialité</LegalLink></li><li><LegalLink url={options.data?.terms_url}>Conditions d’utilisation</LegalLink></li></ul>
-    <p>La création publique exige la vérification de l’e-mail. La première bêta est limitée à cinq admissions cumulatives, y compris les comptes en attente de vérification. Les fonctionnalités IA seront disponibles ultérieurement. Les comptes vérifiés peuvent utiliser les fonctions documentaires classiques.</p>
-    <p>Une suppression de compte le désactive immédiatement. L’effacement final est traité par l’administrateur ; les copies de sauvegarde sont traitées séparément selon une politique restant à valider avant ouverture. Les durées et coordonnées applicables doivent être précisées dans les documents de l’exploitant avant ouverture.</p><Link to="/login">Revenir à la connexion</Link>
+    <p>La création publique exige la vérification de l’e-mail et une approbation administrative. La bêta publique est limitée à dix admissions cumulatives, y compris les comptes en attente, refusés ou supprimés. Les comptes historiques et sur invitation sont exclus de ce quota. Les fonctionnalités IA seront disponibles ultérieurement. Les comptes approuvés peuvent utiliser les fonctions documentaires classiques.</p>
+    <p>En Beta Lite, une demande de fermeture attend une confirmation administrative indépendante ; dès confirmation, l’accès est fermé. L’effacement final est distinct et traité par l’administrateur ; les copies de sauvegarde sont traitées séparément selon une politique restant à valider avant ouverture. Les durées et coordonnées applicables doivent être précisées dans les documents de l’exploitant avant ouverture.</p><Link to="/login">Revenir à la connexion</Link>
   </section></main>
 }
 
@@ -117,9 +127,9 @@ export function PrivacyPage(){
   const docs=useQuery({queryKey:['privacy-documents'],queryFn:()=>api.documents(0,100)})
   const [id,setId]=useState(''),[confirmed,setConfirmed]=useState(false),[password,setPassword]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState<unknown>(null),[message,setMessage]=useState('')
   async function erase(kind:'document'|'ai-results'|'embeddings'){
-    setBusy(true);setError(null);try{if(kind==='document')await api.remove(id);else await request(`/documents/${id}/${kind}`,{method:'DELETE'});setMessage('Suppression effectuée. Les copies de sauvegarde sont traitées séparément ; leur effacement n’est pas immédiat.');setConfirmed(false);await docs.refetch()}catch(e){setError(e)}finally{setBusy(false)}
+    setBusy(true);setError(null);try{const result=kind==='document'?await api.remove(id):await request<void>(`/documents/${id}/${kind}`,{method:'DELETE'});setMessage(deletionMessage(result));setConfirmed(false);await docs.refetch()}catch(e){setError(e)}finally{setBusy(false)}
   }
   return <div className="page"><SectionTitle eyebrow="VOS DONNÉES" title="Confidentialité"/><section className="panel settings-card"><h2>Gérer les données documentaires</h2><p>La suppression retire les données actives du document et déclenche le nettoyage du fichier. En cas d’erreur, une intervention administrative peut rester nécessaire. Les copies de sauvegarde sont traitées séparément. Les traces de consommation restent pour empêcher la remise à zéro des budgets.</p><label className="field-label" htmlFor="privacy-document">Document</label><select id="privacy-document" className="text-input" value={id} onChange={e=>{setId(e.target.value);setConfirmed(false)}}><option value="">Choisir un document</option>{docs.data?.items.map(d=><option key={d.id} value={d.id}>{d.filename}</option>)}</select>{docs.error&&<ErrorState error={docs.error}/>}<label><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/> Je confirme la suppression des données sélectionnées.</label><div className="settings-actions">{(['document','ai-results','embeddings'] as const).map((k,i)=><button className="button secondary" key={k} disabled={!id||!confirmed||busy} onClick={()=>erase(k)}>{['Supprimer le document','Effacer les résultats IA','Effacer les embeddings'][i]}</button>)}</div><Link to="/settings/ai">Déconnecter ma clé BYOK</Link></section>
-    <section className="panel settings-card"><h2>Demander la suppression de mon compte</h2><p>Votre compte sera immédiatement désactivé et vos sessions révoquées. L’administrateur traitera ensuite l’effacement des contenus et des sauvegardes selon la politique de conservation. Cette demande nécessite votre mot de passe.</p><form onSubmit={async e=>{e.preventDefault();setBusy(true);setError(null);const entered=password;setPassword('');try{await accountPost('/account/deletion-request',{password:entered});window.location.assign('/login')}catch(f){setError(f)}finally{setBusy(false)}}}><label className="field-label" htmlFor="deletion-password">Mot de passe de confirmation</label><input id="deletion-password" className="text-input" type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/><button className="button secondary" disabled={busy}>Demander la suppression et désactiver le compte</button></form></section>
-    <section className="panel settings-card"><h2>Conservation et fournisseur IA</h2><p>La clé BYOK reste uniquement en session serveur jusqu’à déconnexion ou expiration. Les fonctions IA sont indisponibles pour la bêta initiale. Leur éventuelle activation future exigera une information et une décision distinctes. DocuMind n’affiche pas le solde réel de votre compte OpenAI.</p><p>Les sauvegardes peuvent contenir des données supprimées jusqu’à leur expiration. Les durées et procédures applicables doivent être définies par l’exploitant avant la mise en production. Une validation juridique et organisationnelle reste nécessaire pour la politique de confidentialité.</p></section>{busy&&<Spinner/>}{error!=null&&<ErrorState error={error}/>} {message&&<p role="status">{message}</p>}</div>
+    <section className="panel settings-card"><h2>Demander la suppression de mon compte</h2><p>En Beta Lite, la demande attend une confirmation administrative indépendante. Dès confirmation, l’accès est fermé et les sessions deviennent inutilisables ; la purge finale est distincte. Conservez la référence de demande et utilisez le canal d’assistance indiqué dans les documents de l’exploitante pour le suivi après fermeture. Cette action nécessite votre mot de passe.</p><form onSubmit={async e=>{e.preventDefault();setBusy(true);setError(null);const entered=password;setPassword('');try{const result=await request<DeletionStatus|{requested:boolean}>('/account/deletion-request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:entered})});if('state' in result){setMessage(`${deletionMessage(result)} Référence : ${result.operation_id}`)}else window.location.assign('/login')}catch(f){setError(f)}finally{setBusy(false)}}}><label className="field-label" htmlFor="deletion-password">Mot de passe de confirmation</label><input id="deletion-password" className="text-input" type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/><button className="button secondary" disabled={busy}>Demander la fermeture puis la suppression du compte</button></form></section>
+    <section className="panel settings-card"><h2>Conservation et fournisseur IA</h2><p>La clé BYOK reste uniquement en session serveur jusqu’à déconnexion ou expiration. Les fonctions IA sont indisponibles pour la bêta initiale. Leur éventuelle activation future exigera une information et une décision distinctes. Docnelo n’affiche pas le solde réel de votre compte OpenAI.</p><p>Les sauvegardes peuvent contenir des données supprimées jusqu’à leur expiration. Les durées et procédures applicables doivent être définies par l’exploitant avant la mise en production. Une validation juridique et organisationnelle reste nécessaire pour la politique de confidentialité.</p></section>{busy&&<Spinner/>}{error!=null&&<ErrorState error={error}/>} {message&&<p role="status">{message}</p>}</div>
 }

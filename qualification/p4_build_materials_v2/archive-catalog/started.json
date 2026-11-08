@@ -1,0 +1,33 @@
+{
+  "argv": [
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\.venv\\Scripts\\python.exe",
+    "-I",
+    "-B",
+    ".\\qualification\\p4_build_materials_v2\\image_catalog.py",
+    "--archive",
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-10-users\\api-active.tar",
+    "--archive",
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-lifecycle-10-api\\api-active-untagged.tar",
+    "--archive",
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-lifecycle-10-api\\previous-candidate-27c6c58fe19d.tar",
+    "--archive",
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-lifecycle-10-api\\payload\\api-capacity10.tar",
+    "--archive",
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-signup-e2e-lab\\api-untagged.tar",
+    "--archive",
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-web-branding-r1\\payload\\web-image.tar",
+    "--archive",
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-web-branding-r2\\web-active-untagged.tar",
+    "--archive",
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-web-branding-r2\\web-active.tar",
+    "--archive",
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-web-branding-r2\\payload\\web-r2.tar",
+    "--out",
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\qualification\\p4_build_materials_v2\\LOCAL_IMAGE_ARCHIVES.json"
+  ],
+  "complete": false,
+  "python": "3.13.7 (tags/v3.13.7:bcee1c3, Aug 14 2025, 14:15:11) [MSC v.1944 64 bit (AMD64)]",
+  "python_executable": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\.venv\\Scripts\\python.exe",
+  "returncode": null,
+  "start_ns": 1793697726024944300
+}

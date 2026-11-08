@@ -25,7 +25,7 @@ on:
         type: boolean
         default: false
       approve_public_beta:
-        description: Approve public/5 preparation ONLY with an already closed SQL gate; never opens admissions
+        description: Approve reviewed public/5 (0007) or public/10 (0008) preparation with a closed SQL gate; never opens admissions
         type: boolean
         default: false
 
@@ -99,16 +99,17 @@ jobs:
           import json,os
           from pathlib import Path
           from tools.release_manifest import validate_release
-          from tools.release_security import validate_operational_bundle,BUNDLE_FILES,LEGACY_BUNDLE_FILES,STATEMENT
+          from tools.release_security import validate_operational_bundle,BUNDLE_FILES,PREVIOUS_BUNDLE_FILES,LEGACY_BUNDLE_FILES,STATEMENT
           data=validate_release(json.loads(Path('release-bundle/release.json').read_text()))
           assert data['git_sha']==os.environ['RELEASE_SHA']
           actual={p.name for p in Path('release-bundle').iterdir()}
           secure=set(BUNDLE_FILES)|{STATEMENT}
           legacy_secure=set(LEGACY_BUNDLE_FILES)|{STATEMENT}
-          assert actual in (secure,legacy_secure), 'Deployment requires an attested operational bundle'
+          previous_secure=set(PREVIOUS_BUNDLE_FILES)|{STATEMENT}
+          assert actual in (secure,previous_secure,legacy_secure), 'Deployment requires an attested operational bundle'
           statement,_=validate_operational_bundle(
               Path('release-bundle'),data,rollback=os.environ['OPERATION']=='rollback')
-          if actual==legacy_secure:
+          if actual in (previous_secure,legacy_secure):
               assert os.environ['OPERATION']=='rollback'
               assert os.environ['APPROVE_PUBLIC_BETA']!='true'
           assert statement['producer']['repository']==os.environ['GITHUB_REPOSITORY']
@@ -117,7 +118,7 @@ jobs:
           if os.environ['APPROVE_PUBLIC_BETA']=='true':
               assert actual==secure, 'Public beta requires an attested bundle and independent host approval'
           if os.environ['OPERATION']=='rollback':
-              assert actual in (secure,legacy_secure), 'Rollback requires an attested bundle'
+              assert actual in (secure,previous_secure,legacy_secure), 'Rollback requires an attested bundle'
           PY
       - name: Configure verified SSH
         env:
@@ -157,6 +158,9 @@ jobs:
           cp release-bundle/deploy_production.py release-bundle/backup_local.py \
             release-bundle/release_manifest.py release-bundle/public_beta_policy.py \
             release-bundle/release_security.py deploy-control/
+          if [ -f release-bundle/lifecycle_key_policy.py ]; then
+            cp release-bundle/lifecycle_key_policy.py deploy-control/
+          fi
           ssh "${SSH[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "umask 077; mkdir -p '$TARGET'"
           ssh "${SSH[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "umask 077; mkdir -p '$CONTROL'"
           scp "${SSH[@]}" -P "$VPS_PORT" release-bundle/* "$VPS_USER@$VPS_HOST:$TARGET/"

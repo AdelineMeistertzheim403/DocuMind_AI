@@ -1,0 +1,26 @@
+{
+  "argv": [
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\.venv\\Scripts\\python.exe",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    ".\\qualification\\p4_asgi_offline_v1\\tests",
+    "-v"
+  ],
+  "complete": true,
+  "end_ns": 1793696268543118500,
+  "gid": null,
+  "groups": null,
+  "monotonic_end_ns": 4237347317000,
+  "monotonic_start_ns": 4237011964400,
+  "returncode": 0,
+  "sha256": {
+    "stderr": "3e96aaed4d8bb4cb0499c7365e08f2e6775a2f15dc828bd7e7b1b441a09ec4f5",
+    "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "start_ns": 1793696268207766700,
+  "uid": null
+}

@@ -1,0 +1,1157 @@
+{
+  "compose.yaml": {
+    "services": {
+      "db": {
+        "build": {
+          "context": ".",
+          "dockerfile": "Dockerfile.db"
+        },
+        "image": "documind-postgres-vector:17",
+        "environment": {
+          "POSTGRES_USER": "${POSTGRES_USER:-documind}",
+          "POSTGRES_PASSWORD": "${POSTGRES_PASSWORD:-documind}",
+          "POSTGRES_DB": "${POSTGRES_DB:-documind}"
+        },
+        "ports": [
+          "127.0.0.1:5432:5432"
+        ],
+        "volumes": [
+          "postgres_data:/var/lib/postgresql/data"
+        ],
+        "healthcheck": {
+          "test": [
+            "CMD-SHELL",
+            "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"
+          ],
+          "interval": "5s",
+          "timeout": "5s",
+          "retries": 10
+        }
+      },
+      "api": {
+        "build": ".",
+        "env_file": ".env",
+        "environment": {
+          "DATABASE_URL": "postgresql+psycopg://${POSTGRES_USER:-documind}:${POSTGRES_PASSWORD:-documind}@db:5432/${POSTGRES_DB:-documind}",
+          "STORAGE_DIR": "/app/var/documents",
+          "LIFECYCLE_DATA_ROOT": "/app/lifecycle",
+          "LIFECYCLE_BACKUP_LOCK_PATH": "/app/lifecycle/.backup.lock",
+          "EXTRACTION_MODE": "sandbox"
+        },
+        "ports": [
+          "127.0.0.1:${API_PORT:-8000}:8000"
+        ],
+        "volumes": [
+          "documents:/app/var",
+          "lifecycle:/app/lifecycle"
+        ],
+        "depends_on": {
+          "db": {
+            "condition": "service_healthy"
+          }
+        },
+        "mem_limit": "1536m",
+        "cpus": 2,
+        "pids_limit": 64,
+        "init": true,
+        "command": [
+          "sh",
+          "-c",
+          "alembic upgrade head && exec uvicorn backend.main:app --host 0.0.0.0 --port 8000 --limit-concurrency 32 --timeout-keep-alive 5"
+        ],
+        "healthcheck": {
+          "test": [
+            "CMD",
+            "python",
+            "-c",
+            "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3)"
+          ],
+          "interval": "10s",
+          "timeout": "5s",
+          "start_period": "20s",
+          "retries": 5
+        }
+      },
+      "web": {
+        "build": "./frontend",
+        "environment": {
+          "API_KEYS": "${API_KEYS:-}",
+          "BFF_API_KEY": "${BFF_API_KEY:-}",
+          "BFF_SERVICE_KEY": "${BFF_SERVICE_KEY:-}",
+          "BFF_BACKEND_URL": "http://api:8000",
+          "BFF_HOST": "0.0.0.0",
+          "BFF_PORT": 3000,
+          "MAX_UPLOAD_BYTES": "${MAX_UPLOAD_BYTES:-10485760}",
+          "WORKER_TIMEOUT_SECONDS": "${WORKER_TIMEOUT_SECONDS:-30}",
+          "AI_TIMEOUT_SECONDS": "${AI_TIMEOUT_SECONDS:-30}",
+          "AI_MAX_SUMMARY_STEPS": "${AI_MAX_SUMMARY_STEPS:-5}",
+          "DOCUMIND_GATEWAY_TOKEN": "${DOCUMIND_GATEWAY_TOKEN:-}"
+        },
+        "ports": [
+          "127.0.0.1:${WEB_PORT:-3000}:3000"
+        ],
+        "depends_on": {
+          "api": {
+            "condition": "service_healthy"
+          }
+        },
+        "mem_limit": "512m",
+        "cpus": 1,
+        "pids_limit": 64,
+        "init": true
+      },
+      "https": {
+        "image": "caddy:2-alpine",
+        "profiles": [
+          "https"
+        ],
+        "environment": {
+          "DOCUMIND_GATEWAY_TOKEN": "${DOCUMIND_GATEWAY_TOKEN:-}"
+        },
+        "ports": [
+          "127.0.0.1:8443:443"
+        ],
+        "volumes": [
+          "./Caddyfile:/etc/caddy/Caddyfile:ro",
+          "caddy_data:/data",
+          "caddy_config:/config"
+        ],
+        "depends_on": {
+          "web": {
+            "condition": "service_started"
+          }
+        }
+      }
+    },
+    "volumes": {
+      "postgres_data": null,
+      "documents": null,
+      "lifecycle": null,
+      "caddy_data": null,
+      "caddy_config": null
+    }
+  },
+  "compose.production.yaml": {
+    "name": "documind-prod",
+    "services": {
+      "db": {
+        "image": "${POSTGRES_IMAGE:?Supply the PostgreSQL pgvector image digest from a CI release}",
+        "labels": {
+          "traefik.enable": "false"
+        },
+        "environment": {
+          "POSTGRES_DB": "documind",
+          "POSTGRES_USER": "documind",
+          "POSTGRES_PASSWORD": "${POSTGRES_PASSWORD:?Configure a production database password}"
+        },
+        "volumes": [
+          "production_database:/var/lib/postgresql/data"
+        ],
+        "networks": [
+          "data"
+        ],
+        "mem_limit": "1g",
+        "cpus": 1,
+        "pids_limit": 128,
+        "healthcheck": {
+          "test": [
+            "CMD-SHELL",
+            "pg_isready -U documind -d documind"
+          ],
+          "interval": "10s",
+          "timeout": "5s",
+          "retries": 10
+        },
+        "logging": {
+          "driver": "json-file",
+          "options": {
+            "max-size": "10m",
+            "max-file": "3"
+          }
+        }
+      },
+      "api": {
+        "image": "${BACKEND_IMAGE:?Supply the backend image digest from a CI release}",
+        "labels": {
+          "traefik.enable": "false"
+        },
+        "env_file": "${PRODUCTION_ENV_FILE:-.env.production}",
+        "environment": {
+          "DATABASE_URL": "postgresql+psycopg://documind:${POSTGRES_PASSWORD:?}@db:5432/documind",
+          "ACCOUNT_BASE_URL": "https://${APP_HOST:?Set the production DNS hostname}",
+          "STORAGE_DIR": "/app/var/documents",
+          "MAX_UPLOAD_BYTES": "${MAX_UPLOAD_BYTES:-10485760}",
+          "UPLOAD_MAX_CONCURRENT": "${UPLOAD_MAX_CONCURRENT:-2}",
+          "UPLOAD_MAX_PER_OWNER": "${UPLOAD_MAX_PER_OWNER:-1}",
+          "UPLOAD_MAX_PREFLIGHTS": "${UPLOAD_MAX_PREFLIGHTS:-8}",
+          "UPLOAD_TEMP_BUDGET_BYTES": "${UPLOAD_TEMP_BUDGET_BYTES:-67108864}",
+          "UPLOAD_MIN_FREE_BYTES": "${UPLOAD_MIN_FREE_BYTES:-33554432}",
+          "UPLOAD_AUTH_TIMEOUT_SECONDS": "${UPLOAD_AUTH_TIMEOUT_SECONDS:-3}",
+          "UPLOAD_READ_TIMEOUT_SECONDS": "${UPLOAD_READ_TIMEOUT_SECONDS:-30}",
+          "UPLOAD_IDLE_TIMEOUT_SECONDS": "${UPLOAD_IDLE_TIMEOUT_SECONDS:-5}",
+          "EXTRACTION_MODE": "sandbox",
+          "MAX_CONCURRENT_WORKERS": "2",
+          "WORKER_MEMORY_MB": "512",
+          "WORKER_TIMEOUT_SECONDS": "30",
+          "API_KEYS": "{}",
+          "LEGACY_API_ENABLED": "false",
+          "BFF_SERVICE_KEY": "${BFF_SERVICE_KEY:?Configure an independent service credential}",
+          "REGISTRATION_MODE": "${REGISTRATION_MODE:-disabled}",
+          "LIFECYCLE_DATA_ROOT": "/app/lifecycle",
+          "LIFECYCLE_BACKUP_LOCK_PATH": "/app/lifecycle/.backup.lock"
+        },
+        "volumes": [
+          "production_documents:/app/var",
+          "production_lifecycle:/app/lifecycle"
+        ],
+        "networks": [
+          "data",
+          "application",
+          "outbound"
+        ],
+        "depends_on": {
+          "db": {
+            "condition": "service_healthy"
+          }
+        },
+        "mem_limit": "1536m",
+        "cpus": 2,
+        "pids_limit": 64,
+        "init": true,
+        "stop_grace_period": "150s",
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "read_only": true,
+        "tmpfs": [
+          "/tmp:size=256m,mode=1777"
+        ],
+        "command": [
+          "uvicorn",
+          "backend.main:app",
+          "--host",
+          "0.0.0.0",
+          "--port",
+          "8000",
+          "--workers",
+          "1",
+          "--no-access-log",
+          "--limit-concurrency",
+          "32"
+        ],
+        "healthcheck": {
+          "test": [
+            "CMD",
+            "python",
+            "-c",
+            "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health',timeout=3)"
+          ],
+          "interval": "10s",
+          "timeout": "5s",
+          "start_period": "30s",
+          "retries": 5
+        },
+        "logging": {
+          "driver": "json-file",
+          "options": {
+            "max-size": "10m",
+            "max-file": "3"
+          }
+        }
+      },
+      "web": {
+        "image": "${FRONTEND_IMAGE:?Supply the frontend image digest from a CI release}",
+        "environment": {
+          "BFF_SERVICE_KEY": "${BFF_SERVICE_KEY:?}",
+          "BFF_BACKEND_URL": "http://api:8000",
+          "BFF_HOST": "0.0.0.0",
+          "BFF_PORT": 3000,
+          "BFF_ALLOWED_HOSTS": "${APP_HOST:?Set the production DNS hostname}",
+          "BFF_TRUSTED_PROXY_IPS": "${BFF_TRUSTED_PROXY_IPS:?Resolve the actual Traefik address on web before deployment}",
+          "MAX_UPLOAD_BYTES": "${MAX_UPLOAD_BYTES:-10485760}",
+          "UPLOAD_MAX_CONCURRENT": "${UPLOAD_MAX_CONCURRENT:-2}",
+          "UPLOAD_MAX_PREFLIGHTS": "${UPLOAD_MAX_PREFLIGHTS:-8}",
+          "UPLOAD_AUTH_TIMEOUT_SECONDS": "${UPLOAD_AUTH_TIMEOUT_SECONDS:-3}",
+          "UPLOAD_READ_TIMEOUT_SECONDS": "${UPLOAD_READ_TIMEOUT_SECONDS:-30}",
+          "UPLOAD_IDLE_TIMEOUT_SECONDS": "${UPLOAD_IDLE_TIMEOUT_SECONDS:-5}",
+          "UPLOAD_TOTAL_TIMEOUT_SECONDS": "${UPLOAD_TOTAL_TIMEOUT_SECONDS:-75}",
+          "WORKER_TIMEOUT_SECONDS": "${WORKER_TIMEOUT_SECONDS:-30}",
+          "AI_TIMEOUT_SECONDS": "${AI_TIMEOUT_SECONDS:-30}",
+          "AI_MAX_SUMMARY_STEPS": "${AI_MAX_SUMMARY_STEPS:-5}"
+        },
+        "networks": [
+          "application",
+          "web"
+        ],
+        "labels": {
+          "traefik.enable": "true",
+          "traefik.docker.network": "web",
+          "traefik.http.routers.documind-ai.rule": "Host(`${APP_HOST:?Set the production DNS hostname}`)",
+          "traefik.http.routers.documind-ai.entrypoints": "websecure",
+          "traefik.http.routers.documind-ai.tls": "true",
+          "traefik.http.routers.documind-ai.tls.certresolver": "letsencrypt",
+          "traefik.http.routers.documind-ai.service": "documind-ai",
+          "traefik.http.routers.documind-ai.middlewares": "documind-ai-headers@docker",
+          "traefik.http.routers.documind-ai-upload.rule": "Host(`${APP_HOST:?Set the production DNS hostname}`) && Method(`POST`) && Path(`/bff/documents`)",
+          "traefik.http.routers.documind-ai-upload.entrypoints": "websecure",
+          "traefik.http.routers.documind-ai-upload.tls": "true",
+          "traefik.http.routers.documind-ai-upload.tls.certresolver": "letsencrypt",
+          "traefik.http.routers.documind-ai-upload.service": "documind-ai",
+          "traefik.http.routers.documind-ai-upload.priority": "100",
+          "traefik.http.routers.documind-ai-upload.middlewares": "documind-ai-headers@docker,documind-ai-upload-capacity@docker",
+          "traefik.http.middlewares.documind-ai-upload-capacity.inflightreq.amount": "${UPLOAD_MAX_PREFLIGHTS:-8}",
+          "traefik.http.middlewares.documind-ai-upload-capacity.inflightreq.sourcecriterion.requesthost": "true",
+          "traefik.http.services.documind-ai.loadbalancer.server.port": "3000",
+          "traefik.http.services.documind-ai.loadbalancer.passhostheader": "true",
+          "traefik.http.middlewares.documind-ai-headers.headers.customrequestheaders.X-Forwarded-Proto": "https",
+          "traefik.http.middlewares.documind-ai-headers.headers.contenttypenosniff": "true",
+          "traefik.http.middlewares.documind-ai-headers.headers.referrerpolicy": "no-referrer",
+          "traefik.http.middlewares.documind-ai-headers.headers.stsseconds": "31536000"
+        },
+        "depends_on": {
+          "api": {
+            "condition": "service_healthy"
+          }
+        },
+        "mem_limit": "512m",
+        "cpus": 1,
+        "pids_limit": 64,
+        "init": true,
+        "read_only": true,
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "tmpfs": [
+          "/tmp:size=32m"
+        ],
+        "healthcheck": {
+          "test": [
+            "CMD",
+            "node",
+            "server/healthcheck.mjs"
+          ],
+          "interval": "15s",
+          "timeout": "5s",
+          "retries": 5
+        },
+        "logging": {
+          "driver": "json-file",
+          "options": {
+            "max-size": "10m",
+            "max-file": "3"
+          }
+        }
+      }
+    },
+    "networks": {
+      "data": {
+        "internal": true
+      },
+      "application": {
+        "internal": true
+      },
+      "web": {
+        "external": true,
+        "name": "web"
+      },
+      "outbound": {}
+    },
+    "volumes": {
+      "production_database": {},
+      "production_documents": {},
+      "production_lifecycle": {}
+    }
+  },
+  "compose.public-beta.vps.yaml": {
+    "name": "documind-public-beta",
+    "services": {
+      "db": {
+        "image": "${POSTGRES_IMAGE:-documind-postgres-vector:17}",
+        "labels": {
+          "traefik.enable": "false"
+        },
+        "environment": {
+          "POSTGRES_DB": "${POSTGRES_DB:-documind_public_beta}",
+          "POSTGRES_USER": "${POSTGRES_USER:-documind_public_beta}",
+          "POSTGRES_PASSWORD": "${POSTGRES_PASSWORD:?Set a dedicated PostgreSQL password}"
+        },
+        "volumes": [
+          "public_beta_database:/var/lib/postgresql/data"
+        ],
+        "networks": [
+          "data"
+        ],
+        "mem_limit": "1g",
+        "cpus": 1,
+        "pids_limit": 128,
+        "healthcheck": {
+          "test": [
+            "CMD-SHELL",
+            "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"
+          ],
+          "interval": "10s",
+          "timeout": "5s",
+          "retries": 10
+        },
+        "logging": {
+          "driver": "json-file",
+          "options": {
+            "max-size": "10m",
+            "max-file": "3"
+          }
+        }
+      },
+      "lifecycle-init": {
+        "image": "${BACKEND_IMAGE:?Set BACKEND_IMAGE (tag or digest)}",
+        "labels": {
+          "traefik.enable": "false"
+        },
+        "user": "0:0",
+        "env_file": [
+          "${PUBLIC_BETA_ENV_FILE:-.env.public-beta}"
+        ],
+        "environment": {
+          "DATABASE_URL": "postgresql+psycopg://${POSTGRES_USER:-documind_public_beta}:${POSTGRES_PASSWORD:?}@db:5432/${POSTGRES_DB:-documind_public_beta}",
+          "STORAGE_DIR": "/app/var/documents",
+          "EXTRACTION_MODE": "sandbox",
+          "MAX_CONCURRENT_WORKERS": "2",
+          "WORKER_MEMORY_MB": "512",
+          "WORKER_TIMEOUT_SECONDS": "30",
+          "API_KEYS": "{}",
+          "LEGACY_API_ENABLED": "false",
+          "AI_ENABLED": "false",
+          "OWNER_DEMO_ENABLED": "false",
+          "LIFECYCLE_DATA_ROOT": "/app/lifecycle",
+          "LIFECYCLE_BACKUP_LOCK_PATH": "/app/lifecycle/.backup.lock",
+          "LIFECYCLE_REGISTRY_PATH": "/app/lifecycle/registry/registry.sqlite",
+          "LIFECYCLE_CONFIRMATION_PATH": "/app/lifecycle/confirmation/confirmation.sqlite",
+          "LIFECYCLE_AUTHENTICATED_CONFIRMATION_PATH": "/app/lifecycle/authenticated/authenticated-confirmation.sqlite",
+          "LIFECYCLE_HOLDS_PATH": "/app/lifecycle/holds/holds.sqlite",
+          "LIFECYCLE_ADMISSION_ANCHOR_PATH": "/app/lifecycle/admissions/admission-anchor.sqlite",
+          "LIFECYCLE_AUTHENTICATION_KEY_PATH": "/app/lifecycle/keys/authentication.key",
+          "LIFECYCLE_ADMISSION_KEY_PATH": "/app/lifecycle/keys/admission.key"
+        },
+        "volumes": [
+          "public_beta_lifecycle:/app/lifecycle"
+        ],
+        "networks": [
+          "data"
+        ],
+        "depends_on": {
+          "db": {
+            "condition": "service_healthy"
+          }
+        },
+        "read_only": true,
+        "cap_drop": [
+          "ALL"
+        ],
+        "cap_add": [
+          "CHOWN",
+          "FOWNER",
+          "DAC_OVERRIDE",
+          "SETUID",
+          "SETGID"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "init": true,
+        "entrypoint": [
+          "python"
+        ],
+        "command": [
+          "-c",
+          "import os\nimport secrets\nimport pwd\nfrom pathlib import Path\n\nfrom backend.lifecycle_admissions import AdmissionAnchor\nfrom backend.lifecycle_authenticated import AuthenticatedConfirmationStore\nfrom backend.lifecycle_durability import ConfirmationStore\nfrom backend.lifecycle_holds import HoldStore\nfrom backend.lifecycle_registry import Registry\n\napp = pwd.getpwnam('app')\napp_uid, app_gid = app.pw_uid, app.pw_gid\n\nroot = Path(os.environ['LIFECYCLE_DATA_ROOT'])\nlock_path = Path(os.environ['LIFECYCLE_BACKUP_LOCK_PATH'])\n\nregistry = Path(os.environ['LIFECYCLE_REGISTRY_PATH'])\nwitness = Path(os.environ['LIFECYCLE_CONFIRMATION_PATH'])\nauth_path = Path(os.environ['LIFECYCLE_AUTHENTICATED_CONFIRMATION_PATH'])\nholds = Path(os.environ['LIFECYCLE_HOLDS_PATH'])\nanchor = Path(os.environ['LIFECYCLE_ADMISSION_ANCHOR_PATH'])\n\nstore_paths = [registry, witness, auth_path, holds, anchor]\n\ndef chmod(path: Path, mode: int) -> None:\n  os.chmod(path, mode, follow_symlinks=False)\n\ndef chown(path: Path, uid: int, gid: int) -> None:\n  os.chown(path, uid, gid, follow_symlinks=False)\n\ndef stat_owner(path: Path):\n  st = os.stat(path, follow_symlinks=False)\n  return st.st_uid, st.st_gid, st.st_mode & 0o777\n\ndef ensure_dir(path: Path, *, uid: int, gid: int, mode: int) -> None:\n  path.mkdir(parents=True, exist_ok=True)\n  if path.is_symlink():\n    raise ValueError(f\"Unsafe lifecycle directory: {path}\")\n  current_uid, current_gid, _ = stat_owner(path)\n  if (current_uid, current_gid) != (uid, gid):\n    chown(path, uid, gid)\n  chmod(path, mode)\n\ndef ensure_file_owner(path: Path, *, uid: int, gid: int, mode: int, allow_root_fixup: bool) -> None:\n  if not path.exists():\n    return\n  if path.is_symlink():\n    raise ValueError(f\"Unsafe lifecycle file: {path}\")\n  current_uid, current_gid, _ = stat_owner(path)\n  if (current_uid, current_gid) == (uid, gid):\n    chmod(path, mode)\n    return\n  if allow_root_fixup and current_uid == 0:\n    # Fix a partial provisioning that created stores as root.\n    chown(path, uid, gid)\n    chmod(path, mode)\n    return\n  raise ValueError(f\"Owner mismatch for {path}: {current_uid}:{current_gid} (expected {uid}:{gid})\")\n\nprint(f\"[lifecycle-init] pre ids uid={os.getuid()} gid={os.getgid()}\")\n\n# Privileged step: create dirs and keys, and (idempotently) fix wrong root-owned stores/lock.\nensure_dir(root, uid=app_uid, gid=app_gid, mode=0o700)\n# Migrate legacy store locations (flat files under /app/lifecycle) into separate directories.\n# This preserves store bytes (rename) and enables backend.lifecycle_snapshot invariants.\nlegacy_map = {\n  root/'registry.sqlite': registry,\n  root/'confirmation.sqlite': witness,\n  root/'authenticated-confirmation.sqlite': auth_path,\n  root/'holds.sqlite': holds,\n  root/'admission-anchor.sqlite': anchor,\n}\n\nfor legacy, current in legacy_map.items():\n  if legacy.exists() and not current.exists():\n    ensure_dir(current.parent, uid=app_uid, gid=app_gid, mode=0o700)\n    os.rename(legacy, current)\n\nfor p in store_paths:\n  ensure_dir(p.parent, uid=app_uid, gid=app_gid, mode=0o700)\n  ensure_file_owner(p, uid=app_uid, gid=app_gid, mode=0o600, allow_root_fixup=True)\n\nensure_dir(lock_path.parent, uid=app_uid, gid=app_gid, mode=0o700)\nensure_file_owner(lock_path, uid=app_uid, gid=app_gid, mode=0o600, allow_root_fixup=True)\n\nkeys_dir = Path(os.environ['LIFECYCLE_AUTHENTICATION_KEY_PATH']).parent\nensure_dir(keys_dir, uid=0, gid=app_gid, mode=0o750)\n\ndef ensure_key(path: Path) -> None:\n  if path.exists():\n    # Preserve existing keys; only enforce the expected perms.\n    ensure_file_owner(path, uid=0, gid=app_gid, mode=0o440, allow_root_fixup=False)\n    return\n  fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)\n  try:\n    os.write(fd, secrets.token_bytes(32))\n  finally:\n    os.close(fd)\n  chown(path, 0, app_gid)\n  chmod(path, 0o440)\n\nensure_key(Path(os.environ['LIFECYCLE_AUTHENTICATION_KEY_PATH']))\nensure_key(Path(os.environ['LIFECYCLE_ADMISSION_KEY_PATH']))\n\n# Drop privileges: all SQLite stores MUST be created/initialized as `app`.\ntry:\n  os.setgroups([app_gid])\nexcept Exception:\n  pass\nos.setgid(app_gid)\nos.setuid(app_uid)\nos.umask(0o077)\n\nprint(f\"[lifecycle-init] post ids uid={os.getuid()} gid={os.getgid()}\")\n\n# Idempotent initialization: never overwrite existing stores.\nif not registry.exists():\n  Registry(registry).initialize()\nif not witness.exists():\n  ConfirmationStore(witness).initialize()\n\nauth = AuthenticatedConfirmationStore(\n  auth_path,\n  Path(os.environ['LIFECYCLE_AUTHENTICATION_KEY_PATH']).read_bytes(),\n  os.environ.get('LIFECYCLE_AUTHENTICATED_NAMESPACE', 'documind-public-beta'),\n)\nif not auth_path.exists():\n  auth.initialize()\n\nif not holds.exists():\n  HoldStore(holds, auth).initialize()\n\nif not anchor.exists():\n  AdmissionAnchor(anchor, Path(os.environ['LIFECYCLE_ADMISSION_KEY_PATH']).read_bytes()).initialize()\n\n# Ensure lock exists and is owned by `app` (no chmod/chown possible after setuid).\nif not lock_path.exists():\n  fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)\n  os.close(fd)\ncurrent_uid, current_gid, _ = stat_owner(lock_path)\nif (current_uid, current_gid) != (app_uid, app_gid):\n  raise ValueError(f\"Lock owner mismatch for {lock_path}: {current_uid}:{current_gid} (expected {app_uid}:{app_gid})\")\nchmod(lock_path, 0o600)\n\n# Final verification: owners must match effective uid.\nfor p in store_paths:\n  puid, pgid, pmode = stat_owner(p)\n  duid, dgid, dmode = stat_owner(p.parent)\n  print(f\"[lifecycle-init] {p} file={puid}:{pgid} {oct(pmode)} dir={duid}:{dgid} {oct(dmode)}\")\n  if puid != app_uid or duid != app_uid:\n    raise ValueError(f\"Owner mismatch after init: {p}\")\n"
+        ]
+      },
+      "api": {
+        "image": "${BACKEND_IMAGE:?Set BACKEND_IMAGE (tag or digest)}",
+        "labels": {
+          "traefik.enable": "false"
+        },
+        "env_file": [
+          "${PUBLIC_BETA_ENV_FILE:-.env.public-beta}"
+        ],
+        "environment": {
+          "DATABASE_URL": "postgresql+psycopg://${POSTGRES_USER:-documind_public_beta}:${POSTGRES_PASSWORD:?}@db:5432/${POSTGRES_DB:-documind_public_beta}",
+          "ACCOUNT_BASE_URL": "https://${APP_HOST:?Set beta hostname}",
+          "STORAGE_DIR": "/app/var/documents",
+          "EXTRACTION_MODE": "sandbox",
+          "API_KEYS": "{}",
+          "LEGACY_API_ENABLED": "false",
+          "OWNER_DEMO_ENABLED": "false",
+          "AI_ENABLED": "false",
+          "BFF_SERVICE_KEY": "${BFF_SERVICE_KEY:?Set an independent BFF service key}",
+          "REGISTRATION_MODE": "${REGISTRATION_MODE:-disabled}",
+          "APPLICATION_PROFILE": "${APPLICATION_PROFILE:-standard}",
+          "PUBLIC_REGISTRATION_LIMIT": "${PUBLIC_REGISTRATION_LIMIT:-5}",
+          "PUBLIC_REGISTRATION_PER_HOUR": "${PUBLIC_REGISTRATION_PER_HOUR:-10}",
+          "LIFECYCLE_DATA_ROOT": "/app/lifecycle",
+          "LIFECYCLE_BACKUP_LOCK_PATH": "/app/lifecycle/.backup.lock",
+          "LIFECYCLE_REGISTRY_PATH": "/app/lifecycle/registry/registry.sqlite",
+          "LIFECYCLE_CONFIRMATION_PATH": "/app/lifecycle/confirmation/confirmation.sqlite",
+          "LIFECYCLE_AUTHENTICATED_CONFIRMATION_PATH": "/app/lifecycle/authenticated/authenticated-confirmation.sqlite",
+          "LIFECYCLE_HOLDS_PATH": "/app/lifecycle/holds/holds.sqlite",
+          "LIFECYCLE_ADMISSION_ANCHOR_PATH": "/app/lifecycle/admissions/admission-anchor.sqlite",
+          "LIFECYCLE_AUTHENTICATION_KEY_PATH": "/app/lifecycle/keys/authentication.key",
+          "LIFECYCLE_ADMISSION_KEY_PATH": "/app/lifecycle/keys/admission.key"
+        },
+        "volumes": [
+          "public_beta_documents:/app/var",
+          "public_beta_lifecycle:/app/lifecycle"
+        ],
+        "networks": [
+          "data",
+          "application",
+          "outbound"
+        ],
+        "depends_on": {
+          "db": {
+            "condition": "service_healthy"
+          }
+        },
+        "mem_limit": "1536m",
+        "cpus": 2,
+        "pids_limit": 64,
+        "init": true,
+        "stop_grace_period": "150s",
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "read_only": true,
+        "tmpfs": [
+          "/tmp:size=256m,mode=1777"
+        ],
+        "command": [
+          "uvicorn",
+          "backend.main:app",
+          "--host",
+          "0.0.0.0",
+          "--port",
+          "8000",
+          "--workers",
+          "1",
+          "--no-access-log",
+          "--limit-concurrency",
+          "32"
+        ],
+        "healthcheck": {
+          "test": [
+            "CMD",
+            "python",
+            "-c",
+            "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health',timeout=3)"
+          ],
+          "interval": "10s",
+          "timeout": "5s",
+          "start_period": "30s",
+          "retries": 5
+        },
+        "logging": {
+          "driver": "json-file",
+          "options": {
+            "max-size": "10m",
+            "max-file": "3"
+          }
+        }
+      },
+      "web": {
+        "image": "${FRONTEND_IMAGE:?Set FRONTEND_IMAGE (tag or digest)}",
+        "environment": {
+          "BFF_SERVICE_KEY": "${BFF_SERVICE_KEY:?}",
+          "BFF_BACKEND_URL": "http://api:8000",
+          "BFF_HOST": "0.0.0.0",
+          "BFF_PORT": 3000,
+          "BFF_ALLOWED_HOSTS": "${APP_HOST:?Set beta hostname}",
+          "BFF_TRUSTED_PROXY_IPS": "${BFF_TRUSTED_PROXY_IPS:?Set actual proxy IP on the docker network}",
+          "MAX_UPLOAD_BYTES": "${MAX_UPLOAD_BYTES:-10485760}",
+          "UPLOAD_MAX_CONCURRENT": "${UPLOAD_MAX_CONCURRENT:-2}",
+          "UPLOAD_MAX_PREFLIGHTS": "${UPLOAD_MAX_PREFLIGHTS:-8}",
+          "UPLOAD_AUTH_TIMEOUT_SECONDS": "${UPLOAD_AUTH_TIMEOUT_SECONDS:-3}",
+          "UPLOAD_READ_TIMEOUT_SECONDS": "${UPLOAD_READ_TIMEOUT_SECONDS:-30}",
+          "UPLOAD_IDLE_TIMEOUT_SECONDS": "${UPLOAD_IDLE_TIMEOUT_SECONDS:-5}",
+          "UPLOAD_TOTAL_TIMEOUT_SECONDS": "${UPLOAD_TOTAL_TIMEOUT_SECONDS:-75}",
+          "WORKER_TIMEOUT_SECONDS": "${WORKER_TIMEOUT_SECONDS:-30}",
+          "AI_TIMEOUT_SECONDS": "${AI_TIMEOUT_SECONDS:-30}",
+          "AI_MAX_SUMMARY_STEPS": "${AI_MAX_SUMMARY_STEPS:-5}"
+        },
+        "networks": [
+          "application",
+          "web"
+        ],
+        "labels": {
+          "traefik.enable": "true",
+          "traefik.docker.network": "web",
+          "traefik.http.routers.documind-public-beta.rule": "Host(`${APP_HOST:?Set beta hostname}`)",
+          "traefik.http.routers.documind-public-beta.entrypoints": "websecure",
+          "traefik.http.routers.documind-public-beta.tls": "true",
+          "traefik.http.routers.documind-public-beta.tls.certresolver": "letsencrypt",
+          "traefik.http.routers.documind-public-beta.service": "documind-public-beta",
+          "traefik.http.routers.documind-public-beta.middlewares": "documind-public-beta-headers@docker",
+          "traefik.http.routers.documind-public-beta-upload.rule": "Host(`${APP_HOST:?Set beta hostname}`) && Method(`POST`) && Path(`/bff/documents`)",
+          "traefik.http.routers.documind-public-beta-upload.entrypoints": "websecure",
+          "traefik.http.routers.documind-public-beta-upload.tls": "true",
+          "traefik.http.routers.documind-public-beta-upload.tls.certresolver": "letsencrypt",
+          "traefik.http.routers.documind-public-beta-upload.service": "documind-public-beta",
+          "traefik.http.routers.documind-public-beta-upload.priority": "100",
+          "traefik.http.routers.documind-public-beta-upload.middlewares": "documind-public-beta-headers@docker,documind-public-beta-upload-capacity@docker",
+          "traefik.http.middlewares.documind-public-beta-upload-capacity.inflightreq.amount": "${UPLOAD_MAX_PREFLIGHTS:-8}",
+          "traefik.http.middlewares.documind-public-beta-upload-capacity.inflightreq.sourcecriterion.requesthost": "true",
+          "traefik.http.services.documind-public-beta.loadbalancer.server.port": "3000",
+          "traefik.http.services.documind-public-beta.loadbalancer.passhostheader": "true",
+          "traefik.http.middlewares.documind-public-beta-headers.headers.customrequestheaders.X-Forwarded-Proto": "https",
+          "traefik.http.middlewares.documind-public-beta-headers.headers.contenttypenosniff": "true",
+          "traefik.http.middlewares.documind-public-beta-headers.headers.referrerpolicy": "no-referrer",
+          "traefik.http.middlewares.documind-public-beta-headers.headers.stsseconds": "31536000"
+        },
+        "depends_on": {
+          "api": {
+            "condition": "service_healthy"
+          }
+        },
+        "mem_limit": "512m",
+        "cpus": 1,
+        "pids_limit": 64,
+        "init": true,
+        "read_only": true,
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "tmpfs": [
+          "/tmp:size=32m"
+        ],
+        "healthcheck": {
+          "test": [
+            "CMD",
+            "node",
+            "server/healthcheck.mjs"
+          ],
+          "interval": "15s",
+          "timeout": "5s",
+          "retries": 5
+        },
+        "logging": {
+          "driver": "json-file",
+          "options": {
+            "max-size": "10m",
+            "max-file": "3"
+          }
+        }
+      }
+    },
+    "networks": {
+      "data": {
+        "internal": true
+      },
+      "application": {
+        "internal": true
+      },
+      "web": {
+        "external": true,
+        "name": "web"
+      },
+      "outbound": {}
+    },
+    "volumes": {
+      "public_beta_database": {},
+      "public_beta_documents": {},
+      "public_beta_lifecycle": {}
+    }
+  },
+  "compose.public-beta-test.yaml": {
+    "services": {
+      "db": {
+        "image": "documind-postgres-vector:17",
+        "pull_policy": "never",
+        "labels": {
+          "documind.test": "sprint-14-6"
+        },
+        "user": "70:70",
+        "environment": {
+          "POSTGRES_USER": "documind_test",
+          "POSTGRES_PASSWORD": "fictitious-s14-6-only",
+          "POSTGRES_DB": "documind_beta_recipe"
+        },
+        "networks": [
+          "data"
+        ],
+        "tmpfs": [
+          "/var/lib/postgresql/data:rw,noexec,nosuid,size=768m,uid=70,gid=70,mode=0700"
+        ],
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "mem_limit": "1g",
+        "cpus": 1,
+        "pids_limit": 128,
+        "healthcheck": {
+          "test": [
+            "CMD-SHELL",
+            "pg_isready -U documind_test -d documind_beta_recipe"
+          ],
+          "interval": "2s",
+          "timeout": "3s",
+          "retries": 30
+        },
+        "logging": {
+          "driver": "json-file",
+          "options": {
+            "max-size": "10m",
+            "max-file": "3"
+          }
+        }
+      },
+      "api": {
+        "image": "documind-s14-6-api:local",
+        "pull_policy": "never",
+        "labels": {
+          "documind.test": "sprint-14-6"
+        },
+        "env_file": "${BETA_RECIPE_ENV:?Provide the newly generated fictitious recipe env}",
+        "environment": {
+          "DATABASE_URL": "postgresql+psycopg://documind_test:fictitious-s14-6-only@db:5432/documind_beta_recipe",
+          "STORAGE_DIR": "/app/var/documents",
+          "EXTRACTION_MODE": "sandbox",
+          "WORKER_MEMORY_MB": "512",
+          "WORKER_TIMEOUT_SECONDS": "30",
+          "MAX_CONCURRENT_WORKERS": "2",
+          "API_KEYS": "{}",
+          "LEGACY_API_ENABLED": "false",
+          "AI_ENABLED": "false",
+          "OWNER_DEMO_ENABLED": "false",
+          "SSL_CERT_FILE": "/certs/recipe.crt"
+        },
+        "volumes": [
+          "recipe_documents:/app/var",
+          "recipe_lifecycle:/app/lifecycle",
+          "${BETA_RECIPE_DIR:?}/tls:/certs:ro"
+        ],
+        "networks": [
+          "data",
+          "application"
+        ],
+        "depends_on": {
+          "db": {
+            "condition": "service_healthy"
+          }
+        },
+        "command": [
+          "uvicorn",
+          "backend.main:app",
+          "--host",
+          "0.0.0.0",
+          "--port",
+          "8000",
+          "--workers",
+          "1",
+          "--no-access-log",
+          "--limit-concurrency",
+          "32"
+        ],
+        "read_only": true,
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "init": true,
+        "stop_grace_period": "150s",
+        "tmpfs": [
+          "/tmp:rw,noexec,nosuid,size=256m,mode=1777"
+        ],
+        "mem_limit": "1536m",
+        "cpus": 2,
+        "pids_limit": 64,
+        "healthcheck": {
+          "test": [
+            "CMD",
+            "python",
+            "-c",
+            "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health',timeout=3)"
+          ],
+          "interval": "3s",
+          "timeout": "5s",
+          "start_period": "30s",
+          "retries": 20
+        },
+        "logging": {
+          "driver": "json-file",
+          "options": {
+            "max-size": "10m",
+            "max-file": "3"
+          }
+        }
+      },
+      "lifecycle-init": {
+        "image": "documind-s14-6-api:local",
+        "pull_policy": "never",
+        "labels": {
+          "documind.test": "sprint-14-6"
+        },
+        "user": "0:0",
+        "env_file": "${BETA_RECIPE_ENV:?Provide the newly generated fictitious recipe env}",
+        "environment": {
+          "DATABASE_URL": "postgresql+psycopg://documind_test:fictitious-s14-6-only@db:5432/documind_beta_recipe",
+          "STORAGE_DIR": "/app/var/documents",
+          "EXTRACTION_MODE": "sandbox",
+          "WORKER_MEMORY_MB": "512",
+          "WORKER_TIMEOUT_SECONDS": "30",
+          "MAX_CONCURRENT_WORKERS": "2",
+          "API_KEYS": "{}",
+          "LEGACY_API_ENABLED": "false",
+          "AI_ENABLED": "false",
+          "OWNER_DEMO_ENABLED": "false",
+          "SSL_CERT_FILE": "/certs/recipe.crt"
+        },
+        "volumes": [
+          "recipe_lifecycle:/app/lifecycle",
+          "${BETA_RECIPE_DIR:?}/tls:/certs:ro"
+        ],
+        "networks": [
+          "data"
+        ],
+        "read_only": true,
+        "cap_drop": [
+          "ALL"
+        ],
+        "cap_add": [
+          "CHOWN",
+          "FOWNER",
+          "DAC_OVERRIDE"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "init": true,
+        "entrypoint": [
+          "python"
+        ],
+        "command": [
+          "-c",
+          "import json\nimport os\nimport secrets\nfrom pathlib import Path\nimport pwd\n\nfrom backend.lifecycle_admissions import AdmissionAnchor\nfrom backend.lifecycle_authenticated import AuthenticatedConfirmationStore\nfrom backend.lifecycle_durability import ConfirmationStore\nfrom backend.lifecycle_holds import HoldStore\nfrom backend.lifecycle_registry import Registry\n\napp = pwd.getpwnam('app')\napp_uid, app_gid = app.pw_uid, app.pw_gid\nroot = Path(os.environ['LIFECYCLE_DATA_ROOT'])\nlock_path = Path(os.environ['LIFECYCLE_BACKUP_LOCK_PATH'])\n\nroot.mkdir(parents=True, exist_ok=True)\nos.chown(root, app_uid, app_gid)\nos.chmod(root, 0o700)\n\nstore_paths = [\n    Path(os.environ['LIFECYCLE_REGISTRY_PATH']),\n    Path(os.environ['LIFECYCLE_CONFIRMATION_PATH']),\n    Path(os.environ['LIFECYCLE_AUTHENTICATED_CONFIRMATION_PATH']),\n    Path(os.environ['LIFECYCLE_HOLDS_PATH']),\n    Path(os.environ['LIFECYCLE_ADMISSION_ANCHOR_PATH']),\n]\nfor path in store_paths:\n    path.parent.mkdir(parents=True, exist_ok=True)\n    os.chmod(path.parent, 0o700)\n\nkeys_dir = Path(os.environ['LIFECYCLE_AUTHENTICATION_KEY_PATH']).parent\nkeys_dir.mkdir(parents=True, exist_ok=True)\nos.chown(keys_dir, 0, app_gid)\nos.chmod(keys_dir, 0o750)\n\ndef ensure_key(path: Path) -> None:\n    if path.exists():\n        return\n    descriptor = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)\n    try:\n        os.write(descriptor, secrets.token_bytes(32))\n    finally:\n        os.close(descriptor)\n    os.chown(path, 0, app_gid)\n    os.chmod(path, 0o440)\n\nensure_key(Path(os.environ['LIFECYCLE_AUTHENTICATION_KEY_PATH']))\nensure_key(Path(os.environ['LIFECYCLE_ADMISSION_KEY_PATH']))\n\ncreated = []\nregistry = Path(os.environ['LIFECYCLE_REGISTRY_PATH'])\nwitness = Path(os.environ['LIFECYCLE_CONFIRMATION_PATH'])\nauth_path = Path(os.environ['LIFECYCLE_AUTHENTICATED_CONFIRMATION_PATH'])\nholds = Path(os.environ['LIFECYCLE_HOLDS_PATH'])\nanchor = Path(os.environ['LIFECYCLE_ADMISSION_ANCHOR_PATH'])\n\nif not registry.exists():\n    Registry(registry).initialize()\n    created.append('registry')\nif not witness.exists():\n    ConfirmationStore(witness).initialize()\n    created.append('witness')\n\nauth = AuthenticatedConfirmationStore(\n    auth_path,\n    Path(os.environ['LIFECYCLE_AUTHENTICATION_KEY_PATH']).read_bytes(),\n    'documind-local-v2',\n)\nif not auth_path.exists():\n    auth.initialize()\n    created.append('authenticated')\nif not holds.exists():\n    HoldStore(holds, auth).initialize()\n    created.append('holds')\nif not anchor.exists():\n    AdmissionAnchor(anchor, Path(os.environ['LIFECYCLE_ADMISSION_KEY_PATH']).read_bytes()).initialize()\n    created.append('admission_anchor')\n\nfor path in store_paths:\n    os.chown(path, app_uid, app_gid)\n    os.chown(path.parent, app_uid, app_gid)\n    os.chmod(path, 0o600)\n    os.chmod(path.parent, 0o700)\n\nlock_path.parent.mkdir(parents=True, exist_ok=True)\nif not lock_path.exists():\n    lock_path.touch()\nos.chown(lock_path, app_uid, app_gid)\nos.chmod(lock_path, 0o600)\n\nos.chmod(root, 0o500)\n\nprint(json.dumps({'created': created}, sort_keys=True))\n"
+        ],
+        "logging": {
+          "driver": "json-file",
+          "options": {
+            "max-size": "10m",
+            "max-file": "3"
+          }
+        }
+      },
+      "web": {
+        "image": "documind-s14-6-web:local",
+        "pull_policy": "never",
+        "labels": {
+          "documind.test": "sprint-14-6"
+        },
+        "environment": {
+          "BFF_SERVICE_KEY": "fictitious-s14-6-service-key-no-real-secret-0001",
+          "BFF_BACKEND_URL": "http://api:8000",
+          "BFF_HOST": "0.0.0.0",
+          "BFF_PORT": "3000",
+          "BFF_ALLOWED_HOSTS": "documind.test",
+          "BFF_TRUSTED_PROXY_IPS": "172.30.247.10"
+        },
+        "networks": [
+          "application",
+          "proxy"
+        ],
+        "depends_on": {
+          "api": {
+            "condition": "service_healthy"
+          }
+        },
+        "read_only": true,
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "init": true,
+        "tmpfs": [
+          "/tmp:size=32m"
+        ],
+        "mem_limit": "512m",
+        "cpus": 1,
+        "pids_limit": 64,
+        "healthcheck": {
+          "test": [
+            "CMD",
+            "node",
+            "server/healthcheck.mjs"
+          ],
+          "interval": "3s",
+          "timeout": "5s",
+          "retries": 20
+        },
+        "logging": {
+          "driver": "json-file",
+          "options": {
+            "max-size": "10m",
+            "max-file": "3"
+          }
+        }
+      },
+      "smtp": {
+        "image": "documind-s14-6-proofs:local",
+        "pull_policy": "never",
+        "labels": {
+          "documind.test": "sprint-14-6"
+        },
+        "init": true,
+        "environment": {
+          "DOCUMIND_TEST_ONLY": "sprint-14-6"
+        },
+        "command": [
+          "python",
+          "-m",
+          "tests.fixtures.public_beta_smtp"
+        ],
+        "volumes": [
+          "${BETA_RECIPE_DIR:?}/tls:/certs:ro",
+          "${BETA_RECIPE_DIR:?}/capture:/capture"
+        ],
+        "networks": [
+          "application"
+        ],
+        "read_only": true,
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "mem_limit": "128m",
+        "cpus": 0.5,
+        "pids_limit": 32,
+        "logging": {
+          "driver": "json-file",
+          "options": {
+            "max-size": "10m",
+            "max-file": "3"
+          }
+        }
+      },
+      "traefik": {
+        "image": "traefik:v3.3",
+        "pull_policy": "never",
+        "labels": {
+          "documind.test": "sprint-14-6"
+        },
+        "user": "1000:1000",
+        "command": [
+          "--entrypoints.alpha.address=:8443",
+          "--entrypoints.beta.address=:8444",
+          "--entrypoints.gamma.address=:8445",
+          "--entrypoints.alpha.transport.respondingtimeouts.readtimeout=60s",
+          "--entrypoints.alpha.transport.respondingtimeouts.writetimeout=90s",
+          "--entrypoints.beta.transport.respondingtimeouts.readtimeout=60s",
+          "--entrypoints.beta.transport.respondingtimeouts.writetimeout=90s",
+          "--entrypoints.gamma.transport.respondingtimeouts.readtimeout=60s",
+          "--entrypoints.gamma.transport.respondingtimeouts.writetimeout=90s",
+          "--providers.file.filename=/etc/traefik/recipe.yaml",
+          "--api=false",
+          "--accesslog=true",
+          "--accesslog.format=json",
+          "--accesslog.fields.defaultmode=drop",
+          "--accesslog.fields.headers.defaultmode=drop",
+          "--accesslog.fields.names.DownstreamStatus=keep",
+          "--accesslog.fields.names.Duration=keep"
+        ],
+        "volumes": [
+          "./ops/testing/traefik-public-beta-test.yaml:/etc/traefik/recipe.yaml:ro",
+          "${BETA_RECIPE_DIR:?}/tls:/certs:ro"
+        ],
+        "networks": {
+          "proxy": {
+            "ipv4_address": "172.30.247.10"
+          }
+        },
+        "read_only": true,
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "mem_limit": "256m",
+        "cpus": 1,
+        "pids_limit": 64,
+        "logging": {
+          "driver": "json-file",
+          "options": {
+            "max-size": "10m",
+            "max-file": "3"
+          }
+        }
+      },
+      "relay-alpha": {
+        "image": "documind-s14-6-proofs:local",
+        "pull_policy": "never",
+        "labels": {
+          "documind.test": "sprint-14-6"
+        },
+        "init": true,
+        "environment": {
+          "DOCUMIND_TEST_ONLY": "sprint-14-6",
+          "RELAY_TARGET_PORT": "8443"
+        },
+        "command": [
+          "python",
+          "-m",
+          "tests.fixtures.public_beta_tcp_relay"
+        ],
+        "ports": [
+          "127.0.0.1:19443:8443"
+        ],
+        "networks": [
+          "proxy"
+        ],
+        "read_only": true,
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "mem_limit": "128m",
+        "cpus": 0.5,
+        "pids_limit": 64,
+        "logging": {
+          "driver": "json-file",
+          "options": {
+            "max-size": "10m",
+            "max-file": "3"
+          }
+        }
+      },
+      "relay-beta": {
+        "image": "documind-s14-6-proofs:local",
+        "pull_policy": "never",
+        "labels": {
+          "documind.test": "sprint-14-6"
+        },
+        "init": true,
+        "environment": {
+          "DOCUMIND_TEST_ONLY": "sprint-14-6",
+          "RELAY_TARGET_PORT": "8444"
+        },
+        "command": [
+          "python",
+          "-m",
+          "tests.fixtures.public_beta_tcp_relay"
+        ],
+        "ports": [
+          "127.0.0.1:19444:8443"
+        ],
+        "networks": [
+          "proxy"
+        ],
+        "read_only": true,
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "mem_limit": "128m",
+        "cpus": 0.5,
+        "pids_limit": 64,
+        "logging": {
+          "driver": "json-file",
+          "options": {
+            "max-size": "10m",
+            "max-file": "3"
+          }
+        }
+      },
+      "relay-gamma": {
+        "image": "documind-s14-6-proofs:local",
+        "pull_policy": "never",
+        "labels": {
+          "documind.test": "sprint-14-6"
+        },
+        "init": true,
+        "environment": {
+          "DOCUMIND_TEST_ONLY": "sprint-14-6",
+          "RELAY_TARGET_PORT": "8445"
+        },
+        "command": [
+          "python",
+          "-m",
+          "tests.fixtures.public_beta_tcp_relay"
+        ],
+        "ports": [
+          "127.0.0.1:19445:8443"
+        ],
+        "networks": [
+          "proxy"
+        ],
+        "read_only": true,
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "mem_limit": "128m",
+        "cpus": 0.5,
+        "pids_limit": 64,
+        "logging": {
+          "driver": "json-file",
+          "options": {
+            "max-size": "10m",
+            "max-file": "3"
+          }
+        }
+      }
+    },
+    "networks": {
+      "data": {
+        "internal": true,
+        "labels": {
+          "documind.test": "sprint-14-6"
+        }
+      },
+      "application": {
+        "internal": true,
+        "labels": {
+          "documind.test": "sprint-14-6"
+        }
+      },
+      "proxy": {
+        "driver_opts": {
+          "com.docker.network.bridge.enable_ip_masquerade": "false"
+        },
+        "ipam": {
+          "config": [
+            {
+              "subnet": "172.30.247.0/24"
+            }
+          ]
+        },
+        "labels": {
+          "documind.test": "sprint-14-6"
+        }
+      }
+    },
+    "volumes": {
+      "recipe_documents": {
+        "labels": {
+          "documind.test": "sprint-14-6"
+        }
+      },
+      "recipe_lifecycle": {
+        "labels": {
+          "documind.test": "sprint-14-6"
+        }
+      }
+    }
+  }
+}

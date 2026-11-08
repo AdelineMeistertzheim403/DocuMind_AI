@@ -1,0 +1,29 @@
+diff --git a/.gitignore b/.gitignore
+--- a/.gitignore
++++ b/.gitignore
+@@ -35,2 +35,25 @@
+ # Optional standalone experiment, outside the approved public candidate.
+ /ops/testing/cloudflare_lot213/
++
++# Local root caches and alternate virtual environment.
++/.mypy_cache/
++/.ruff_cache/
++/.coverage.*
++/htmlcov/
++/venv/
++
++# Frontend-local generated outputs; never blanket-ignore sealed dist copies.
++/frontend/.next/
++/frontend/.vite/
++/frontend/.cache/
++/frontend/.nyc_output/
++/frontend/coverage/
++
++# Root private environment variants; retain non-sensitive templates.
++/.env.*
++!/.env.example
++!/.env.*.example
++
++# Exact local cache and private-key candidate; preserve before any cleanup.
++/deliveries/docnelo-web-branding-r1/npm-cache/
++/deliveries/docnelo-signup-e2e-lab/tls/lab.key

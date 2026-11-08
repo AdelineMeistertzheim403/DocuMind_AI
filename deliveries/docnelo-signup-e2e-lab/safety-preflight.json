@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "project": "docnelo-signup-lab-7c98f505cd",
+  "internal_network": true,
+  "immutable_images": true,
+  "new_volumes_only": true,
+  "real_env_files": false,
+  "real_credentials": false,
+  "loopback_only": true,
+  "durable_receipts_required": true,
+  "synthetic_mutations_enabled": false
+}

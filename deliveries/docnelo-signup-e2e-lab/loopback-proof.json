@@ -1,0 +1,25 @@
+{
+  "status": "PASS",
+  "bind": "127.0.0.1:19446",
+  "tls_certificate_verified": true,
+  "transport": "local Docker exec TCP relay to internal proxy; no external network",
+  "browser_interaction_performed": false,
+  "requests": [
+    {
+      "path": "/",
+      "status": 200
+    },
+    {
+      "path": "/register",
+      "status": 200
+    },
+    {
+      "path": "/lab-legal/terms",
+      "status": 200
+    },
+    {
+      "path": "/bff/auth/options",
+      "status": 200
+    }
+  ]
+}

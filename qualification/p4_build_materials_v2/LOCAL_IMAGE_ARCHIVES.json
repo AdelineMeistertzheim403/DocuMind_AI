@@ -1,0 +1,513 @@
+{
+  "approved_base_image_id": null,
+  "archives": [
+    {
+      "archive_sha256": "2ee6ab4f9a5eee4e6dad475e0a2988745472e12a918e186580a36e2e6c631081",
+      "bytes": 305131008,
+      "images": [
+        {
+          "architecture": "amd64",
+          "config_sha256": "4aa850b6fb8d16b32fd731d94b232b2f817f461892b3f39a28e7557a25a5eb3d",
+          "debian13_verified": false,
+          "image_id_from_config": "sha256:4aa850b6fb8d16b32fd731d94b232b2f817f461892b3f39a28e7557a25a5eb3d",
+          "layer_diff_ids_verified": false,
+          "layers": [
+            "blobs/sha256/a70f6272827f64e1427d048ced77491aab5d64ab95725e56920802ff391197d7",
+            "blobs/sha256/2538910a438d12b379a114fe53e919845f3fbf3c8ebacdc86b117281df86e341",
+            "blobs/sha256/d9e2bc4a8e2007c79074ed5d6f970dbb6a02a030e7ccf0ae41b8fb299584e429",
+            "blobs/sha256/778cedcffda71987237d372220e4cb0bfe2bf751a9375c7e05c92db24a802b4f",
+            "blobs/sha256/c8278fb85b36a0f57d96a42fb740b031e221ca4462bba9ba1b174006ce39f154",
+            "blobs/sha256/46b2037dabf6c7c0a46bfacbbf1a5e94a843fbbb629721076ffbbea22d36c743",
+            "blobs/sha256/6a219bd21b11bf9b024763af9fefefe4a0589a0808a5947a4cda888e957773b8",
+            "blobs/sha256/8407f07965cc4c4e20280e60af7b694c91dd733904c47430832da1c89aa70ee0",
+            "blobs/sha256/4dcafdea7348e499df74af2f54594b9b0a274e6e32ffa06fa7d0c7b7de03f37d",
+            "blobs/sha256/56df5adc6e3386fd86eba752df5bc4aac9fc1aa76a6a4f6ed3e10a406eedbf43",
+            "blobs/sha256/49e1ec98dc45debda17b64b1a82515a88bf1e64bfcc93ac47ec83778bbdda7e4",
+            "blobs/sha256/ca8eeeb719357352c36e84fa9537b6de391d9de90aa55f7ca9c76a11e1757ac2",
+            "blobs/sha256/7dc144aef8bbb0ff08e0a80e060998964938e5caeec5686a34d9bb1726f347b0",
+            "blobs/sha256/163524adaa7f47d88d185a2c30e6edeeac9e5038ddea5bd62ab4c513d180dece",
+            "blobs/sha256/c6dc6a4656805f9c69c79045a8dcb99fa176638c0a3c950579cce84c2b362336"
+          ],
+          "note": "No layer extraction, app files, full ENV, history commands or service data read",
+          "os": "linux",
+          "provenance_approved": false,
+          "python_version_env_hint_only": "3.13.17",
+          "repo_tags_observed_not_trusted": [
+            "documind-public-beta-backend:2026-10-31"
+          ],
+          "rootfs_diff_ids": [
+            "sha256:a70f6272827f64e1427d048ced77491aab5d64ab95725e56920802ff391197d7",
+            "sha256:2538910a438d12b379a114fe53e919845f3fbf3c8ebacdc86b117281df86e341",
+            "sha256:d9e2bc4a8e2007c79074ed5d6f970dbb6a02a030e7ccf0ae41b8fb299584e429",
+            "sha256:778cedcffda71987237d372220e4cb0bfe2bf751a9375c7e05c92db24a802b4f",
+            "sha256:c8278fb85b36a0f57d96a42fb740b031e221ca4462bba9ba1b174006ce39f154",
+            "sha256:46b2037dabf6c7c0a46bfacbbf1a5e94a843fbbb629721076ffbbea22d36c743",
+            "sha256:6a219bd21b11bf9b024763af9fefefe4a0589a0808a5947a4cda888e957773b8",
+            "sha256:8407f07965cc4c4e20280e60af7b694c91dd733904c47430832da1c89aa70ee0",
+            "sha256:4dcafdea7348e499df74af2f54594b9b0a274e6e32ffa06fa7d0c7b7de03f37d",
+            "sha256:56df5adc6e3386fd86eba752df5bc4aac9fc1aa76a6a4f6ed3e10a406eedbf43",
+            "sha256:49e1ec98dc45debda17b64b1a82515a88bf1e64bfcc93ac47ec83778bbdda7e4",
+            "sha256:ca8eeeb719357352c36e84fa9537b6de391d9de90aa55f7ca9c76a11e1757ac2",
+            "sha256:7dc144aef8bbb0ff08e0a80e060998964938e5caeec5686a34d9bb1726f347b0",
+            "sha256:163524adaa7f47d88d185a2c30e6edeeac9e5038ddea5bd62ab4c513d180dece",
+            "sha256:c6dc6a4656805f9c69c79045a8dcb99fa176638c0a3c950579cce84c2b362336"
+          ],
+          "status": "NOT_A_TARGET_BASE",
+          "target_version_hint_matches": false
+        }
+      ],
+      "path": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-10-users\\api-active.tar"
+    },
+    {
+      "archive_sha256": "71772a7b734471f7986d4f5c541742541f9f299a1c4dc07eeeb8daba6afd5ac5",
+      "bytes": 305131520,
+      "images": [
+        {
+          "architecture": "amd64",
+          "config_sha256": "4aa850b6fb8d16b32fd731d94b232b2f817f461892b3f39a28e7557a25a5eb3d",
+          "debian13_verified": false,
+          "image_id_from_config": "sha256:4aa850b6fb8d16b32fd731d94b232b2f817f461892b3f39a28e7557a25a5eb3d",
+          "layer_diff_ids_verified": false,
+          "layers": [
+            "blobs/sha256/a70f6272827f64e1427d048ced77491aab5d64ab95725e56920802ff391197d7",
+            "blobs/sha256/2538910a438d12b379a114fe53e919845f3fbf3c8ebacdc86b117281df86e341",
+            "blobs/sha256/d9e2bc4a8e2007c79074ed5d6f970dbb6a02a030e7ccf0ae41b8fb299584e429",
+            "blobs/sha256/778cedcffda71987237d372220e4cb0bfe2bf751a9375c7e05c92db24a802b4f",
+            "blobs/sha256/c8278fb85b36a0f57d96a42fb740b031e221ca4462bba9ba1b174006ce39f154",
+            "blobs/sha256/46b2037dabf6c7c0a46bfacbbf1a5e94a843fbbb629721076ffbbea22d36c743",
+            "blobs/sha256/6a219bd21b11bf9b024763af9fefefe4a0589a0808a5947a4cda888e957773b8",
+            "blobs/sha256/8407f07965cc4c4e20280e60af7b694c91dd733904c47430832da1c89aa70ee0",
+            "blobs/sha256/4dcafdea7348e499df74af2f54594b9b0a274e6e32ffa06fa7d0c7b7de03f37d",
+            "blobs/sha256/56df5adc6e3386fd86eba752df5bc4aac9fc1aa76a6a4f6ed3e10a406eedbf43",
+            "blobs/sha256/49e1ec98dc45debda17b64b1a82515a88bf1e64bfcc93ac47ec83778bbdda7e4",
+            "blobs/sha256/ca8eeeb719357352c36e84fa9537b6de391d9de90aa55f7ca9c76a11e1757ac2",
+            "blobs/sha256/7dc144aef8bbb0ff08e0a80e060998964938e5caeec5686a34d9bb1726f347b0",
+            "blobs/sha256/163524adaa7f47d88d185a2c30e6edeeac9e5038ddea5bd62ab4c513d180dece",
+            "blobs/sha256/c6dc6a4656805f9c69c79045a8dcb99fa176638c0a3c950579cce84c2b362336"
+          ],
+          "note": "No layer extraction, app files, full ENV, history commands or service data read",
+          "os": "linux",
+          "provenance_approved": false,
+          "python_version_env_hint_only": "3.13.17",
+          "repo_tags_observed_not_trusted": [],
+          "rootfs_diff_ids": [
+            "sha256:a70f6272827f64e1427d048ced77491aab5d64ab95725e56920802ff391197d7",
+            "sha256:2538910a438d12b379a114fe53e919845f3fbf3c8ebacdc86b117281df86e341",
+            "sha256:d9e2bc4a8e2007c79074ed5d6f970dbb6a02a030e7ccf0ae41b8fb299584e429",
+            "sha256:778cedcffda71987237d372220e4cb0bfe2bf751a9375c7e05c92db24a802b4f",
+            "sha256:c8278fb85b36a0f57d96a42fb740b031e221ca4462bba9ba1b174006ce39f154",
+            "sha256:46b2037dabf6c7c0a46bfacbbf1a5e94a843fbbb629721076ffbbea22d36c743",
+            "sha256:6a219bd21b11bf9b024763af9fefefe4a0589a0808a5947a4cda888e957773b8",
+            "sha256:8407f07965cc4c4e20280e60af7b694c91dd733904c47430832da1c89aa70ee0",
+            "sha256:4dcafdea7348e499df74af2f54594b9b0a274e6e32ffa06fa7d0c7b7de03f37d",
+            "sha256:56df5adc6e3386fd86eba752df5bc4aac9fc1aa76a6a4f6ed3e10a406eedbf43",
+            "sha256:49e1ec98dc45debda17b64b1a82515a88bf1e64bfcc93ac47ec83778bbdda7e4",
+            "sha256:ca8eeeb719357352c36e84fa9537b6de391d9de90aa55f7ca9c76a11e1757ac2",
+            "sha256:7dc144aef8bbb0ff08e0a80e060998964938e5caeec5686a34d9bb1726f347b0",
+            "sha256:163524adaa7f47d88d185a2c30e6edeeac9e5038ddea5bd62ab4c513d180dece",
+            "sha256:c6dc6a4656805f9c69c79045a8dcb99fa176638c0a3c950579cce84c2b362336"
+          ],
+          "status": "NOT_A_TARGET_BASE",
+          "target_version_hint_matches": false
+        }
+      ],
+      "path": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-lifecycle-10-api\\api-active-untagged.tar"
+    },
+    {
+      "archive_sha256": "54861f26d0528cea245e1527e9cda00500215d572d5087c3b9946b5b2c8ba0fb",
+      "bytes": 305291776,
+      "images": [
+        {
+          "architecture": "amd64",
+          "config_sha256": "525c859f0d162d0ff47ae1f7a04d630a14702d8815b1cf6862833b662f523ca4",
+          "debian13_verified": false,
+          "image_id_from_config": "sha256:525c859f0d162d0ff47ae1f7a04d630a14702d8815b1cf6862833b662f523ca4",
+          "layer_diff_ids_verified": false,
+          "layers": [
+            "blobs/sha256/a70f6272827f64e1427d048ced77491aab5d64ab95725e56920802ff391197d7",
+            "blobs/sha256/2538910a438d12b379a114fe53e919845f3fbf3c8ebacdc86b117281df86e341",
+            "blobs/sha256/d9e2bc4a8e2007c79074ed5d6f970dbb6a02a030e7ccf0ae41b8fb299584e429",
+            "blobs/sha256/778cedcffda71987237d372220e4cb0bfe2bf751a9375c7e05c92db24a802b4f",
+            "blobs/sha256/c8278fb85b36a0f57d96a42fb740b031e221ca4462bba9ba1b174006ce39f154",
+            "blobs/sha256/46b2037dabf6c7c0a46bfacbbf1a5e94a843fbbb629721076ffbbea22d36c743",
+            "blobs/sha256/6a219bd21b11bf9b024763af9fefefe4a0589a0808a5947a4cda888e957773b8",
+            "blobs/sha256/8407f07965cc4c4e20280e60af7b694c91dd733904c47430832da1c89aa70ee0",
+            "blobs/sha256/4dcafdea7348e499df74af2f54594b9b0a274e6e32ffa06fa7d0c7b7de03f37d",
+            "blobs/sha256/56df5adc6e3386fd86eba752df5bc4aac9fc1aa76a6a4f6ed3e10a406eedbf43",
+            "blobs/sha256/49e1ec98dc45debda17b64b1a82515a88bf1e64bfcc93ac47ec83778bbdda7e4",
+            "blobs/sha256/ca8eeeb719357352c36e84fa9537b6de391d9de90aa55f7ca9c76a11e1757ac2",
+            "blobs/sha256/7dc144aef8bbb0ff08e0a80e060998964938e5caeec5686a34d9bb1726f347b0",
+            "blobs/sha256/163524adaa7f47d88d185a2c30e6edeeac9e5038ddea5bd62ab4c513d180dece",
+            "blobs/sha256/c6dc6a4656805f9c69c79045a8dcb99fa176638c0a3c950579cce84c2b362336",
+            "blobs/sha256/6ad6352c08cefb2fc83ffdeb8aafda0214d3e05a69447a18ebd4b9d4906cbca2",
+            "blobs/sha256/d91576fd17d97ee04035700b8ad49188a0c3664f36f1cd3a56af9476e137b106",
+            "blobs/sha256/c8df9eac270dfbe29f58315014cb50a7854c04d7293ab52a8e5132decaf32874",
+            "blobs/sha256/9ca2195f0ef465d468e180a467d62eb6e8ce7dba53b996aae211a3740293260e",
+            "blobs/sha256/73eb6e98b53eae7f8cd6b121c6b1507a65f2b95399ced2b7ee09cf50d0adfb9a",
+            "blobs/sha256/69c96645614be68e233415bf51152285fd5a45b9ae2c175213448f13df0e7ff2",
+            "blobs/sha256/4e4b15b621b239ae1dcc67ae9fa4991cb3035d4ed4f95deb4fda8654060c4cb2",
+            "blobs/sha256/bbe7c4ac7ea9c450bdb908e3c231d3af3dafc70eb9c25814194bd69d166c6c63",
+            "blobs/sha256/db06d908d7e4b4a1fe16d2a13fd1c91882c3ad69c6afccdc1e1302f232364be0"
+          ],
+          "note": "No layer extraction, app files, full ENV, history commands or service data read",
+          "os": "linux",
+          "provenance_approved": false,
+          "python_version_env_hint_only": "3.13.17",
+          "repo_tags_observed_not_trusted": [
+            "documind-public-beta-backend:capacity10-27c6c58fe19d"
+          ],
+          "rootfs_diff_ids": [
+            "sha256:a70f6272827f64e1427d048ced77491aab5d64ab95725e56920802ff391197d7",
+            "sha256:2538910a438d12b379a114fe53e919845f3fbf3c8ebacdc86b117281df86e341",
+            "sha256:d9e2bc4a8e2007c79074ed5d6f970dbb6a02a030e7ccf0ae41b8fb299584e429",
+            "sha256:778cedcffda71987237d372220e4cb0bfe2bf751a9375c7e05c92db24a802b4f",
+            "sha256:c8278fb85b36a0f57d96a42fb740b031e221ca4462bba9ba1b174006ce39f154",
+            "sha256:46b2037dabf6c7c0a46bfacbbf1a5e94a843fbbb629721076ffbbea22d36c743",
+            "sha256:6a219bd21b11bf9b024763af9fefefe4a0589a0808a5947a4cda888e957773b8",
+            "sha256:8407f07965cc4c4e20280e60af7b694c91dd733904c47430832da1c89aa70ee0",
+            "sha256:4dcafdea7348e499df74af2f54594b9b0a274e6e32ffa06fa7d0c7b7de03f37d",
+            "sha256:56df5adc6e3386fd86eba752df5bc4aac9fc1aa76a6a4f6ed3e10a406eedbf43",
+            "sha256:49e1ec98dc45debda17b64b1a82515a88bf1e64bfcc93ac47ec83778bbdda7e4",
+            "sha256:ca8eeeb719357352c36e84fa9537b6de391d9de90aa55f7ca9c76a11e1757ac2",
+            "sha256:7dc144aef8bbb0ff08e0a80e060998964938e5caeec5686a34d9bb1726f347b0",
+            "sha256:163524adaa7f47d88d185a2c30e6edeeac9e5038ddea5bd62ab4c513d180dece",
+            "sha256:c6dc6a4656805f9c69c79045a8dcb99fa176638c0a3c950579cce84c2b362336",
+            "sha256:6ad6352c08cefb2fc83ffdeb8aafda0214d3e05a69447a18ebd4b9d4906cbca2",
+            "sha256:d91576fd17d97ee04035700b8ad49188a0c3664f36f1cd3a56af9476e137b106",
+            "sha256:c8df9eac270dfbe29f58315014cb50a7854c04d7293ab52a8e5132decaf32874",
+            "sha256:9ca2195f0ef465d468e180a467d62eb6e8ce7dba53b996aae211a3740293260e",
+            "sha256:73eb6e98b53eae7f8cd6b121c6b1507a65f2b95399ced2b7ee09cf50d0adfb9a",
+            "sha256:69c96645614be68e233415bf51152285fd5a45b9ae2c175213448f13df0e7ff2",
+            "sha256:4e4b15b621b239ae1dcc67ae9fa4991cb3035d4ed4f95deb4fda8654060c4cb2",
+            "sha256:bbe7c4ac7ea9c450bdb908e3c231d3af3dafc70eb9c25814194bd69d166c6c63",
+            "sha256:db06d908d7e4b4a1fe16d2a13fd1c91882c3ad69c6afccdc1e1302f232364be0"
+          ],
+          "status": "NOT_A_TARGET_BASE",
+          "target_version_hint_matches": false
+        }
+      ],
+      "path": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-lifecycle-10-api\\previous-candidate-27c6c58fe19d.tar"
+    },
+    {
+      "archive_sha256": "6bb4d7f6b6cd865f80c729b3f8b13287a7a6750e4c95f135079fc5bdb4458847",
+      "bytes": 305294336,
+      "images": [
+        {
+          "architecture": "amd64",
+          "config_sha256": "32a1516206d9e648e3741b54dc0543c0b455f22cdf676e7d69d9a971e1f4213d",
+          "debian13_verified": false,
+          "image_id_from_config": "sha256:32a1516206d9e648e3741b54dc0543c0b455f22cdf676e7d69d9a971e1f4213d",
+          "layer_diff_ids_verified": false,
+          "layers": [
+            "blobs/sha256/a70f6272827f64e1427d048ced77491aab5d64ab95725e56920802ff391197d7",
+            "blobs/sha256/2538910a438d12b379a114fe53e919845f3fbf3c8ebacdc86b117281df86e341",
+            "blobs/sha256/d9e2bc4a8e2007c79074ed5d6f970dbb6a02a030e7ccf0ae41b8fb299584e429",
+            "blobs/sha256/778cedcffda71987237d372220e4cb0bfe2bf751a9375c7e05c92db24a802b4f",
+            "blobs/sha256/c8278fb85b36a0f57d96a42fb740b031e221ca4462bba9ba1b174006ce39f154",
+            "blobs/sha256/46b2037dabf6c7c0a46bfacbbf1a5e94a843fbbb629721076ffbbea22d36c743",
+            "blobs/sha256/6a219bd21b11bf9b024763af9fefefe4a0589a0808a5947a4cda888e957773b8",
+            "blobs/sha256/8407f07965cc4c4e20280e60af7b694c91dd733904c47430832da1c89aa70ee0",
+            "blobs/sha256/4dcafdea7348e499df74af2f54594b9b0a274e6e32ffa06fa7d0c7b7de03f37d",
+            "blobs/sha256/56df5adc6e3386fd86eba752df5bc4aac9fc1aa76a6a4f6ed3e10a406eedbf43",
+            "blobs/sha256/49e1ec98dc45debda17b64b1a82515a88bf1e64bfcc93ac47ec83778bbdda7e4",
+            "blobs/sha256/ca8eeeb719357352c36e84fa9537b6de391d9de90aa55f7ca9c76a11e1757ac2",
+            "blobs/sha256/7dc144aef8bbb0ff08e0a80e060998964938e5caeec5686a34d9bb1726f347b0",
+            "blobs/sha256/163524adaa7f47d88d185a2c30e6edeeac9e5038ddea5bd62ab4c513d180dece",
+            "blobs/sha256/c6dc6a4656805f9c69c79045a8dcb99fa176638c0a3c950579cce84c2b362336",
+            "blobs/sha256/6ad6352c08cefb2fc83ffdeb8aafda0214d3e05a69447a18ebd4b9d4906cbca2",
+            "blobs/sha256/d91576fd17d97ee04035700b8ad49188a0c3664f36f1cd3a56af9476e137b106",
+            "blobs/sha256/c4401d3a7a61142b17e5ab0656359069beabd5630df4807e80661c55e9b57816",
+            "blobs/sha256/0017c6a9a252a7d5a0376d75886a7abdb387ea4fc912efedf146c9d6c010c16c",
+            "blobs/sha256/b8ef1dd1e49ab634558d6a514bac62fb31b22129fdb105064f5ffa38d75b0008",
+            "blobs/sha256/f3fd1a6091b60cffbfa8ac5df701d8c4426822ef06548e57e9f1f1df325d05d8",
+            "blobs/sha256/2b9123c9a90c34fbd136fd2ecb41fc97fe9180faaef68899b284a3b25ba68eb7",
+            "blobs/sha256/6f5f4e386388d422d36e404af25343be90ee8206f018b3f146b368643dd32cec",
+            "blobs/sha256/a0ae0dc7588857bf76251e9ce847b5910ef4284639f1110ba1318da3b6297525"
+          ],
+          "note": "No layer extraction, app files, full ENV, history commands or service data read",
+          "os": "linux",
+          "provenance_approved": false,
+          "python_version_env_hint_only": "3.13.17",
+          "repo_tags_observed_not_trusted": [
+            "documind-public-beta-backend:capacity10-8b11d4daf47b"
+          ],
+          "rootfs_diff_ids": [
+            "sha256:a70f6272827f64e1427d048ced77491aab5d64ab95725e56920802ff391197d7",
+            "sha256:2538910a438d12b379a114fe53e919845f3fbf3c8ebacdc86b117281df86e341",
+            "sha256:d9e2bc4a8e2007c79074ed5d6f970dbb6a02a030e7ccf0ae41b8fb299584e429",
+            "sha256:778cedcffda71987237d372220e4cb0bfe2bf751a9375c7e05c92db24a802b4f",
+            "sha256:c8278fb85b36a0f57d96a42fb740b031e221ca4462bba9ba1b174006ce39f154",
+            "sha256:46b2037dabf6c7c0a46bfacbbf1a5e94a843fbbb629721076ffbbea22d36c743",
+            "sha256:6a219bd21b11bf9b024763af9fefefe4a0589a0808a5947a4cda888e957773b8",
+            "sha256:8407f07965cc4c4e20280e60af7b694c91dd733904c47430832da1c89aa70ee0",
+            "sha256:4dcafdea7348e499df74af2f54594b9b0a274e6e32ffa06fa7d0c7b7de03f37d",
+            "sha256:56df5adc6e3386fd86eba752df5bc4aac9fc1aa76a6a4f6ed3e10a406eedbf43",
+            "sha256:49e1ec98dc45debda17b64b1a82515a88bf1e64bfcc93ac47ec83778bbdda7e4",
+            "sha256:ca8eeeb719357352c36e84fa9537b6de391d9de90aa55f7ca9c76a11e1757ac2",
+            "sha256:7dc144aef8bbb0ff08e0a80e060998964938e5caeec5686a34d9bb1726f347b0",
+            "sha256:163524adaa7f47d88d185a2c30e6edeeac9e5038ddea5bd62ab4c513d180dece",
+            "sha256:c6dc6a4656805f9c69c79045a8dcb99fa176638c0a3c950579cce84c2b362336",
+            "sha256:6ad6352c08cefb2fc83ffdeb8aafda0214d3e05a69447a18ebd4b9d4906cbca2",
+            "sha256:d91576fd17d97ee04035700b8ad49188a0c3664f36f1cd3a56af9476e137b106",
+            "sha256:c4401d3a7a61142b17e5ab0656359069beabd5630df4807e80661c55e9b57816",
+            "sha256:0017c6a9a252a7d5a0376d75886a7abdb387ea4fc912efedf146c9d6c010c16c",
+            "sha256:b8ef1dd1e49ab634558d6a514bac62fb31b22129fdb105064f5ffa38d75b0008",
+            "sha256:f3fd1a6091b60cffbfa8ac5df701d8c4426822ef06548e57e9f1f1df325d05d8",
+            "sha256:2b9123c9a90c34fbd136fd2ecb41fc97fe9180faaef68899b284a3b25ba68eb7",
+            "sha256:6f5f4e386388d422d36e404af25343be90ee8206f018b3f146b368643dd32cec",
+            "sha256:a0ae0dc7588857bf76251e9ce847b5910ef4284639f1110ba1318da3b6297525"
+          ],
+          "status": "NOT_A_TARGET_BASE",
+          "target_version_hint_matches": false
+        }
+      ],
+      "path": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-lifecycle-10-api\\payload\\api-capacity10.tar"
+    },
+    {
+      "archive_sha256": "205558a4e477b5cbcaeabc4609a96a1cd2dcb5b94ebddbdfbfae974b4bc6558d",
+      "bytes": 305111040,
+      "images": [
+        {
+          "architecture": "amd64",
+          "config_sha256": "4aa850b6fb8d16b32fd731d94b232b2f817f461892b3f39a28e7557a25a5eb3d",
+          "debian13_verified": false,
+          "image_id_from_config": "sha256:4aa850b6fb8d16b32fd731d94b232b2f817f461892b3f39a28e7557a25a5eb3d",
+          "layer_diff_ids_verified": false,
+          "layers": [
+            "blobs/sha256/a70f6272827f64e1427d048ced77491aab5d64ab95725e56920802ff391197d7",
+            "blobs/sha256/2538910a438d12b379a114fe53e919845f3fbf3c8ebacdc86b117281df86e341",
+            "blobs/sha256/d9e2bc4a8e2007c79074ed5d6f970dbb6a02a030e7ccf0ae41b8fb299584e429",
+            "blobs/sha256/778cedcffda71987237d372220e4cb0bfe2bf751a9375c7e05c92db24a802b4f",
+            "blobs/sha256/c8278fb85b36a0f57d96a42fb740b031e221ca4462bba9ba1b174006ce39f154",
+            "blobs/sha256/46b2037dabf6c7c0a46bfacbbf1a5e94a843fbbb629721076ffbbea22d36c743",
+            "blobs/sha256/6a219bd21b11bf9b024763af9fefefe4a0589a0808a5947a4cda888e957773b8",
+            "blobs/sha256/8407f07965cc4c4e20280e60af7b694c91dd733904c47430832da1c89aa70ee0",
+            "blobs/sha256/4dcafdea7348e499df74af2f54594b9b0a274e6e32ffa06fa7d0c7b7de03f37d",
+            "blobs/sha256/56df5adc6e3386fd86eba752df5bc4aac9fc1aa76a6a4f6ed3e10a406eedbf43",
+            "blobs/sha256/49e1ec98dc45debda17b64b1a82515a88bf1e64bfcc93ac47ec83778bbdda7e4",
+            "blobs/sha256/ca8eeeb719357352c36e84fa9537b6de391d9de90aa55f7ca9c76a11e1757ac2",
+            "blobs/sha256/7dc144aef8bbb0ff08e0a80e060998964938e5caeec5686a34d9bb1726f347b0",
+            "blobs/sha256/163524adaa7f47d88d185a2c30e6edeeac9e5038ddea5bd62ab4c513d180dece",
+            "blobs/sha256/c6dc6a4656805f9c69c79045a8dcb99fa176638c0a3c950579cce84c2b362336"
+          ],
+          "note": "No layer extraction, app files, full ENV, history commands or service data read",
+          "os": "linux",
+          "provenance_approved": false,
+          "python_version_env_hint_only": "3.13.17",
+          "repo_tags_observed_not_trusted": [],
+          "rootfs_diff_ids": [
+            "sha256:a70f6272827f64e1427d048ced77491aab5d64ab95725e56920802ff391197d7",
+            "sha256:2538910a438d12b379a114fe53e919845f3fbf3c8ebacdc86b117281df86e341",
+            "sha256:d9e2bc4a8e2007c79074ed5d6f970dbb6a02a030e7ccf0ae41b8fb299584e429",
+            "sha256:778cedcffda71987237d372220e4cb0bfe2bf751a9375c7e05c92db24a802b4f",
+            "sha256:c8278fb85b36a0f57d96a42fb740b031e221ca4462bba9ba1b174006ce39f154",
+            "sha256:46b2037dabf6c7c0a46bfacbbf1a5e94a843fbbb629721076ffbbea22d36c743",
+            "sha256:6a219bd21b11bf9b024763af9fefefe4a0589a0808a5947a4cda888e957773b8",
+            "sha256:8407f07965cc4c4e20280e60af7b694c91dd733904c47430832da1c89aa70ee0",
+            "sha256:4dcafdea7348e499df74af2f54594b9b0a274e6e32ffa06fa7d0c7b7de03f37d",
+            "sha256:56df5adc6e3386fd86eba752df5bc4aac9fc1aa76a6a4f6ed3e10a406eedbf43",
+            "sha256:49e1ec98dc45debda17b64b1a82515a88bf1e64bfcc93ac47ec83778bbdda7e4",
+            "sha256:ca8eeeb719357352c36e84fa9537b6de391d9de90aa55f7ca9c76a11e1757ac2",
+            "sha256:7dc144aef8bbb0ff08e0a80e060998964938e5caeec5686a34d9bb1726f347b0",
+            "sha256:163524adaa7f47d88d185a2c30e6edeeac9e5038ddea5bd62ab4c513d180dece",
+            "sha256:c6dc6a4656805f9c69c79045a8dcb99fa176638c0a3c950579cce84c2b362336"
+          ],
+          "status": "NOT_A_TARGET_BASE",
+          "target_version_hint_matches": false
+        }
+      ],
+      "path": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-signup-e2e-lab\\api-untagged.tar"
+    },
+    {
+      "archive_sha256": "72ec517904aa3eb74a520c9aacc49cfb9ba63b390c19c32843a15f27b70378ea",
+      "bytes": 260080640,
+      "images": [
+        {
+          "architecture": "amd64",
+          "config_sha256": "b8dcd1edd1c0e366f0bc605914424585a96d261b49b82e952458dfab1a911a1a",
+          "debian13_verified": false,
+          "image_id_from_config": "sha256:b8dcd1edd1c0e366f0bc605914424585a96d261b49b82e952458dfab1a911a1a",
+          "layer_diff_ids_verified": false,
+          "layers": [
+            "blobs/sha256/75c137aedfb2760f88629236cb7b797630aed0c3d91d626d1d1bb694878fc2ba",
+            "blobs/sha256/30ad2d1597a9c97acebab3677fb203383cecf282375bb030d114b01f98a1adb4",
+            "blobs/sha256/7f78e22f72fbece43b0a1236ad7b98579faaa411ce7445c98d8f6bfc7f06b1bc",
+            "blobs/sha256/92ef3b67b69bfad75b1f2a2df8279578ae15f7282b28f5d29bb4a85709285ecd",
+            "blobs/sha256/0153d3e2221a4ffd4264d058d2f625184644061d0e79c6c4aa94d8149f55951e",
+            "blobs/sha256/90b1c2ff28406a2179b8235fd4339c0bb1fbfa14ccf1a2c97f1097fa0eba62c9",
+            "blobs/sha256/852273ecfd6d88d67349332aab6cb43c3ed904259cabeaec77d02be4dbf7b813",
+            "blobs/sha256/d30de497fbe87bdd45268bee5105e69c305e7ab6c46cde12aad87c4b31773bb9",
+            "blobs/sha256/d8899d27161b2111d8325fba1bd6d847a8697abe7e1a6cd9cf85cb826caf8946",
+            "blobs/sha256/1f1c96ccdccd7930ec2b457186e96c169c3f03b130564bb55b1779f8cf579b59",
+            "blobs/sha256/fce8e616c7fb8eb2cb89647e768c9d92e35df3145aa49bf8544a5546555eba7c",
+            "blobs/sha256/f24c6a8851eda73c6b5c7e8e7b59281f3868fd6e8cb5bb2baa6248b2b4a6cb00",
+            "blobs/sha256/edbcac388a5c5dda9fecfced0d85d64c518e63db31256dd9b3cbb1d249911d48"
+          ],
+          "note": "No layer extraction, app files, full ENV, history commands or service data read",
+          "os": "linux",
+          "provenance_approved": false,
+          "python_version_env_hint_only": null,
+          "repo_tags_observed_not_trusted": [
+            "documind-public-beta-web:docnelo-r1-22b6428-v2"
+          ],
+          "rootfs_diff_ids": [
+            "sha256:75c137aedfb2760f88629236cb7b797630aed0c3d91d626d1d1bb694878fc2ba",
+            "sha256:30ad2d1597a9c97acebab3677fb203383cecf282375bb030d114b01f98a1adb4",
+            "sha256:7f78e22f72fbece43b0a1236ad7b98579faaa411ce7445c98d8f6bfc7f06b1bc",
+            "sha256:92ef3b67b69bfad75b1f2a2df8279578ae15f7282b28f5d29bb4a85709285ecd",
+            "sha256:0153d3e2221a4ffd4264d058d2f625184644061d0e79c6c4aa94d8149f55951e",
+            "sha256:90b1c2ff28406a2179b8235fd4339c0bb1fbfa14ccf1a2c97f1097fa0eba62c9",
+            "sha256:852273ecfd6d88d67349332aab6cb43c3ed904259cabeaec77d02be4dbf7b813",
+            "sha256:d30de497fbe87bdd45268bee5105e69c305e7ab6c46cde12aad87c4b31773bb9",
+            "sha256:d8899d27161b2111d8325fba1bd6d847a8697abe7e1a6cd9cf85cb826caf8946",
+            "sha256:1f1c96ccdccd7930ec2b457186e96c169c3f03b130564bb55b1779f8cf579b59",
+            "sha256:fce8e616c7fb8eb2cb89647e768c9d92e35df3145aa49bf8544a5546555eba7c",
+            "sha256:f24c6a8851eda73c6b5c7e8e7b59281f3868fd6e8cb5bb2baa6248b2b4a6cb00",
+            "sha256:edbcac388a5c5dda9fecfced0d85d64c518e63db31256dd9b3cbb1d249911d48"
+          ],
+          "status": "NOT_A_TARGET_BASE",
+          "target_version_hint_matches": false
+        }
+      ],
+      "path": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-web-branding-r1\\payload\\web-image.tar"
+    },
+    {
+      "archive_sha256": "67da7ce30c105693fb294ffeb586054e414a8f5c70e52d8d8ec47d5aa570013e",
+      "bytes": 257986560,
+      "images": [
+        {
+          "architecture": "amd64",
+          "config_sha256": "9301710690ea35cd3b81db3acf48deb38638c6e7fa3c29dac77756d60025f487",
+          "debian13_verified": false,
+          "image_id_from_config": "sha256:9301710690ea35cd3b81db3acf48deb38638c6e7fa3c29dac77756d60025f487",
+          "layer_diff_ids_verified": false,
+          "layers": [
+            "blobs/sha256/75c137aedfb2760f88629236cb7b797630aed0c3d91d626d1d1bb694878fc2ba",
+            "blobs/sha256/30ad2d1597a9c97acebab3677fb203383cecf282375bb030d114b01f98a1adb4",
+            "blobs/sha256/7f78e22f72fbece43b0a1236ad7b98579faaa411ce7445c98d8f6bfc7f06b1bc",
+            "blobs/sha256/92ef3b67b69bfad75b1f2a2df8279578ae15f7282b28f5d29bb4a85709285ecd",
+            "blobs/sha256/ff809c9b6e7e5602aac4084ab8c4b6b61aade4855c2bea73569e057d91463674",
+            "blobs/sha256/4e10897238a523c9d490b7684ad5acc76a45cd2db6f4f1c2426dd79698a12bea",
+            "blobs/sha256/a654b031c7fa09242d23e8b7b4bcbd44b309e3cc704ac6a1c7c640e2d9797f13",
+            "blobs/sha256/c43261351956ed3afd8ed0654887df4230ec29f06e5e5b992f0b966c1999cf1e",
+            "blobs/sha256/03868790d1e324abd78f2984c0f151890470b76694ceb6fc34e3a6b93f757b2c"
+          ],
+          "note": "No layer extraction, app files, full ENV, history commands or service data read",
+          "os": "linux",
+          "provenance_approved": false,
+          "python_version_env_hint_only": null,
+          "repo_tags_observed_not_trusted": [],
+          "rootfs_diff_ids": [
+            "sha256:75c137aedfb2760f88629236cb7b797630aed0c3d91d626d1d1bb694878fc2ba",
+            "sha256:30ad2d1597a9c97acebab3677fb203383cecf282375bb030d114b01f98a1adb4",
+            "sha256:7f78e22f72fbece43b0a1236ad7b98579faaa411ce7445c98d8f6bfc7f06b1bc",
+            "sha256:92ef3b67b69bfad75b1f2a2df8279578ae15f7282b28f5d29bb4a85709285ecd",
+            "sha256:ff809c9b6e7e5602aac4084ab8c4b6b61aade4855c2bea73569e057d91463674",
+            "sha256:4e10897238a523c9d490b7684ad5acc76a45cd2db6f4f1c2426dd79698a12bea",
+            "sha256:a654b031c7fa09242d23e8b7b4bcbd44b309e3cc704ac6a1c7c640e2d9797f13",
+            "sha256:c43261351956ed3afd8ed0654887df4230ec29f06e5e5b992f0b966c1999cf1e",
+            "sha256:03868790d1e324abd78f2984c0f151890470b76694ceb6fc34e3a6b93f757b2c"
+          ],
+          "status": "NOT_A_TARGET_BASE",
+          "target_version_hint_matches": false
+        }
+      ],
+      "path": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-web-branding-r2\\web-active-untagged.tar"
+    },
+    {
+      "archive_sha256": "321ea808f4dc246291adf484c9ee25245470545dec0a7774d4404f052100792b",
+      "bytes": 257984000,
+      "images": [
+        {
+          "architecture": "amd64",
+          "config_sha256": "9301710690ea35cd3b81db3acf48deb38638c6e7fa3c29dac77756d60025f487",
+          "debian13_verified": false,
+          "image_id_from_config": "sha256:9301710690ea35cd3b81db3acf48deb38638c6e7fa3c29dac77756d60025f487",
+          "layer_diff_ids_verified": false,
+          "layers": [
+            "blobs/sha256/75c137aedfb2760f88629236cb7b797630aed0c3d91d626d1d1bb694878fc2ba",
+            "blobs/sha256/30ad2d1597a9c97acebab3677fb203383cecf282375bb030d114b01f98a1adb4",
+            "blobs/sha256/7f78e22f72fbece43b0a1236ad7b98579faaa411ce7445c98d8f6bfc7f06b1bc",
+            "blobs/sha256/92ef3b67b69bfad75b1f2a2df8279578ae15f7282b28f5d29bb4a85709285ecd",
+            "blobs/sha256/ff809c9b6e7e5602aac4084ab8c4b6b61aade4855c2bea73569e057d91463674",
+            "blobs/sha256/4e10897238a523c9d490b7684ad5acc76a45cd2db6f4f1c2426dd79698a12bea",
+            "blobs/sha256/a654b031c7fa09242d23e8b7b4bcbd44b309e3cc704ac6a1c7c640e2d9797f13",
+            "blobs/sha256/c43261351956ed3afd8ed0654887df4230ec29f06e5e5b992f0b966c1999cf1e",
+            "blobs/sha256/03868790d1e324abd78f2984c0f151890470b76694ceb6fc34e3a6b93f757b2c"
+          ],
+          "note": "No layer extraction, app files, full ENV, history commands or service data read",
+          "os": "linux",
+          "provenance_approved": false,
+          "python_version_env_hint_only": null,
+          "repo_tags_observed_not_trusted": [
+            "documind-public-beta-frontend:2026-10-31"
+          ],
+          "rootfs_diff_ids": [
+            "sha256:75c137aedfb2760f88629236cb7b797630aed0c3d91d626d1d1bb694878fc2ba",
+            "sha256:30ad2d1597a9c97acebab3677fb203383cecf282375bb030d114b01f98a1adb4",
+            "sha256:7f78e22f72fbece43b0a1236ad7b98579faaa411ce7445c98d8f6bfc7f06b1bc",
+            "sha256:92ef3b67b69bfad75b1f2a2df8279578ae15f7282b28f5d29bb4a85709285ecd",
+            "sha256:ff809c9b6e7e5602aac4084ab8c4b6b61aade4855c2bea73569e057d91463674",
+            "sha256:4e10897238a523c9d490b7684ad5acc76a45cd2db6f4f1c2426dd79698a12bea",
+            "sha256:a654b031c7fa09242d23e8b7b4bcbd44b309e3cc704ac6a1c7c640e2d9797f13",
+            "sha256:c43261351956ed3afd8ed0654887df4230ec29f06e5e5b992f0b966c1999cf1e",
+            "sha256:03868790d1e324abd78f2984c0f151890470b76694ceb6fc34e3a6b93f757b2c"
+          ],
+          "status": "NOT_A_TARGET_BASE",
+          "target_version_hint_matches": false
+        }
+      ],
+      "path": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-web-branding-r2\\web-active.tar"
+    },
+    {
+      "archive_sha256": "de8f742edd34bf0182e746916376599686fcd7d5a176e43cdf0979caa32fc54b",
+      "bytes": 259197440,
+      "images": [
+        {
+          "architecture": "amd64",
+          "config_sha256": "ebdbc7fba1c61c03349088ca093470c78eec9dd91c5e2aa92ab1d8c0db5be362",
+          "debian13_verified": false,
+          "image_id_from_config": "sha256:ebdbc7fba1c61c03349088ca093470c78eec9dd91c5e2aa92ab1d8c0db5be362",
+          "layer_diff_ids_verified": false,
+          "layers": [
+            "blobs/sha256/75c137aedfb2760f88629236cb7b797630aed0c3d91d626d1d1bb694878fc2ba",
+            "blobs/sha256/30ad2d1597a9c97acebab3677fb203383cecf282375bb030d114b01f98a1adb4",
+            "blobs/sha256/7f78e22f72fbece43b0a1236ad7b98579faaa411ce7445c98d8f6bfc7f06b1bc",
+            "blobs/sha256/92ef3b67b69bfad75b1f2a2df8279578ae15f7282b28f5d29bb4a85709285ecd",
+            "blobs/sha256/ff809c9b6e7e5602aac4084ab8c4b6b61aade4855c2bea73569e057d91463674",
+            "blobs/sha256/4e10897238a523c9d490b7684ad5acc76a45cd2db6f4f1c2426dd79698a12bea",
+            "blobs/sha256/a654b031c7fa09242d23e8b7b4bcbd44b309e3cc704ac6a1c7c640e2d9797f13",
+            "blobs/sha256/c43261351956ed3afd8ed0654887df4230ec29f06e5e5b992f0b966c1999cf1e",
+            "blobs/sha256/03868790d1e324abd78f2984c0f151890470b76694ceb6fc34e3a6b93f757b2c",
+            "blobs/sha256/63ec6387e68b2b36d56656f54a3ae3de295c4ca5cae8be6e114bb0885de4d30d",
+            "blobs/sha256/ee13c49e4aaeb8727eeb35fb9a56fd0b171b52da209785c032faf6a57ff9caa1"
+          ],
+          "note": "No layer extraction, app files, full ENV, history commands or service data read",
+          "os": "linux",
+          "provenance_approved": false,
+          "python_version_env_hint_only": null,
+          "repo_tags_observed_not_trusted": [
+            "documind-public-beta-frontend:docnelo-r2-b046e5d8256d"
+          ],
+          "rootfs_diff_ids": [
+            "sha256:75c137aedfb2760f88629236cb7b797630aed0c3d91d626d1d1bb694878fc2ba",
+            "sha256:30ad2d1597a9c97acebab3677fb203383cecf282375bb030d114b01f98a1adb4",
+            "sha256:7f78e22f72fbece43b0a1236ad7b98579faaa411ce7445c98d8f6bfc7f06b1bc",
+            "sha256:92ef3b67b69bfad75b1f2a2df8279578ae15f7282b28f5d29bb4a85709285ecd",
+            "sha256:ff809c9b6e7e5602aac4084ab8c4b6b61aade4855c2bea73569e057d91463674",
+            "sha256:4e10897238a523c9d490b7684ad5acc76a45cd2db6f4f1c2426dd79698a12bea",
+            "sha256:a654b031c7fa09242d23e8b7b4bcbd44b309e3cc704ac6a1c7c640e2d9797f13",
+            "sha256:c43261351956ed3afd8ed0654887df4230ec29f06e5e5b992f0b966c1999cf1e",
+            "sha256:03868790d1e324abd78f2984c0f151890470b76694ceb6fc34e3a6b93f757b2c",
+            "sha256:63ec6387e68b2b36d56656f54a3ae3de295c4ca5cae8be6e114bb0885de4d30d",
+            "sha256:ee13c49e4aaeb8727eeb35fb9a56fd0b171b52da209785c032faf6a57ff9caa1"
+          ],
+          "status": "NOT_A_TARGET_BASE",
+          "target_version_hint_matches": false
+        }
+      ],
+      "path": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\deliveries\\docnelo-web-branding-r2\\payload\\web-r2.tar"
+    }
+  ],
+  "status": "BLOCKED"
+}

@@ -21,6 +21,8 @@ BUNDLE_FILES=frozenset(('release.json','compose.production.yaml','deploy_product
     'documind-monitor.service','documind-monitor.timer',
     'documind-retention.service','documind-retention.timer',
     'release_manifest.py','public_beta_policy.py','release_security.py'))
+PREVIOUS_BUNDLE_FILES = BUNDLE_FILES
+BUNDLE_FILES = BUNDLE_FILES | {'lifecycle_key_policy.py', 'restore_pgvector.py'}
 
 
 class SecurityError(ValueError):pass
@@ -89,12 +91,12 @@ def validate_statement(bundle,release):
     if not isinstance(data,dict) or set(data)!={'format','profile','git_sha','schema_revision','images','bundle_sha256','producer'}:
         raise SecurityError('Invalid security statement structure')
     if (type(data['format']) is not int or data['format']!=1 or data['profile']!=PROFILE
-            or data['git_sha']!=release['git_sha'] or data['schema_revision']!='0007'
-            or release['schema_revision']!='0007' or data['images']!=release['images']):
+            or data['git_sha']!=release['git_sha'] or data['schema_revision'] not in ('0007','0008')
+            or release['schema_revision']!=data['schema_revision'] or data['images']!=release['images']):
         raise SecurityError('Security statement identity mismatch')
     if strict_json(read_file(bundle/'release.json'))!=release:raise SecurityError('Security manifest mismatch')
     hashes=data['bundle_sha256']
-    if not isinstance(hashes,dict) or set(hashes) not in (BUNDLE_FILES,LEGACY_BUNDLE_FILES):
+    if not isinstance(hashes,dict) or set(hashes) not in (BUNDLE_FILES,PREVIOUS_BUNDLE_FILES,LEGACY_BUNDLE_FILES):
         raise SecurityError('Incomplete security bundle')
     for name,digest in hashes.items():
         if not isinstance(digest,str) or not re.fullmatch('[a-f0-9]{64}',digest) or hashlib.sha256(read_file(bundle/name)).hexdigest()!=digest:
@@ -112,9 +114,10 @@ def validate_operational_bundle(bundle,release,*,rollback=False):
     data,digest=validate_statement(bundle,release)
     names=set(data['bundle_sha256'])
     legacy=names==LEGACY_BUNDLE_FILES
-    if names!=BUNDLE_FILES and not legacy:
+    previous=names==PREVIOUS_BUNDLE_FILES
+    if names!=BUNDLE_FILES and not legacy and not previous:
         raise SecurityError('Unrecognized operational bundle inventory')
-    if legacy and not rollback:
+    if (legacy or previous) and not rollback:
         raise SecurityError('Legacy release bundles are rollback-only')
     actual={path.name for path in bundle.iterdir()}
     if actual!=names|{STATEMENT}:

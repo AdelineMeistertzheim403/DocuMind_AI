@@ -1,0 +1,10 @@
+{
+  "scope": "candidate preparation only; Docker/Debian campaigns not executed",
+  "candidate_SHA256SUMS_sha256": "c1099170790274d9a0bfc813d44f17afb907e1d68eb101a9c5fc887022030eba",
+  "evidence_SHA256SUMS_sha256": "ea2beb80994a3201dff8e9c42b3632ba750cd5f0e290595287b64a0842b92884",
+  "report_sha256": "8edea936794ae6ec0ec664b6a8fd241af0f6d23daf889e4ee75c35e98546ae3a",
+  "windows_passed": 119,
+  "docker_images_included": false,
+  "debian_wheel_closure_included": false,
+  "operational_go": false
+}

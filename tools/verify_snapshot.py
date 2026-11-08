@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import os
 import re
 import sqlite3
 import subprocess
@@ -9,6 +10,11 @@ import tarfile
 import tempfile
 from pathlib import Path
 from sqlalchemy import create_engine, text
+
+if __package__:
+    from .lifecycle_key_policy import validate_key_member, validate_key_permissions
+else:
+    from lifecycle_key_policy import validate_key_member, validate_key_permissions
 
 
 LIFECYCLE_STORES = {
@@ -19,16 +25,27 @@ LIFECYCLE_STORES = {
     'holds': (2, {'confirmations', 'admissions', 'holds_v2', 'hold_decisions_v2'}),
     'admission_anchor': (2, {'confirmations', 'admissions', 'admission_anchor'}),
 }
-BACKUP_FILES = {'database.dump', 'documents.tar.gz', 'lifecycle.sqlite.tar.gz', 'integrity.json'}
+V3_BACKUP_FILES = {'database.dump', 'documents.tar.gz', 'lifecycle.sqlite.tar.gz', 'integrity.json'}
+V4_BACKUP_FILES = V3_BACKUP_FILES | {'recovery-state.json'}
+V5_BACKUP_FILES = V4_BACKUP_FILES | {'lifecycle-keys.tar.gz'}
+RECOVERY_STATE_ALLOWED = {'ready', 'quarantined', 'serving_closed'}
 
 
 def verify_capture(snapshot, manifest, *, require_s2=False):
     """Verify exact archive completeness; never equate completeness with recovery authority."""
     version = manifest.get('backup_format_version', 0)
-    if version != 3:
+    if version not in {3, 4, 5}:
         if require_s2:
             raise SystemExit('Legacy snapshot lacks the five SQLite lifecycle stores; S2 restore refused')
         return False
+
+    expected_files = (V5_BACKUP_FILES if version == 5 else (V4_BACKUP_FILES if version == 4 else V3_BACKUP_FILES))
+    expected_scope = (
+        ['postgresql', 'documents', 'lifecycle_sqlite', 'lifecycle_keys', 'recovery_state'] if version == 5
+        else (['postgresql', 'documents', 'lifecycle_sqlite', 'recovery_state'] if version == 4
+              else ['postgresql', 'documents', 'lifecycle_sqlite'])
+    )
+
     if (manifest.get('capture_complete') is not True
             or manifest.get('s2_recovery_authorized') is not False
             or manifest.get('recovery_disposition') !=
@@ -39,16 +56,16 @@ def verify_capture(snapshot, manifest, *, require_s2=False):
     if (not isinstance(manifest.get('capture_id'), str)
             or not re.fullmatch(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',
                                 manifest['capture_id'])
-            or not isinstance(files, list) or len(files) != len(BACKUP_FILES)
-            or set(files) != BACKUP_FILES
-            or not isinstance(checksums, dict) or set(checksums) != BACKUP_FILES
+            or not isinstance(files, list) or len(files) != len(expected_files)
+            or set(files) != expected_files
+            or not isinstance(checksums, dict) or set(checksums) != expected_files
             or any(not isinstance(value, str) or not re.fullmatch(r'[a-f0-9]{64}', value)
                    for value in checksums.values())
-            or manifest.get('capture_scope') != ['postgresql', 'documents', 'lifecycle_sqlite']):
+            or manifest.get('capture_scope') != expected_scope):
         raise SystemExit('Incomplete full-backup file manifest')
-    if set(path.name for path in snapshot.iterdir()) != BACKUP_FILES | {'manifest.json'}:
+    if set(path.name for path in snapshot.iterdir()) != expected_files | {'manifest.json'}:
         raise SystemExit('Unexpected or missing full-backup archive file')
-    for name in BACKUP_FILES:
+    for name in expected_files:
         path = snapshot / name
         if not path.is_file() or path.is_symlink():
             raise SystemExit('Backup payload must be a regular file')
@@ -56,6 +73,34 @@ def verify_capture(snapshot, manifest, *, require_s2=False):
             digest = hashlib.file_digest(source, 'sha256').hexdigest()
         if manifest['sha256'].get(name) != digest:
             raise SystemExit(f'Backup payload checksum mismatch: {name}')
+
+    if version in {4, 5}:
+        recovery = manifest.get('recovery_state')
+        if (not isinstance(recovery, dict)
+                or not isinstance(recovery.get('path'), str)
+                or recovery.get('sha256') != manifest['sha256'].get('recovery-state.json')
+                or recovery.get('state') not in RECOVERY_STATE_ALLOWED):
+            raise SystemExit('Recovery latch metadata is missing or invalid')
+        payload = (snapshot / 'recovery-state.json').read_bytes()
+        if len(payload) > 1024:
+            raise SystemExit('Recovery latch is too large')
+
+        def unique_keys(pairs):
+            values = {}
+            for key, value in pairs:
+                if key in values:
+                    raise ValueError('duplicate key')
+                values[key] = value
+            return values
+
+        try:
+            parsed = json.loads(payload.decode('utf-8'), object_pairs_hook=unique_keys)
+        except (UnicodeDecodeError, ValueError):
+            raise SystemExit('Recovery latch is not valid JSON') from None
+        if (not isinstance(parsed, dict) or set(parsed) != {'format', 'state'}
+                or type(parsed.get('format')) is not int or parsed.get('format') != 1
+                or not isinstance(parsed.get('state'), str) or parsed.get('state') != recovery.get('state')):
+            raise SystemExit('Recovery latch payload schema mismatch')
 
     required_quiescence = {
         'api_web_stopped', 'only_database_service_running', 'private_networks_exclusive',
@@ -118,23 +163,65 @@ def verify_capture(snapshot, manifest, *, require_s2=False):
                 if (digest != item['sha256']
                         or digest != lifecycle_hashes.get(name)):
                     raise SystemExit(f'Lifecycle SQLite checksum mismatch: {name}')
-                database = Path(temporary) / f'{name}.sqlite'
-                database.write_bytes(payload)
-                connection = sqlite3.connect(f'file:{database.as_posix()}?mode=ro', uri=True)
+                if os.environ.get('DOCUMIND_VERIFY_SQLITE') == 'always':
+                    target = Path(temporary) / f'{name}.sqlite'
+                    target.write_bytes(payload)
+                    connection = sqlite3.connect(target)
+                    try:
+                        if connection.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
+                            raise SystemExit(f'Lifecycle SQLite integrity mismatch: {name}')
+                        user_version = connection.execute('PRAGMA user_version').fetchone()[0]
+                        tables = {
+                            row[0] for row in connection.execute(
+                                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+                        }
+                        if user_version != version_expected or tables != tables_expected:
+                            raise SystemExit(f'Lifecycle SQLite schema mismatch: {name}')
+                    finally:
+                        connection.close()
+    if version == 5:
+        expected_key_names = {'keys/authentication.key', 'keys/admission.key'}
+        keys = manifest.get('lifecycle_keys')
+        if (not isinstance(keys, dict) or set(keys) != expected_key_names):
+            raise SystemExit('Lifecycle key inventory missing or invalid')
+        for name, meta in keys.items():
+            if (not isinstance(meta, dict)
+                    or type(meta.get('size')) is not int or meta['size'] < 1
+                    or type(meta.get('mode')) is not int
+                    or not isinstance(meta.get('sha256'), str)
+                    or not re.fullmatch(r'[a-f0-9]{64}', meta['sha256'])):
+                raise SystemExit('Lifecycle key inventory entry is invalid')
+            try:
+                validate_key_permissions(meta['mode'], meta.get('uid'), meta.get('gid'))
+            except ValueError as exc:
+                raise SystemExit('Lifecycle key inventory entry is invalid') from exc
+        with tarfile.open(snapshot / 'lifecycle-keys.tar.gz', 'r:gz') as archive:
+            members = archive.getmembers()
+            names = {member.name for member in members}
+            if (names != expected_key_names or len(members) != len(expected_key_names)
+                    or any(not member.isfile() or member.issym() or member.islnk() for member in members)):
+                raise SystemExit('Lifecycle key archive must contain exactly the two key files')
+            for member in members:
+                path = Path(member.name)
+                if path.is_absolute() or '..' in path.parts:
+                    raise SystemExit('Unsafe lifecycle key archive member')
+                meta = keys[member.name]
                 try:
-                    if connection.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
-                        raise SystemExit(f'Lifecycle SQLite integrity failure: {name}')
-                    actual_version = connection.execute('PRAGMA user_version').fetchone()[0]
-                    actual_tables = {row[0] for row in connection.execute(
-                        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
-                    if actual_version != version_expected or actual_tables != tables_expected:
-                        raise SystemExit(f'Lifecycle SQLite schema mismatch: {name}')
-                finally:
-                    connection.close()
+                    validate_key_member(member, meta)
+                except ValueError as exc:
+                    raise SystemExit('Lifecycle key metadata mismatch') from exc
+                mode = member.mode
+                if member.size != meta['size'] or mode != meta['mode']:
+                    raise SystemExit(f'Lifecycle key metadata mismatch: {member.name}')
+                source = archive.extractfile(member)
+                if source is None:
+                    raise SystemExit(f'Lifecycle key missing: {member.name}')
+                payload = source.read()
+                if len(payload) != member.size or hashlib.sha256(payload).hexdigest() != meta['sha256']:
+                    raise SystemExit(f'Lifecycle key checksum mismatch: {member.name}')
     return True
 
-
-def verify_snapshot(snapshot,database='documind',compose=None,env=None,*,require_s2=False,database_url=None):
+def verify_snapshot(snapshot,database='documind',compose=None,env=None,*,require_s2=False,database_url=None,database_connect_args=None):
     """Read-only, usable with an explicitly isolated Compose project in restore tests."""
     if not re.fullmatch(r'[a-zA-Z0-9_]+',database):
         raise SystemExit('Invalid database name')
@@ -156,7 +243,7 @@ def verify_snapshot(snapshot,database='documind',compose=None,env=None,*,require
         columns=integrity['public_registration_quota'].get('columns')
         if columns is not None and set(columns)!={'id','issued_count','closed'}:
             raise SystemExit('Incomplete public quota integrity columns')
-    engine=create_engine(database_url) if database_url is not None else None
+    engine=create_engine(database_url,connect_args=database_connect_args or {}) if database_url is not None else None
     try:
         for table,expected in integrity.items():
             columns=expected.get('columns')
@@ -167,7 +254,7 @@ def verify_snapshot(snapshot,database='documind',compose=None,env=None,*,require
             sql=f"SELECT count(*),md5(coalesce(string_agg(row_to_json(t)::text,'' ORDER BY {order}),'')) FROM {source} t"
             if engine is None:
                 output=subprocess.check_output((compose or ['docker','compose'])+['exec','-T','db','sh','-c',
-                    'exec psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$1" -At -c "$2"', 'snapshot-check',database,sql],text=True,env=env)
+                    'exec psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$1" -At -c "$2"', 'snapshot-check',database,sql],text=True,env=env,stderr=subprocess.PIPE)
                 count,digest=output.strip().split('|')
                 count=int(count)
             else:

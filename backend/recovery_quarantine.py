@@ -46,7 +46,7 @@ def read_recovery_state(path):
         return 'invalid'
     if (not isinstance(value, dict) or set(value) != {'format', 'state'}
             or type(value['format']) is not int or value['format'] != 1
-            or not isinstance(value['state'], str) or value['state'] not in {'ready', 'quarantined'}):
+            or not isinstance(value['state'], str) or value['state'] not in {'ready', 'quarantined', 'serving_closed'}):
         return 'invalid'
     return value['state']
 
@@ -60,8 +60,16 @@ class RecoveryQuarantine:
             return await self.app(scope, receive, send)
         app = scope['app']
         state = read_recovery_state(app.state.settings.recovery_state_path)
-        if not app.state.recovery_ready_at_start or state != 'ready':
+        permitted = state == 'ready'
+        if getattr(app.state, 'recovery_release', None):
+            permitted = False
+        if state == 'serving_closed':
+            from .lite_release import serving_gate
+            permitted = serving_gate(app)
+        if not app.state.recovery_ready_at_start or not permitted:
             emit('system.recovery.quarantine', reason_code='recovery_quarantined', http_status=503)
             response = JSONResponse({'detail': 'Service en quarantaine de reprise'}, status_code=503)
             return await response(scope, receive, send)
+        if state == 'serving_closed' and scope.get('path') == '/api/v1/auth/register':
+            return await JSONResponse({'detail': 'Admissions fermees apres reprise'}, status_code=403)(scope, receive, send)
         await self.app(scope, receive, send)

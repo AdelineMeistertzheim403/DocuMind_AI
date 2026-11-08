@@ -1,0 +1,17 @@
+{
+  "common.py": {
+    "copied_without_modification": true,
+    "sha256": "c814691da99458de23e6477265f34db0ba6faf290b6d31e4d9c94a032cae3f99",
+    "source": "qualification/p4_base_runtime_v3/common.py"
+  },
+  "preserve.py": {
+    "copied_without_modification": true,
+    "sha256": "cb42b66101bb7e9579b6d66b2256a591c4dc7661dca0737aed44133c3e6d4bd9",
+    "source": "qualification/p4_base_runtime_v3/preserve.py"
+  },
+  "record.py": {
+    "copied_without_modification": true,
+    "sha256": "aee02c071fdaec51372873b582b1e4956ecb4ef1f182fcf13cb30dfef3427e38",
+    "source": "qualification/p4_base_runtime_v3/record.py"
+  }
+}

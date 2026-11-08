@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\.venv\\Scripts\\python.exe",
+    "-I",
+    "-B",
+    "-c",
+    "import ast, json, pathlib, sys, time\nroot, reproduced = map(pathlib.Path, sys.argv[1:])\nsys.path.insert(0, str(root))\nfrom common import digest, load, need, write_new\nexpected = {'local-image-list':1, 'archive-catalog':0, 'pyyaml-upstream':0, 'pip-upstream':0, 'wheel-verification':0, 'native-verification':0, 'bootstrap-verification':1, 'bootstrap-verification-final':0, 'material-gate':2, 'staged-wheel-verification':0, 'tool-tests-final':0, 'static-reproduction':0, 'source-validation':0, 'report-reproduction':0}\nreceipts = {}\nfor name, code in expected.items():\n    path = root / name / 'receipt.json'\n    receipt = load(path)\n    need(receipt['complete'] is True and type(receipt['returncode']) is int and receipt['returncode'] == code, name)\n    for item, value in receipt['sha256'].items():\n        need(digest(path.parent / item) == value, 'Capture changed: ' + name)\n    receipts[name] = {'returncode':code, 'receipt_sha256':digest(path)}\nneed('Ran 15 tests' in (root/'tool-tests-final'/'stderr').read_text() and '\\nOK\\n' in (root/'tool-tests-final'/'stderr').read_text(), 'Tool test completion absent')\nreports = {}\nfor name in ('P4_IMAGE_COMPONENTS.json','P4_WHEEL_APPROVAL_MATRIX.md','P4_PIP_BOOTSTRAP.json'):\n    need((root/name).read_bytes() == (reproduced/name).read_bytes(), 'Reproduction mismatch: ' + name)\n    reports[name] = digest(root/name)\nsources = list(root.rglob('*.py'))\nfor path in sources:\n    ast.parse(path.read_text(encoding='ascii'), filename=str(path), feature_version=(3,11))\nfor path in root.rglob('*'):\n    if path.is_file() and path.suffix in ('.py','.md','.json','.lock'):\n        text = path.read_text(encoding='ascii')\n        need(all(line.rstrip()==line for line in text.splitlines()), 'Trailing whitespace: ' + str(path))\n        if path.suffix == '.json': load(path)\npreserved = load(root/'PRESERVATION_VERIFIED.json')\nneed(preserved['files']==927 and preserved['status']=='PASS_SCOPED_REPOSITORY_BYTES_UNCHANGED','Historical preservation')\nwrite_new(root/'LOCAL_CHECKS.json', {'status':'PASS_PREPARATION_TOOL_CHECKS_NOT_P4', 'decision':'BLOCKED', 'observed_ns':time.time_ns(), 'python':sys.version, 'platform':sys.platform, 'tool_tests':15, 'python311_grammar_files':len(sources), 'receipts':receipts, 'reproduced_reports_sha256':reports, 'historical_repository_files_unchanged':927, 'public_https_metadata_gets_windows_only':2, 'packages_installed':0, 'docker_readonly_list_attempts':1, 'docker_build_pull_load_create_start_exec_stop_operations':0, 'debian_p4_executed':False, 'target_abi_executed':False, 'build_go':False, 'production_go':False})\nprint('PASS_PREPARATION_TOOL_CHECKS_NOT_P4; preparation BLOCKED')",
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\qualification\\p4_build_materials_v2",
+    "C:\\Users\\Adeline\\.copilot\\session-state\\e350b227-e5b4-47b0-873a-e4dd918941a0\\files\\p4-v2-report-check"
+  ],
+  "complete": false,
+  "python": "3.13.7 (tags/v3.13.7:bcee1c3, Aug 14 2025, 14:15:11) [MSC v.1944 64 bit (AMD64)]",
+  "python_executable": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\.venv\\Scripts\\python.exe",
+  "returncode": null,
+  "start_ns": 1793698658958692800
+}

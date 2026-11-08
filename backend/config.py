@@ -8,6 +8,9 @@ from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+PUBLIC_BETA_MAX_ADMISSIONS = 10
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     database_url: str = "postgresql+psycopg://documind:documind@localhost:5432/documind"
@@ -15,7 +18,14 @@ class Settings(BaseSettings):
     legacy_api_enabled: bool = True
     bff_service_key: SecretStr = SecretStr('')
     registration_mode: Literal['disabled', 'invite', 'public'] = 'disabled'
+    application_profile: Literal['standard', 'beta_lite'] = 'standard'
+    lite_cohort_id: UUID | None = None
+    lite_terms_sha256: str = ''
+    lite_instance_id: UUID | None = None
+    lite_authority_manifest: Path | None = None
     public_registration_limit: int = Field(0, ge=0, le=10000)
+    public_registration_requires_approval: bool = True
+    public_registration_use_lifecycle_receipts: bool = True
     public_registration_per_hour: int = Field(3, ge=1, le=10)
     public_verification_ttl_seconds: int = Field(3600, ge=300, le=86400)
     public_challenge_difficulty: int = Field(12, ge=10, le=18)
@@ -121,7 +131,22 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_keys(self):
-        if self.registration_mode == 'public':
+        if self.registration_mode == 'public' and self.public_registration_limit > PUBLIC_BETA_MAX_ADMISSIONS:
+            raise ValueError('La bêta publique est limitée à 10 admissions cumulatives')
+        if self.application_profile == 'standard' and (self.lite_cohort_id is not None or self.lite_terms_sha256 or self.lite_instance_id is not None or self.lite_authority_manifest is not None):
+            raise ValueError('Lite configuration requires an explicit Beta Lite profile')
+        if self.lite_authority_manifest is not None and (self.lite_instance_id is None or not self.lite_authority_manifest.is_absolute()):
+            raise ValueError('Explicit authority instance and absolute manifest required')
+        if self.application_profile == 'beta_lite':
+            import re
+            if (self.lite_cohort_id is None or self.registration_mode != 'invite'
+                    or self.public_registration_limit != 5 or self.ai_enabled
+                    or self.owner_demo_enabled or self.legacy_api_enabled or self.api_keys
+                    or not self.lifecycle_durable_receipts_required or self.lifecycle_synthetic_mutations_enabled
+                    or self.recovery_state_path is None
+                    or not re.fullmatch(r'[0-9a-f]{64}', self.lite_terms_sha256)):
+                raise ValueError('Incomplete or contradictory Beta Lite profile')
+        if self.registration_mode == 'public' or self.application_profile == 'beta_lite':
             if (not self.bff_service_key.get_secret_value() or self.legacy_api_enabled or self.owner_demo_enabled or
                     not self.smtp_host or self.smtp_from == 'no-reply@localhost' or not self.public_legal_ready or
                     not self.public_operator_name.strip() or '@' not in self.public_contact_email or not self.public_terms_version):

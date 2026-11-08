@@ -1,0 +1,42 @@
+Traceback (most recent call last):
+  File "C:\Users\Adeline\AppData\Local\Programs\Python\Python313\Lib\platform.py", line 987, in uname
+    system, node, release, version, machine = infos = os.uname()
+                                                      ^^^^^^^^
+AttributeError: module 'os' has no attribute 'uname'. Did you mean: 'name'?
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Adeline\Documents\DocuMind_AI\candidates\recovery-control-directory-v1\run_local.py", line 152, in main
+    import sqlalchemy
+  File "C:\Users\Adeline\Documents\DocuMind_AI\.venv\Lib\site-packages\sqlalchemy\__init__.py", line 12, in <module>
+    from . import util as _util
+  File "C:\Users\Adeline\Documents\DocuMind_AI\.venv\Lib\site-packages\sqlalchemy\util\__init__.py", line 14, in <module>
+    from ._collections import coerce_generator_arg as coerce_generator_arg
+  File "C:\Users\Adeline\Documents\DocuMind_AI\.venv\Lib\site-packages\sqlalchemy\util\_collections.py", line 39, in <module>
+    from ._has_cy import HAS_CYEXTENSION
+  File "C:\Users\Adeline\Documents\DocuMind_AI\.venv\Lib\site-packages\sqlalchemy\util\_has_cy.py", line 32, in <module>
+    _import_cy_extensions()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\Adeline\Documents\DocuMind_AI\.venv\Lib\site-packages\sqlalchemy\util\_has_cy.py", line 20, in _import_cy_extensions
+    from ..cyextension import util
+  File "lib/sqlalchemy/cyextension/util.pyx", line 9, in init sqlalchemy.cyextension.util
+  File "C:\Users\Adeline\Documents\DocuMind_AI\.venv\Lib\site-packages\sqlalchemy\exc.py", line 27, in <module>
+    from .util import compat
+  File "C:\Users\Adeline\Documents\DocuMind_AI\.venv\Lib\site-packages\sqlalchemy\util\compat.py", line 50, in <module>
+    arm = "aarch" in platform.machine().lower()
+                     ~~~~~~~~~~~~~~~~^^
+  File "C:\Users\Adeline\AppData\Local\Programs\Python\Python313\Lib\platform.py", line 1110, in machine
+    return uname().machine
+           ~~~~~^^
+  File "C:\Users\Adeline\AppData\Local\Programs\Python\Python313\Lib\platform.py", line 990, in uname
+    node = _node()
+  File "C:\Users\Adeline\AppData\Local\Programs\Python\Python313\Lib\platform.py", line 698, in _node
+    return socket.gethostname()
+           ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\Adeline\Documents\DocuMind_AI\candidates\recovery-control-directory-v1\run_local.py", line 77, in audit
+    deny(event)
+    ~~~~^^^^^^^
+  File "C:\Users\Adeline\Documents\DocuMind_AI\candidates\recovery-control-directory-v1\run_local.py", line 60, in deny
+    raise RuntimeError('Forbidden I/O: ' + label)
+RuntimeError: Forbidden I/O: socket.gethostname

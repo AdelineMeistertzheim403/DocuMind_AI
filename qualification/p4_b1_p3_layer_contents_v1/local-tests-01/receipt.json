@@ -1,0 +1,54 @@
+{
+  "argv": [
+    "/usr/bin/python3.11",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/mnt/c/Users/Adeline/Documents/DocuMind_AI/deliveries/docnelo-v51-p4-b1-p3-layer-contents-v1",
+    "-p",
+    "test_*.py",
+    "-v"
+  ],
+  "code_sha256": {
+    "comparator.py": "63225aec80a257a246ca492acbaf1dcc73c66a0c49123ffaffc9ad73ee6c383a",
+    "layer_contents.py": "d87b56c0d202699c0fc4fbf987d0ffcde43151cf0dd7719770ae84b2e67aae1f",
+    "record_tests.py": "a948c2ed342527dc7633d6ec603208947691ac0a21d9b81140cd958f47974476",
+    "seal.py": "6a275d0188afb19212e642bff867b1ad94cb53ef8db4de493c56f25449c9624a",
+    "test_comparator.py": "c47dc8de96e46cfb015ce890abb628c3852cfc7d2ff18d1c1551994418003b0c",
+    "test_layer_contents.py": "ef0ce54ffcc1e68b8b96f36d81fc7dda5eba90ee1fcbd9a58af12bd5c3be7205"
+  },
+  "complete": true,
+  "cwd": "/mnt/c/Users/Adeline/Documents/DocuMind_AI/deliveries/docnelo-v51-p4-b1-p3-layer-contents-v1",
+  "end_ns": 1793876665472181619,
+  "os_release": {
+    "BUG_REPORT_URL": "https://bugs.debian.org/",
+    "HOME_URL": "https://www.debian.org/",
+    "ID": "debian",
+    "NAME": "Debian GNU/Linux",
+    "PRETTY_NAME": "Debian GNU/Linux 12 (bookworm)",
+    "SUPPORT_URL": "https://www.debian.org/support",
+    "VERSION": "12 (bookworm)",
+    "VERSION_CODENAME": "bookworm",
+    "VERSION_ID": "12"
+  },
+  "platform": "Linux-6.18.54.1-microsoft-standard-WSL2-x86_64-with-glibc2.36",
+  "python": "3.11.2 (main, Oct  7 2026, 12:35:07) [GCC 12.2.0]",
+  "recorder_argv": [
+    "python3.11",
+    "-I",
+    "-B",
+    "-c",
+    "import pathlib,runpy,sys; sys.argv=['record_tests.py','--out',str(pathlib.Path.cwd().parents[1].joinpath('qualification','p4_b1_p3_layer_contents_v1','local-tests-01'))]; runpy.run_path('record_tests.py',run_name='__main__')"
+  ],
+  "release_anchor": null,
+  "returncode": 0,
+  "sha256": {
+    "stderr": "0e97d13d97a7e2a2db5291bce5d1aa7872f5c0f2fd7ca2ec2cfd00353b354d10",
+    "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "start_ns": 1793876664522169420,
+  "timeout": 120
+}

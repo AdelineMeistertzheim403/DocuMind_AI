@@ -18,6 +18,8 @@ from ..security_audit import emit, mark
 
 
 def owned_document(session, document_id, owner_id, lock=False):
+    from ..lite_deletions import check_document_access
+    check_document_access(session, document_id, owner_id)
     query = select(Document).where(Document.id == document_id, Document.owner_id == owner_id)
     if lock:
         query = query.with_for_update()

@@ -70,7 +70,9 @@ jobs:
             tests/test_lifecycle_durability.py::test_concurrent_last_admission_with_independent_witness \
             tests/test_lifecycle_posix.py::test_inventory_postgresql_transaction_rejects_writes \
             tests/test_document_integrity.py::test_postgresql_verifier_waits_for_original_writer_fence \
-            tests/test_release_security.py::test_real_postgresql_history_and_disabled_account_guard
+            tests/test_release_security.py::test_real_postgresql_history_and_disabled_account_guard \
+            tests/test_public_beta_approval.py \
+            tests/test_public_beta_postgresql_concurrency.py
       - name: Required native root ownership proofs (zero skips)
         run: |
           sudo .ci-venv/bin/python -m pytest -q -p no:cacheprovider --require-no-skips \
@@ -255,6 +257,7 @@ jobs:
           cp compose.production.yaml tools/deploy_production.py tools/backup_local.py tools/release_manifest.py tools/public_beta_policy.py release-bundle/
           cp tools/release_security.py tools/backup_production.py tools/verify_snapshot.py tools/validate_restore.py \
             tools/retention_production.py tools/monitor_production.py tools/gmail_monitor_alert.py release-bundle/
+          cp tools/lifecycle_key_policy.py tools/restore_pgvector.py release-bundle/
           cp ops/systemd/documind-backup.service ops/systemd/documind-backup.timer \
             ops/systemd/documind-backup-alert.service ops/systemd/documind-monitor.service \
             ops/systemd/documind-monitor.timer ops/systemd/documind-retention.service \

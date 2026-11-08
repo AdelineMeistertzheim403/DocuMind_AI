@@ -1,0 +1,43 @@
+{
+  "b1_contents_formally_closed": false,
+  "build_go": false,
+  "create_go": false,
+  "decision": "BLOCKED",
+  "docker_commands": 0,
+  "historical_b1_comparator_reexecuted": false,
+  "historical_campaigns_reexecuted": false,
+  "historical_scoped_files_unchanged": 1184,
+  "import_go": false,
+  "network_downloads": 0,
+  "observed_ns": 1793704413981673400,
+  "p3_archive_or_rootfs_reexamined": false,
+  "packages_installed": 0,
+  "platform": "win32",
+  "production_go": false,
+  "pull_go": false,
+  "python": "3.13.7 (tags/v3.13.7:bcee1c3, Aug 14 2025, 14:15:11) [MSC v.1944 64 bit (AMD64)]",
+  "raw_b1_evidence_verified_here": false,
+  "receipts": {
+    "preservation-command": {
+      "receipt_sha256": "e04aa8e52021562a0e7c03051f3c64242e9c74832ffdf06988cc1be1b7cd175d",
+      "returncode": 0
+    },
+    "reference-assessment": {
+      "receipt_sha256": "528e5aed6631e29365b641ebed296d9f87cb682702838acf916d7329f57cf35f",
+      "returncode": 0
+    },
+    "source-validation": {
+      "receipt_sha256": "6f42ab037f3d345d37125877179e8fe5fc4766ad5cd057fc78929a3f6f55075e",
+      "returncode": 0
+    },
+    "tool-tests": {
+      "receipt_sha256": "fd7b786bbbb92a462319a414bceed1abd16c40dc624c73aa9eb3d07d4d6ca98f",
+      "returncode": 0
+    }
+  },
+  "run_go": false,
+  "start_go": false,
+  "status": "PASS_SUPPLEMENT_TOOLS_ONLY",
+  "synthetic_tool_tests": 9,
+  "wheels_native_qualification_repeated": false
+}

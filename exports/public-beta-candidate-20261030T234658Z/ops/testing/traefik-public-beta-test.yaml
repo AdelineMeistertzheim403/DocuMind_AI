@@ -1,0 +1,19 @@
+# TEST ONLY: three TCP relays give these entries distinct real peers. No client XFF trust.
+http:
+  routers:
+    alpha: {rule: 'Host(`documind.test`)', entryPoints: [alpha], tls: {}, service: bff, middlewares: [https]}
+    beta: {rule: 'Host(`documind.test`)', entryPoints: [beta], tls: {}, service: bff, middlewares: [https]}
+    gamma: {rule: 'Host(`documind.test`)', entryPoints: [gamma], tls: {}, service: bff, middlewares: [https]}
+    upload-alpha: {rule: 'Host(`documind.test`) && Method(`POST`) && Path(`/bff/documents`)', entryPoints: [alpha], tls: {}, priority: 100, service: bff, middlewares: [https, uploads]}
+    upload-beta: {rule: 'Host(`documind.test`) && Method(`POST`) && Path(`/bff/documents`)', entryPoints: [beta], tls: {}, priority: 100, service: bff, middlewares: [https, uploads]}
+    upload-gamma: {rule: 'Host(`documind.test`) && Method(`POST`) && Path(`/bff/documents`)', entryPoints: [gamma], tls: {}, priority: 100, service: bff, middlewares: [https, uploads]}
+  services:
+    bff:
+      loadBalancer: {servers: [{url: 'http://web:3000'}], passHostHeader: true}
+  middlewares:
+    https:
+      headers: {customRequestHeaders: {X-Forwarded-Proto: https}, contentTypeNosniff: true, referrerPolicy: no-referrer}
+    uploads: {inFlightReq: {amount: 8, sourceCriterion: {requestHost: true}}}
+tls:
+  certificates:
+    - {certFile: /certs/recipe.crt, keyFile: /certs/recipe.key}

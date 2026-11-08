@@ -1,0 +1,118 @@
+{
+  "status": "passed",
+  "source_commit": "22b6428f961e98c6482a9881579361f53c114934",
+  "reference_image_id": "sha256:f15855942fb4382375648841bbcdc486fd39d252e80e8fdf8eb42999d6590019",
+  "new_image_id": "sha256:b8dcd1edd1c0e366f0bc605914424585a96d261b49b82e952458dfab1a911a1a",
+  "new_image_tag": "documind-public-beta-web:docnelo-r1-22b6428-v2",
+  "architecture": "linux/amd64",
+  "runtime_config_identical": true,
+  "base_layers_preserved": 11,
+  "additional_layers": 2,
+  "changed_layer_paths": [
+    "app",
+    "app/.wh.dist",
+    "etc",
+    "app",
+    "app/dist",
+    "app/dist/assets",
+    "app/dist/assets/Analysis-DIX2PiS3.js",
+    "app/dist/assets/index-BQlf71St.js",
+    "app/dist/assets/index-jboJjn68.css",
+    "app/dist/brand",
+    "app/dist/brand/docnelo",
+    "app/dist/brand/docnelo/docnelo-horizontal-dark-transparent.png",
+    "app/dist/brand/docnelo/docnelo-icon-192.png",
+    "app/dist/brand/docnelo/docnelo-icon-32.png",
+    "app/dist/brand/docnelo/docnelo-icon-512.png",
+    "app/dist/brand/docnelo/docnelo-icon-64.png",
+    "app/dist/brand/docnelo/docnelo-tokens.css",
+    "app/dist/brand/docnelo/favicon.ico",
+    "app/dist/favicon.svg",
+    "app/dist/index.html",
+    "app/dist/manifest.webmanifest"
+  ],
+  "runtime_source_files_identical": [
+    {
+      "path": "package-lock.json",
+      "sha256": "7ce52768894aeaccbd4f632b6c18261348cf6858a6f5787fc5ad86d52e051804"
+    },
+    {
+      "path": "package.json",
+      "sha256": "4ae12f1f5aa4f5bd964d03832bf14a597273d3c15775ff7d74ba73f290ba419b"
+    },
+    {
+      "path": "server/app.mjs",
+      "sha256": "178f100852e1202aac454eb15c4b47eae49003769249723e604fe82f2ac34834"
+    },
+    {
+      "path": "server/app.test.mjs",
+      "sha256": "6deababb48c17d7013366fb55d01bd6f0c8ef874464e7f5b4cf63b77f1fe108c"
+    },
+    {
+      "path": "server/config.mjs",
+      "sha256": "f521bc98437a608c1832f61d29e9e7c2cb8a211b9bdbd9c7057a66985ff90d47"
+    },
+    {
+      "path": "server/healthcheck.mjs",
+      "sha256": "a176c82ab75f1bb7f67489a52a0ae26df5295af5c0aaa9709e90777583c25dc7"
+    },
+    {
+      "path": "server/http-server.mjs",
+      "sha256": "4192ea35793cd522b8bed3c1afe60324fb73db9345d2456a3c8ad220e5d7eb73"
+    },
+    {
+      "path": "server/index.mjs",
+      "sha256": "4f67599320c99fbf3a01b906273dbee6214c596b4de57bbb484fb1d528dfe6a9"
+    },
+    {
+      "path": "server/security-audit.mjs",
+      "sha256": "c9d02bf493e294c70f56368eebd2a9bebc4fa2b9c484b1ac80d0520a2c2be0c6"
+    },
+    {
+      "path": "server/security-audit.test.mjs",
+      "sha256": "18f5ea646467999bf0c5b13e1334ecc686d172737c79d91fddb01e5f31286bdc"
+    },
+    {
+      "path": "server/upload-admission.test.mjs",
+      "sha256": "46f6e74fa6d331587c306b46c28e69f567f1f5cb3d0a30a9fec5b9ec64110b22"
+    }
+  ],
+  "parent_directory_metadata": [
+    {
+      "path": "app",
+      "mode_uid_gid_unchanged": true,
+      "mtime_before": 1792928661,
+      "mtime_after": 1793458622
+    },
+    {
+      "path": "etc",
+      "mode_uid_gid_unchanged": true,
+      "mtime_before": 1792661402,
+      "mtime_after": 1793458622
+    },
+    {
+      "path": "app",
+      "mode_uid_gid_unchanged": true,
+      "mtime_before": 1792928661,
+      "mtime_after": 1793458622
+    }
+  ],
+  "archive_sha256": "72ec517904aa3eb74a520c9aacc49cfb9ba63b390c19c32843a15f27b70378ea",
+  "archive_bytes": 260080640,
+  "active_vps_image_id": null,
+  "new_image_dist_sha256_matches_source": {
+    "assets/Analysis-DIX2PiS3.js": "c09d2f40510d5a5e4880d4aafba1e2244567e29783c259577ed033bedc4708ad",
+    "assets/index-BQlf71St.js": "b4646fe09fff8b8c5998100b87fbbce498f910a12798c4d063b1dd22490f5f09",
+    "assets/index-jboJjn68.css": "5da0883c013ccb7a6de42b43bc777f398bf112da8afd920c99e4f358900092b0",
+    "brand/docnelo/docnelo-horizontal-dark-transparent.png": "8076bf4f108a1a9224cb11748257850d6c1fadbaf927fbbe8c38255cdbfca0a1",
+    "brand/docnelo/docnelo-icon-192.png": "157f11b3fa5262d923a2d51ed706e12457d76660365f7afce0154bdec195e600",
+    "brand/docnelo/docnelo-icon-32.png": "1ddc50f4a0792b35c2e31f09177a4e64f2c8b575dc15cd6fd65c71f3d406b7d7",
+    "brand/docnelo/docnelo-icon-512.png": "60815d53cc0e835b11e6bb87b588a1e3fae81c78f0ccbb409c5cdaeee6f9d7e3",
+    "brand/docnelo/docnelo-icon-64.png": "7c96b04cae7479f562747177b7aa73d05fa885f319a0603b5a637b3b11304a5e",
+    "brand/docnelo/docnelo-tokens.css": "070b3432b5698813177f98ddc39f7b2519a3f500448d9c12f257d55dc50dabf8",
+    "brand/docnelo/favicon.ico": "f237b74e365f51f078416dd574250a4e9eaffbc534a3a0fed144766588384f07",
+    "favicon.svg": "2113501d9de800348e6441f103cee301c45aeab3da4d5b4d65d95163f2cd3d10",
+    "index.html": "84c6b52edc2945e90bf530c16dd389a7c1c9800db66c73130131a5730b4c0179",
+    "manifest.webmanifest": "7a507e4d01514d0c3b8c0fd6688b9d54a164d4464caa3ee5ee71427bd6427132"
+  }
+}

@@ -1,5 +1,5 @@
 """Cooperative process lock shared by lifecycle stores and backup capture."""
-from contextlib import contextmanager, nullcontext
+from contextlib import contextmanager
 import os
 from pathlib import Path
 import stat
@@ -10,7 +10,7 @@ def _lock_file(required: bool):
     if not raw_path:
         if required:
             raise ValueError("Lifecycle backup lock is not configured")
-        return nullcontext()
+        return None
     path = Path(raw_path)
     if not path.is_absolute() or path.resolve() != path or any(
         parent.is_symlink() for parent in (path, *path.parents) if parent.exists()
@@ -26,9 +26,8 @@ def _lock_file(required: bool):
 def lifecycle_store_lock(*, exclusive: bool = False, required: bool = False):
     """Serialize configured lifecycle access with an exclusive snapshot barrier."""
     path = _lock_file(required)
-    if path is None or hasattr(path, "__enter__"):
-        with path:
-            yield
+    if path is None:
+        yield
         return
     flags = os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0)
     descriptor = os.open(path, flags, 0o600)

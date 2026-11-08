@@ -1,0 +1,20 @@
+{
+  "argv": [
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\.venv\\Scripts\\python.exe",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    ".\\qualification\\p4_asgi_offline_v1\\tests",
+    "-v"
+  ],
+  "complete": false,
+  "gid": null,
+  "groups": null,
+  "monotonic_start_ns": 4120683526000,
+  "returncode": null,
+  "start_ns": 1793696151879328600,
+  "uid": null
+}

@@ -1,0 +1,75 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+________ test_new_python_api_process_keeps_ten_and_login_after_closure _________
+
+ten = ((<starlette.testclient.TestClient object at 0x771e54d78440>, <fastapi.applications.FastAPI object at 0x771e55075f90>, <queue.Queue object at 0x771e54d0be30>), [10610.0])
+
+    def test_new_python_api_process_keeps_ten_and_login_after_closure(ten):
+        (client, app, sent), clock = ten
+        enroll_ten(ten, 10)
+        with app.state.sessions() as db:
+            user = db.scalar(select(User).where(User.email == 'synthetic-0@example.test'))
+            user.email_verified_at = now()
+            db.commit()
+        settings = app.state.settings.model_copy(update={'registration_mode':'disabled'})
+        program = '''
+    import json,sys
+    from fastapi.testclient import TestClient
+    from backend.config import Settings
+    from backend.main import create_app
+    from backend.account_models import PublicRegistrationQuota
+    from tests.conftest import BFF_KEY
+    from tests.test_public_beta import PASSWORD
+    settings=Settings(_env_file=None,**json.load(sys.stdin))
+    app=create_app(settings)
+    with TestClient(app) as client:
+        client.headers.update({'X-API-Key':BFF_KEY,'X-Documind-Secure':'1'})
+        options=client.get('/api/v1/auth/options').json()
+        result=client.post('/api/v1/auth/login',json={'email':'synthetic-0@example.test','password':PASSWORD})
+        with app.state.sessions() as db:
+            count=db.get(PublicRegistrationQuota,'public').issued_count
+        print(json.dumps({'restart_proof':True,'issued_count':count,'login_status':result.status_code,'availability':options['public_registration_availability']}))
+    app.state.authentication_engine.dispose()
+    app.state.engine.dispose()
+    '''
+        child = subprocess.run([sys.executable, '-B', '-c', program],
+            input=settings.model_dump_json(), capture_output=True, text=True, timeout=30)
+>       assert child.returncode == 0, child.stderr
+E       AssertionError: /usr/local/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+E           from starlette.testclient import TestClient as TestClient  # noqa
+E         Traceback (most recent call last):
+E           File "<string>", line 9, in <module>
+E             settings=Settings(_env_file=None,**json.load(sys.stdin))
+E           File "/usr/local/lib/python3.13/site-packages/pydantic_settings/main.py", line 292, in __init__
+E             super().__init__(**__pydantic_self__.__class__._settings_build_values(sources, init_kwargs))
+E             ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           File "/usr/local/lib/python3.13/site-packages/pydantic/main.py", line 280, in __init__
+E             validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+E         pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E           Value error, BFF_SERVICE_KEY doit contenir au moins 32 caractères sans espace [type=value_error, input_value={'database_url': 'postgre...context_tokens': 128000}, input_type=dict]
+E             For further information visit https://errors.pydantic.dev/2.14/v/value_error
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/usr/local/bin/python', '-B', '-c', "\nimport json,sys\nfrom fastapi.testclient import TestCli...kens\': 128000}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.14/v/value_error\n').returncode
+
+tests/test_ten_users_process_restart.py:44: AssertionError
+----------------------------- Captured stdout call -----------------------------
+{"timestamp":"2026-10-31T16:29:49.803Z","level":"INFO","service":"documind-api","event":"account.registration.requested","operation":"register","outcome":"success","request_id":"bab5f31bbe4f4e1ab0a12364e622e274","http_status":202,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:29:49.930Z","level":"INFO","service":"documind-api","event":"account.registration.requested","operation":"register","outcome":"success","request_id":"d68beb801aaf415daeef54fb585ee6ba","http_status":202,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:29:50.059Z","level":"INFO","service":"documind-api","event":"account.registration.requested","operation":"register","outcome":"success","request_id":"64b9747d268c4798b999a3e95c2a2de6","http_status":202,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:29:50.186Z","level":"INFO","service":"documind-api","event":"account.registration.requested","operation":"register","outcome":"success","request_id":"d64970b393574b10ba43bd3d68a82170","http_status":202,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:29:50.319Z","level":"INFO","service":"documind-api","event":"account.registration.requested","operation":"register","outcome":"success","request_id":"c90eac884b174898bd63a87a7dbab21a","http_status":202,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:29:50.445Z","level":"INFO","service":"documind-api","event":"account.registration.requested","operation":"register","outcome":"success","request_id":"c90f112f27a4488e932fd751007d5b59","http_status":202,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:29:50.568Z","level":"INFO","service":"documind-api","event":"account.registration.requested","operation":"register","outcome":"success","request_id":"d581ed1623154199928623f68f17e48f","http_status":202,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:29:50.691Z","level":"INFO","service":"documind-api","event":"account.registration.requested","operation":"register","outcome":"success","request_id":"373eb34f99a74caa849cffd7c7521add","http_status":202,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:29:50.820Z","level":"INFO","service":"documind-api","event":"account.registration.requested","operation":"register","outcome":"success","request_id":"8a04c7b0b21149d6a1a185bc5f6635de","http_status":202,"reason_code":"completed"}
+{"timestamp":"2026-10-31T16:29:50.949Z","level":"INFO","service":"documind-api","event":"account.registration.requested","operation":"register","outcome":"success","request_id":"c77434ddb54f4bcc88c2382ce520eedc","http_status":202,"reason_code":"completed"}
+=============================== warnings summary ===============================
+../usr/local/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /usr/local/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_ten_users_process_restart.py::test_new_python_api_process_keeps_ten_and_login_after_closure
+1 failed, 1 warning in 5.01s

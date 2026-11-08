@@ -1,0 +1,1118 @@
+{
+  "status": "passed",
+  "browser": "156.0.8078.4",
+  "network": "all requests intercepted; synthetic data only",
+  "results": [
+    {
+      "format": "desktop",
+      "path": "/login",
+      "passed": true,
+      "computedCss": {
+        "blue": "#126bee",
+        "mint": "#3ad8b4",
+        "logoWidth": 160,
+        "primary": "rgb(18, 107, 238)",
+        "overflow": false
+      }
+    },
+    {
+      "format": "desktop",
+      "path": "/register",
+      "passed": true,
+      "registration": "disabled in synthetic options"
+    },
+    {
+      "format": "desktop",
+      "path": "/",
+      "passed": true,
+      "viewportWidth": 1440,
+      "scrollWidth": 1440
+    },
+    {
+      "format": "desktop",
+      "path": "/documents",
+      "passed": true,
+      "viewportWidth": 1440,
+      "scrollWidth": 1440
+    },
+    {
+      "format": "desktop",
+      "path": "/documents/11111111-1111-4111-8111-111111111111",
+      "passed": true,
+      "viewportWidth": 1440,
+      "scrollWidth": 1440
+    },
+    {
+      "format": "desktop",
+      "path": "/settings/ai",
+      "passed": true,
+      "viewportWidth": 1440,
+      "scrollWidth": 1440
+    },
+    {
+      "format": "desktop",
+      "path": "/settings/profile",
+      "passed": true,
+      "viewportWidth": 1440,
+      "scrollWidth": 1440
+    },
+    {
+      "format": "desktop",
+      "path": "/settings/security",
+      "passed": true,
+      "viewportWidth": 1440,
+      "scrollWidth": 1440
+    },
+    {
+      "format": "desktop",
+      "path": "/settings/privacy",
+      "passed": true,
+      "viewportWidth": 1440,
+      "scrollWidth": 1440
+    },
+    {
+      "format": "desktop",
+      "path": "/legal",
+      "passed": true,
+      "viewportWidth": 1440,
+      "scrollWidth": 1440
+    },
+    {
+      "format": "mobile",
+      "path": "/login",
+      "passed": true,
+      "computedCss": {
+        "blue": "#126bee",
+        "mint": "#3ad8b4",
+        "logoWidth": 160,
+        "primary": "rgb(18, 107, 238)",
+        "overflow": false
+      }
+    },
+    {
+      "format": "mobile",
+      "path": "/register",
+      "passed": true,
+      "registration": "disabled in synthetic options"
+    },
+    {
+      "format": "mobile",
+      "path": "/",
+      "passed": true,
+      "viewportWidth": 390,
+      "scrollWidth": 390
+    },
+    {
+      "format": "mobile",
+      "path": "/documents",
+      "passed": true,
+      "viewportWidth": 390,
+      "scrollWidth": 390
+    },
+    {
+      "format": "mobile",
+      "path": "/documents/11111111-1111-4111-8111-111111111111",
+      "passed": true,
+      "viewportWidth": 390,
+      "scrollWidth": 390
+    },
+    {
+      "format": "mobile",
+      "path": "/settings/ai",
+      "passed": true,
+      "viewportWidth": 390,
+      "scrollWidth": 390
+    },
+    {
+      "format": "mobile",
+      "path": "/settings/profile",
+      "passed": true,
+      "viewportWidth": 390,
+      "scrollWidth": 390
+    },
+    {
+      "format": "mobile",
+      "path": "/settings/security",
+      "passed": true,
+      "viewportWidth": 390,
+      "scrollWidth": 390
+    },
+    {
+      "format": "mobile",
+      "path": "/settings/privacy",
+      "passed": true,
+      "viewportWidth": 390,
+      "scrollWidth": 390
+    },
+    {
+      "format": "mobile",
+      "path": "/legal",
+      "passed": true,
+      "viewportWidth": 390,
+      "scrollWidth": 390
+    }
+  ],
+  "requests": [
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/login"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/auth/options"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/register"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/auth/options"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/login"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/auth/options"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/auth/csrf"
+    },
+    {
+      "format": "desktop",
+      "method": "POST",
+      "path": "/bff/auth/login"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/account"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/documents"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/health"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/account"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/documents"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/health"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/documents"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/account"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/documents"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/health"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/documents/11111111-1111-4111-8111-111111111111"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/account"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/documents/11111111-1111-4111-8111-111111111111"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/documents/11111111-1111-4111-8111-111111111111/analysis"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/health"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/ai/status"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/documents/11111111-1111-4111-8111-111111111111/summary-plan"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/documents/11111111-1111-4111-8111-111111111111/summaries"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/documents/11111111-1111-4111-8111-111111111111/ai-history"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/settings/ai"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/account"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/ai/settings"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/ai/status"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/health"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/ai/usage"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/settings/profile"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/account"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/health"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/settings/security"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/account"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/account/sessions"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/health"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/settings/privacy"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/account"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/documents"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/health"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/legal"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/bff/auth/options"
+    },
+    {
+      "format": "desktop",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/login"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/auth/options"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/register"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/auth/options"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/login"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/auth/options"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/auth/csrf"
+    },
+    {
+      "format": "mobile",
+      "method": "POST",
+      "path": "/bff/auth/login"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/account"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/documents"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/health"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/documents"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/account"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/documents"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/health"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/documents"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/account"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/documents"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/health"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/documents/11111111-1111-4111-8111-111111111111"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/account"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/documents/11111111-1111-4111-8111-111111111111"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/documents/11111111-1111-4111-8111-111111111111/analysis"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/health"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/ai/status"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/documents/11111111-1111-4111-8111-111111111111/summary-plan"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/documents/11111111-1111-4111-8111-111111111111/summaries"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/documents/11111111-1111-4111-8111-111111111111/ai-history"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/settings/ai"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/account"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/ai/settings"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/ai/status"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/health"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/ai/usage"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/settings/profile"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/account"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/health"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/settings/security"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/account"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/account/sessions"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/health"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/settings/privacy"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/account"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/documents"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/health"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-horizontal-dark-transparent.png"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/legal"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-BQlf71St.js"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/assets/index-jboJjn68.css"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/bff/auth/options"
+    },
+    {
+      "format": "mobile",
+      "method": "GET",
+      "path": "/brand/docnelo/docnelo-icon-32.png"
+    }
+  ],
+  "unexpected": []
+}

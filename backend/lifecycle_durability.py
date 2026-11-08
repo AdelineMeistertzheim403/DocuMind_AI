@@ -182,6 +182,13 @@ def _read_private_key(path):
     path = Path(path)
     if os.name != 'posix' or not path.is_absolute() or path.resolve() != path:
         raise ValueError('A canonical POSIX key path is required')
+    if os.geteuid() != 0 and path.lstat().st_uid == 0:
+        from .lite_authority import read, secure_path
+        secure_path(path.parent, 0, private=False, directory=True)
+        key = read(path, 0, private=False)
+        if path.stat().st_mode & 0o007 or len(key) != 32:
+            raise ValueError('Private read-only administrative key required')
+        return key
     if any(parent.is_symlink() for parent in (path.parent, *path.parent.parents)):
         raise ValueError('Unsafe key directory')
     directory = path.parent.stat()

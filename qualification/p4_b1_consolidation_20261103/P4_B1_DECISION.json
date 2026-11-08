@@ -1,0 +1,36 @@
+{
+  "decision": "BLOCKED",
+  "review_only": true,
+  "build_go": false,
+  "create_go": false,
+  "start_go": false,
+  "run_go": false,
+  "pull_go": false,
+  "import_go": false,
+  "production_go": false,
+  "b1_contents": {
+    "status": "SUPPORTED_BY_REPORTED_RESULTS_PENDING_FORMAL_EVIDENCE_REVIEW",
+    "formally_closed": false,
+    "scope": "exact regular-file path set and file bytes only",
+    "reported_content_mismatches": 0,
+    "closure_requires": [
+      "C1: validate received existing evidence bytes against the recorded anchors",
+      "C2: review the comparison tool, complete capture and its documented return-code policy",
+      "C3: bind the report to the exact config/diff ID and corrected rootfs manifest with a consistent evidence chronology",
+      "C4: verify exhaustive regular-file path/byte coverage and retain explicit root/ownership exclusions",
+      "C5: issue a separate authorized review record closing contents only, with every execution GO false"
+    ]
+  },
+  "full_metadata_equality": {
+    "status": "NOT_EQUAL_AS_REPORTED",
+    "uid_gid_equal": false,
+    "root_directory_entry_equal": false,
+    "mtime_equality": "NOT_DEMONSTRATED",
+    "hardlink_topology_equality": "NOT_DEMONSTRATED",
+    "permission_and_type_equality": "REPORTED_FOR_PRESENT_ENTRIES_ONLY"
+  },
+  "p4_base_approval": "NOT_GRANTED",
+  "provenance_approval": "NOT_GRANTED",
+  "b2_b7": "REMAIN_BLOCKED_OR_NOT_EXECUTED",
+  "historical_v3_decision_rewritten": false
+}

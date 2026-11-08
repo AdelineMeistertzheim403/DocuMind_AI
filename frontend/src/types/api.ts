@@ -1,4 +1,4 @@
-export interface DocumentSummary {
+﻿export interface DocumentSummary {
   id: string; filename: string; media_type: string; size_bytes: number; sha256: string; created_at: string
 }
 export interface DocumentPage { id: string; page_number: number; text: string }
@@ -36,3 +36,4 @@ export interface Analysis {
   result: AnalysisResult; created_at: string
 }
 export interface Health { status: string; database: string }
+export interface UiConfig { environment_label?: string }

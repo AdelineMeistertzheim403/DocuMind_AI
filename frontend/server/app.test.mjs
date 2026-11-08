@@ -131,6 +131,70 @@ test('disabled AI refusal is sanitized while key deletion and local routes keep 
   assert.equal(calls.length,count)
 })
 
+test('Lite admission pending and confirmed responses preserve HTTPS CSRF and never create a session', async t => {
+  let status = 202, calls = 0
+  const pending = {profile:'beta_lite',operation_id:id,state:'result_pending',created:false,confirmation_operational:false}
+  const base = await serve(t, async (url, options) => {
+    calls++
+    assert.ok(url.endsWith('/auth/register'))
+    assert.equal(options.headers['X-API-Key'],key)
+    const body=JSON.parse(await new Response(options.body).text())
+    assert.equal(body.operation_id,id)
+    return Response.json(status===202?pending:{...pending,state:'admitted',created:true},{status,
+      headers:{'Set-Cookie':'untrusted-upstream-cookie=never-forward'}})
+  }, {requireLogin:true,csrfProtection:true,gatewayToken:'fictitious-gateway'})
+  const headers={'x-forwarded-proto':'https','x-documind-gateway':'fictitious-gateway'}
+  const protection=await fetch(base+'/bff/auth/csrf',{headers})
+  const {csrf_token}=await protection.json()
+  const cookie=protection.headers.get('set-cookie').split(';')[0]
+  const send=(extra={})=>fetch(base+'/bff/auth/register',{method:'POST',headers:{...headers,cookie,
+    'x-csrf-token':csrf_token,'content-type':'application/json',...extra},body:JSON.stringify({operation_id:id})})
+  const response=await send()
+  assert.equal(response.status,202)
+  assert.deepEqual(await response.json(),pending)
+  assert.equal(response.headers.get('set-cookie'),null)
+  status=201
+  const admitted=await send()
+  assert.equal(admitted.status,201)
+  assert.equal((await admitted.json()).created,true)
+  assert.equal(admitted.headers.get('set-cookie'),null)
+  assert.equal((await send({'x-csrf-token':'wrong'})).status,403)
+  assert.equal((await send({'x-forwarded-proto':'http'})).status,403)
+  assert.equal(calls,2)
+})
+
+test('Lite deletion 202 and status preserve session, owner bearer and HTTPS CSRF', async t => {
+  let state = 'awaiting_confirmation', status = 202, calls = 0
+  const session = 'A'.repeat(43)
+  const base = await serve(t, async (url, options) => {
+    calls++
+    assert.equal(options.headers.authorization, 'Bearer '+session)
+    if (status === 410) return Response.json({detail:'internal-receipt-never-forwarded'}, {status})
+    return Response.json({operation_id:id, state, completed:false}, {status})
+  }, {requireLogin:true, csrfProtection:true, gatewayToken:'fictitious-gateway'})
+  const secure = {'x-forwarded-proto':'https','x-documind-gateway':'fictitious-gateway'}
+  const protection = await fetch(base+'/bff/auth/csrf', {headers:{...secure, cookie:'__Host-documind='+session}})
+  const {csrf_token} = await protection.json()
+  const headers = {...secure, cookie:'__Host-documind='+session+'; '+protection.headers.get('set-cookie').split(';')[0],
+    'x-csrf-token':csrf_token, 'content-type':'application/json'}
+  for (const [path, method] of [[`/documents/${id}`,'DELETE'], ['/account/deletion-request','POST']]) {
+    const response = await fetch(base+'/bff'+path,{method,headers, ...(method==='POST'?{body:'{}'}:{})})
+    assert.equal(response.status,202)
+    assert.equal((await response.json()).state,'awaiting_confirmation')
+    assert.equal(response.headers.get('set-cookie'),null)
+  }
+  status = 200; state = 'processing'
+  assert.equal((await fetch(base+`/bff/documents/${id}/deletion-status`,{headers})).status,200)
+  const before = calls
+  assert.equal((await fetch(base+`/bff/documents/${id}`,{method:'DELETE',headers:{...headers,'x-csrf-token':'wrong'}})).status,403)
+  assert.equal((await fetch(base+`/bff/documents/${id}`,{method:'DELETE',headers:{...headers,'x-forwarded-proto':'http'}})).status,401)
+  assert.equal(calls,before)
+  status = 410
+  const gone = await fetch(base+`/bff/documents/${id}/download`,{headers})
+  assert.equal(gone.status,410)
+  assert.ok(!JSON.stringify(await gone.json()).includes('internal-receipt'))
+})
+
 test('clé ajoutée côté serveur seulement et pagination transmise', async t => {
   let forwarded
   const base = await serve(t, async (url, options) => {

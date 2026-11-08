@@ -32,8 +32,16 @@ class User(Base):
     disabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     registration_kind: Mapped[str] = mapped_column(String(16), default='legacy', server_default='legacy')
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     terms_version: Mapped[str | None] = mapped_column(String(40))
     terms_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+def public_access_allowed(settings, user):
+    return user.registration_kind != 'public' or (
+        user.email_verified_at is not None
+        and (not settings.public_registration_requires_approval or user.approved_at is not None)
+    )
 
 
 PASSWORD_HASHER = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=1, type=Type.ID)

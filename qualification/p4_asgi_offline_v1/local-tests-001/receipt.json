@@ -1,0 +1,26 @@
+{
+  "argv": [
+    "python",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    ".\\qualification\\p4_asgi_offline_v1\\tests",
+    "-v"
+  ],
+  "complete": true,
+  "end_ns": 1793696125569686600,
+  "gid": null,
+  "groups": null,
+  "monotonic_end_ns": 4094373884900,
+  "monotonic_start_ns": 4094148747400,
+  "returncode": 1,
+  "sha256": {
+    "stderr": "4b7e33189ae876eedfd7da05acb897baa48bebfbf136abe3d9afae5f740df676",
+    "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "start_ns": 1793696125344548400,
+  "uid": null
+}

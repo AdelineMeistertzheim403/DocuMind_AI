@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily DocuMind monitoring at 08:00 Europe/Paris
+
+[Timer]
+OnCalendar=*-*-* 08:00:00 Europe/Paris
+AccuracySec=1s
+RandomizedDelaySec=0
+Persistent=true
+Unit=documind-monitor.service
+
+[Install]
+WantedBy=timers.target

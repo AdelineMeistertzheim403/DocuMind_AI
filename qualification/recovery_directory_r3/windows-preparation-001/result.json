@@ -1,0 +1,14 @@
+{
+  "scope": "unit/static/ASGI only; never Docker qualification",
+  "preparation": true,
+  "platform": "win32",
+  "python": "3.13.7 (tags/v3.13.7:bcee1c3, Aug 14 2025, 14:15:11) [MSC v.1944 64 bit (AMD64)]",
+  "input_manifest_sha256": "526c9a06851436cc47515ed6e162644ef93eaba8f67b071052712ada611620f1",
+  "verdict": "PASS_PREPARATION_ONLY",
+  "forbidden_io_events": [],
+  "collected": 209,
+  "outcomes": {
+    "passed": 209
+  },
+  "pytest_exit_code": 0
+}

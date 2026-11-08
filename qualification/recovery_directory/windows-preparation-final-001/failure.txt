@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "C:\Users\Adeline\Documents\DocuMind_AI\candidates\recovery-control-directory-v1\run_local.py", line 227, in main
+    raise RuntimeError('Campaign failed')
+RuntimeError: Campaign failed

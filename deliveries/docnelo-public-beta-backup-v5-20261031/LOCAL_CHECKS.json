@@ -1,0 +1,8 @@
+{
+  "status": "passed",
+  "local_python": "3.13.7",
+  "isolated_imports": 8,
+  "grammar_311_sources": 9,
+  "delivered_source_import_subprocess_calls": 0,
+  "note": "SQLAlchemy preloaded before subprocess guard: its Windows platform detection uses a system subprocess."
+}

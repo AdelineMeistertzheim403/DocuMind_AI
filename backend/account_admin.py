@@ -9,7 +9,7 @@ from sqlalchemy import select, delete,func,update
 from .account_api import EmailInput, issue_token
 from .account_models import AccountToken, DeletionRequest, PublicRegistrationQuota, WorkspaceMembership
 from .auth import User
-from .config import Settings
+from .config import Settings, PUBLIC_BETA_MAX_ADMISSIONS
 from .db import make_engine, make_sessions
 from .models import Document
 from .services.documents import delete_document
@@ -30,12 +30,18 @@ def registration_control(session,settings,action,execute=False):
     if quota is None:raise ValueError('Migration 0007 requise')
     before={'closed':quota.closed,'issued_count':quota.issued_count}
     if action=='reopen' and execute:
-        if getattr(settings, 'lifecycle_durable_receipts_required', True):
+        from .public_registration import admission_receipts_required
+        if admission_receipts_required(settings):
             raise ValueError('Réouverture interdite avant garde de restauration approuvée')
-        if (settings.registration_mode!='public' or settings.public_registration_limit!=5 or settings.ai_enabled
+        if (settings.registration_mode!='public' or settings.public_registration_limit not in (5, PUBLIC_BETA_MAX_ADMISSIONS) or settings.ai_enabled
                 or settings.owner_demo_enabled or settings.legacy_api_enabled):
-            raise ValueError('La réouverture exige public/5, IA, démonstration et clés historiques désactivées')
-        if not 0<=quota.issued_count<5:
+            raise ValueError('La réouverture exige public/5 ou public/10, IA, démonstration et clés historiques désactivées')
+        if settings.public_registration_limit == 10 and not settings.public_registration_requires_approval:
+            raise ValueError('La bêta à 10 exige une approbation administrative')
+        from .recovery_quarantine import read_recovery_state
+        if settings.public_registration_limit == 10 and read_recovery_state(settings.recovery_state_path) != 'ready':
+            raise ValueError('La reprise doit être autorisée avant toute ouverture')
+        if not 0<=quota.issued_count<settings.public_registration_limit:
             raise ValueError('Aucune admission disponible ; ne pas réinitialiser le compteur')
     if action!='status' and execute:
         # The same row lock serializes with admission's conditional UPDATE.
@@ -47,7 +53,7 @@ def registration_control(session,settings,action,execute=False):
         if action=='reopen' and quota is not None:
             # A legitimate admission can commit immediately after reopening; never
             # mistake a monotonic increment for a failed operator decision.
-            valid_counter=before['issued_count']<=quota.issued_count<=5
+            valid_counter=before['issued_count']<=quota.issued_count<=settings.public_registration_limit
         if quota is None or quota.closed!=(action=='close') or not valid_counter:
             raise ValueError('Résultat du contrôle incohérent ; inspection opérateur requise')
     result={'closed':quota.closed,'issued_count':quota.issued_count,'limit':settings.public_registration_limit,
@@ -55,6 +61,34 @@ def registration_control(session,settings,action,execute=False):
             'action':action,'before':before,'verified':True,
             'timestamp':datetime.now(timezone.utc).isoformat()}
     return result
+
+
+def public_account_control(session, identifier, action, execute=False):
+    """Local review, serialized with email verification; never grants an extra place."""
+    if action not in ('status', 'approve', 'reject'):
+        raise ValueError('Action inconnue')
+    user = session.get(User, identifier, populate_existing=True, with_for_update=execute)
+    if user is None or user.registration_kind != 'public':
+        raise ValueError('Compte public requis')
+    if session.scalar(select(DeletionRequest.id).where(DeletionRequest.user_id == identifier)) is not None:
+        raise ValueError('Compte en attente de suppression')
+    if action == 'approve' and (user.email_verified_at is None or user.disabled_at is not None):
+        raise ValueError('Approbation réservée à un compte vérifié et non bloqué')
+    if execute and action != 'status':
+        from .models import now
+        if action == 'approve':
+            user.approved_at = user.approved_at or now()
+        else:
+            user.approved_at = None
+            user.disabled_at = user.disabled_at or now()
+            session.execute(update(AccountToken).where(
+                AccountToken.email == user.email, AccountToken.used_at.is_(None)
+            ).values(used_at=now()))
+        session.commit()
+        session.refresh(user)
+    return {'user_id':str(user.id), 'action':action, 'simulation':action != 'status' and not execute,
+            'email_verified':user.email_verified_at is not None, 'approved':user.approved_at is not None,
+            'blocked':user.disabled_at is not None, 'timestamp':datetime.now(timezone.utc).isoformat()}
 
 
 def pending_account_control(session,identifier,action,execute=False):
@@ -197,20 +231,43 @@ def _purge_account(session, settings, identifier):
 def main():
     parser=argparse.ArgumentParser(description='Administration locale des comptes')
     commands=parser.add_subparsers(dest='command',required=True)
-    invite=commands.add_parser('invite');invite.add_argument('email')
+    invite=commands.add_parser('invite');invite.add_argument('email');invite.add_argument('--cohort',type=UUID)
+    lite=commands.add_parser('lite-admissions');lite.add_argument('operation',type=UUID);lite.add_argument('--cohort',type=UUID,required=True)
     attach=commands.add_parser('attach-email');attach.add_argument('username');attach.add_argument('email')
     purge=commands.add_parser('purge');purge.add_argument('user_id',type=UUID)
     commands.add_parser('owners')
     pending=commands.add_parser('purge-pending');pending.add_argument('--older-than-hours',type=int,default=168);pending.add_argument('--execute',action='store_true')
     control=commands.add_parser('public-registration');control.add_argument('action',choices=['status','close','reopen']);control.add_argument('--execute',action='store_true')
     pending_control=commands.add_parser('pending-account');pending_control.add_argument('action',choices=['block','release']);pending_control.add_argument('user_id',type=UUID);pending_control.add_argument('--execute',action='store_true')
-    args=parser.parse_args();settings=Settings();engine=make_engine(settings.database_url)
+    review=commands.add_parser('public-account');review.add_argument('action',choices=['status','approve','reject']);review.add_argument('user_id',type=UUID);review.add_argument('--execute',action='store_true')
+    args=parser.parse_args()
+    try:settings=Settings()
+    except (ValueError,OSError):raise SystemExit('Configuration administrative invalide') from None
+    if settings.application_profile == 'beta_lite':
+        if args.command not in ('invite','lite-admissions') or getattr(args,'cohort',None) != settings.lite_cohort_id:
+            raise SystemExit('Explicit matching Lite cohort required; experimental administration unavailable')
+        if args.command == 'lite-admissions':
+            from .lite_authority import load_provision,LocalOperations
+            try:
+                manifest=load_provision(settings,administrative=True)
+                if manifest is None:raise ValueError('Unprovisioned authority')
+                store=LocalOperations(manifest['store'],manifest['api_uid'])
+                op=next((o for o in store.all() if o.id==args.operation),None)
+                if op is None:raise ValueError('Unknown operation')
+                print(json.dumps(op.export(),sort_keys=True));return
+            except (ValueError,OSError):
+                raise SystemExit('Independent operation inspection unavailable') from None
+    elif args.command == 'lite-admissions':
+        raise SystemExit('Beta Lite profile required')
+    engine=make_engine(settings.database_url)
     try:
         with make_sessions(engine)() as session:
             if args.command=='public-registration':
                 print(json.dumps(registration_control(session,settings,args.action,args.execute)))
             elif args.command=='pending-account':
                 print(json.dumps(pending_account_control(session,args.user_id,args.action,args.execute)))
+            elif args.command=='public-account':
+                print(json.dumps(public_account_control(session,args.user_id,args.action,args.execute)))
             elif args.command=='purge-pending':
                 count=purge_pending(session,settings,args.older_than_hours,args.execute)
                 print('Comptes en attente :',count,'; mode :','exécution' if args.execute else 'simulation')

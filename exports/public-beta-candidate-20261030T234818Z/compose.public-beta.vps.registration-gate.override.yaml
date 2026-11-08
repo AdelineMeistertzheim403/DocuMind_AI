@@ -1,0 +1,39 @@
+﻿# DocuMind AI — Public beta — Optional registration gate (IP allowlist)
+#
+# Purpose: prevent unknown users from consuming the 5 public admissions during an opening window.
+# This does NOT alter authentication, HTTPS, CSRF, or email verification.
+#
+# Usage on VPS (example):
+#   PUBLIC_BETA_ENV_FILE=.env.public-beta \
+#   docker compose -p documind-public-beta \
+#     -f compose.public-beta.vps.yaml \
+#     -f compose.public-beta.vps.registration-gate.override.yaml \
+#     up -d web
+#
+# Configure in `.env.public-beta`:
+#   REGISTRATION_GATE_SOURCE_RANGE="203.0.113.10/32,203.0.113.11/32"
+#
+# IMPORTANT:
+# - If testeurs do not have stable IPs, prefer a reverse-proxy access product (e.g. Cloudflare Access)
+#   or keep registrations closed by default and open briefly under operator supervision.
+
+services:
+  web:
+    labels:
+      # Gate only the registration-related auth routes.
+      traefik.http.routers.documind-public-beta-registration.rule: >-
+        Host(`${APP_HOST}`)
+        && (
+          Path(`/bff/auth/registration-challenge`)
+          || Path(`/bff/auth/register`)
+          || Path(`/bff/auth/verify-email`)
+          || Path(`/bff/auth/resend-verification`)
+        )
+      traefik.http.routers.documind-public-beta-registration.entrypoints: websecure
+      traefik.http.routers.documind-public-beta-registration.tls: 'true'
+      traefik.http.routers.documind-public-beta-registration.tls.certresolver: letsencrypt
+      traefik.http.routers.documind-public-beta-registration.service: documind-public-beta
+      traefik.http.routers.documind-public-beta-registration.priority: '110'
+      traefik.http.routers.documind-public-beta-registration.middlewares: documind-public-beta-headers@docker,documind-public-beta-registration-allow@docker
+
+      traefik.http.middlewares.documind-public-beta-registration-allow.ipwhitelist.sourcerange: ${REGISTRATION_GATE_SOURCE_RANGE:?Set REGISTRATION_GATE_SOURCE_RANGE (comma-separated CIDRs)}

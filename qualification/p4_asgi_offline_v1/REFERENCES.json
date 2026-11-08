@@ -1,0 +1,14 @@
+{
+  "status": "REVIEW_ONLY_NO_BUILD_CREATE_START_OR_PRODUCTION_GO",
+  "candidate_sha256sums": "5f3cc1598423107c5616d630d63d31b849b939cbd9f3ce9ce25fc0bf3440f8d4",
+  "candidate_inputs": "c33358f734bcee252a39b1b10f9ed7a459c4ee30d29f46630523ac1aad208ed2",
+  "historical_transfer_sha256sums": "8cccb3511981326e5eb97490c0623c4efaccf56ef080791f588d366ec0a4f25b",
+  "historical_wheel_archive": "55907b272e57a21e4815db2e7e65f4c211601eb911b6c864260002b192365026",
+  "historical_cp311_lock": "9fe00d4247e9a8a3afa1935b7acaa814ff337e336c1136eef743deeca6f24fae",
+  "pyyaml_cp311_wheel": "b8bb0864c5a28024fac8a632c443c87c5aa6f215c0b126c449ae1a150412f31d",
+  "pyyaml_provenance": "Local file observed in deliveries/docnelo-v51-pyyaml-wheel-cp311; no independent approval or signed origin supplied",
+  "base_image": null,
+  "cpython_binary_provenance": null,
+  "native_system_closure": null,
+  "build_go": false
+}

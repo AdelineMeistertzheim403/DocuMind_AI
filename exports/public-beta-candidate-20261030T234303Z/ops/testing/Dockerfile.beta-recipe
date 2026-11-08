@@ -1,0 +1,26 @@
+# Offline recipe overlays only. NOT CI release images and never publish these tags.
+ARG API_BASE=s13-a7b75801-api:local
+ARG WEB_BASE=s13-a7b75801-web:local
+ARG PROOFS_BASE=s13-a7b75801-isolation:local
+FROM ${API_BASE} AS api
+COPY backend /app/backend
+COPY analyseur_documents /app/analyseur_documents
+COPY documind_extractor /app/documind_extractor
+COPY migrations /app/migrations
+LABEL documind.test="sprint-14-6" org.opencontainers.image.revision="uncommitted-sprint-14-6"
+FROM ${WEB_BASE} AS web
+COPY frontend/server /app/server
+COPY frontend/dist /app/dist
+LABEL documind.test="sprint-14-6" org.opencontainers.image.revision="uncommitted-sprint-14-6"
+FROM ${PROOFS_BASE} AS proofs
+COPY backend /app/backend
+COPY analyseur_documents /app/analyseur_documents
+COPY documind_extractor /app/documind_extractor
+COPY migrations /app/migrations
+COPY tests /app/tests
+COPY tools /app/tools
+COPY ops/systemd /app/ops/systemd
+COPY .github/workflows /app/.github/workflows
+COPY frontend/Dockerfile /app/frontend/Dockerfile
+COPY Dockerfile compose.production.yaml compose.pdf-isolation-test.yaml pyproject.toml requirements.lock alembic.ini /app/
+LABEL documind.test="sprint-14-6" org.opencontainers.image.revision="uncommitted-sprint-14-6"

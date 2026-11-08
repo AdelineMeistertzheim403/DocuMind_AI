@@ -6,6 +6,7 @@ __pycache__/
 .pytest_cache/
 .env
 .env.production
+.env.public-beta
 .env.*.local
 var/
 *.egg-info/
@@ -34,3 +35,9 @@ var/tls/
 
 # Optional standalone experiment, outside the approved public candidate.
 /ops/testing/cloudflare_lot213/
+
+# Docker image export archives
+deliveries/**/*.tar
+
+# Docker image export archives compressed
+deliveries/**/*.tar.gz

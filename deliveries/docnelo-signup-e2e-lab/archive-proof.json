@@ -1,0 +1,24 @@
+[
+  {
+    "image": "api",
+    "archive": "deliveries\\docnelo-10-users\\api-active.tar",
+    "archive_sha256": "2ee6ab4f9a5eee4e6dad475e0a2988745472e12a918e186580a36e2e6c631081",
+    "archive_hash_prior_reference": null,
+    "image_id": "sha256:4aa850b6fb8d16b32fd731d94b232b2f817f461892b3f39a28e7557a25a5eb3d",
+    "platform": "linux/amd64",
+    "layers_verified": 15,
+    "provenance": "local private archive; image ID supplied by user",
+    "historical_build_commit_attested": false
+  },
+  {
+    "image": "web",
+    "archive": "deliveries\\docnelo-web-branding-r2\\payload\\web-r2.tar",
+    "archive_sha256": "de8f742edd34bf0182e746916376599686fcd7d5a176e43cdf0979caa32fc54b",
+    "archive_hash_prior_reference": "de8f742edd34bf0182e746916376599686fcd7d5a176e43cdf0979caa32fc54b",
+    "image_id": "sha256:ebdbc7fba1c61c03349088ca093470c78eec9dd91c5e2aa92ab1d8c0db5be362",
+    "platform": "linux/amd64",
+    "layers_verified": 11,
+    "provenance": "local R2 RELEASE.json",
+    "historical_build_commit_attested": false
+  }
+]

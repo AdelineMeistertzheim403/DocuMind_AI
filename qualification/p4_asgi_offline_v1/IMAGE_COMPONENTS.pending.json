@@ -1,0 +1,139 @@
+{
+  "build_go": false,
+  "components": [
+    {
+      "component": "Debian base archive",
+      "platform": "Linux amd64 / Debian13 / CPython3.11.18",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "version": "13"
+    },
+    {
+      "component": "CPython interpreter / libpython / stdlib",
+      "platform": "Linux amd64 / Debian13 / CPython3.11.18",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "version": "3.11.18"
+    },
+    {
+      "component": "ELF loader and glibc",
+      "platform": "Linux amd64 / Debian13 / CPython3.11.18",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "version": "2.41 target; actual version must be established"
+    },
+    {
+      "component": "venv bootstrap; observed pip25.2 requires approval",
+      "platform": "Linux amd64 / Debian13 / CPython3.11.18",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "version": "25.2 proposed"
+    },
+    {
+      "component": "recursive stdlib ELF closure / dlopen modules",
+      "platform": "Linux amd64 / Debian13 / CPython3.11.18",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "version": null
+    },
+    {
+      "component": "approved deterministic assembly recipe",
+      "platform": "Linux amd64 / Debian13 / CPython3.11.18",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "version": null
+    }
+  ],
+  "image_id": null,
+  "status": "BLOCKED_REVIEW_ONLY",
+  "unverified_system_DT_NEEDED": [
+    {
+      "component": "ld-linux-x86-64.so.2",
+      "platform": "Linux amd64 / Debian13 / CPython3.11.18",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "version": null
+    },
+    {
+      "component": "libc.so.6",
+      "platform": "Linux amd64 / Debian13 / CPython3.11.18",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "version": null
+    },
+    {
+      "component": "libdl.so.2",
+      "platform": "Linux amd64 / Debian13 / CPython3.11.18",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "version": null
+    },
+    {
+      "component": "libgcc_s.so.1",
+      "platform": "Linux amd64 / Debian13 / CPython3.11.18",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "version": null
+    },
+    {
+      "component": "libm.so.6",
+      "platform": "Linux amd64 / Debian13 / CPython3.11.18",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "version": null
+    },
+    {
+      "component": "libpthread.so.0",
+      "platform": "Linux amd64 / Debian13 / CPython3.11.18",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "version": null
+    },
+    {
+      "component": "libresolv.so.2",
+      "platform": "Linux amd64 / Debian13 / CPython3.11.18",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "version": null
+    },
+    {
+      "component": "librt.so.1",
+      "platform": "Linux amd64 / Debian13 / CPython3.11.18",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "version": null
+    },
+    {
+      "component": "libstdc++.so.6",
+      "platform": "Linux amd64 / Debian13 / CPython3.11.18",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "version": null
+    },
+    {
+      "component": "libz.so.1",
+      "platform": "Linux amd64 / Debian13 / CPython3.11.18",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "version": null
+    }
+  ],
+  "wheel_binary_inventory": "DEPENDENCIES_OBSERVED.json",
+  "wheel_elf_files": 32
+}

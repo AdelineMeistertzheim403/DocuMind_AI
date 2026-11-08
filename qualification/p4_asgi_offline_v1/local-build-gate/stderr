@@ -1,0 +1,15 @@
+Traceback (most recent call last):
+  File "C:\Users\Adeline\Documents\DocuMind_AI\qualification\p4_asgi_offline_v1\offline.py", line 309, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\Adeline\Documents\DocuMind_AI\qualification\p4_asgi_offline_v1\offline.py", line 299, in main
+    material_gate(args.inventory, args.approval)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Adeline\Documents\DocuMind_AI\qualification\p4_asgi_offline_v1\offline.py", line 258, in material_gate
+    require(approval.get('review_only') is False and approval.get('build_authorized') is True,
+    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            'STOP BEFORE BUILD: approval absent')
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Adeline\Documents\DocuMind_AI\qualification\p4_asgi_offline_v1\offline.py", line 27, in require
+    raise ValueError(message)
+ValueError: STOP BEFORE BUILD: approval absent

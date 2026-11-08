@@ -1,0 +1,16 @@
+{
+  "blockers": [
+    "B1: verified Debian13/CPython3.11.18 base bytes, provenance and image ID absent",
+    "B2: base interpreter/stdlib/native providers/recipe evidence incomplete",
+    "B3: recursive native closure and ABI not verified/approved",
+    "B4: 43 wheel target compatibility/provenance approvals incomplete",
+    "B5: pip25.2 CPython3.11.18 offline installation/pip check not qualified",
+    "B6: no sufficiently justified Docker build recipe issued"
+  ],
+  "build_go": false,
+  "create_go": false,
+  "decision": "BLOCKED",
+  "production_go": false,
+  "review_only": true,
+  "start_go": false
+}

@@ -1,0 +1,4 @@
+services:
+  web:
+    image: "documind-public-beta-web:r1-rollback-f15855942fb4"
+    pull_policy: never

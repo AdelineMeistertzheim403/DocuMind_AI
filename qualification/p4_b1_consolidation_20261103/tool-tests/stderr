@@ -1,0 +1,14 @@
+test_duplicate_json_keys_not_silently_accepted (test_supplement.ProofTests.test_duplicate_json_keys_not_silently_accepted) ... ok
+test_hash_success_never_means_schema_review_or_b1_approval (test_supplement.ProofTests.test_hash_success_never_means_schema_review_or_b1_approval) ... ok
+test_inconsistent_counts_or_content_difference_cannot_reuse_assessment (test_supplement.ProofTests.test_inconsistent_counts_or_content_difference_cannot_reuse_assessment) ... ok
+test_missing_proofs_cli_returns_incomplete_not_a_pass (test_supplement.ProofTests.test_missing_proofs_cli_returns_incomplete_not_a_pass) ... ok
+test_root_omission_and_uid_changes_do_not_become_full_equality_or_closure (test_supplement.ProofTests.test_root_omission_and_uid_changes_do_not_become_full_equality_or_closure) ... ok
+test_tampered_copy_is_rejected (test_supplement.ProofTests.test_tampered_copy_is_rejected) ... ok
+test_relative_destination_refused (test_supplement.TransferTests.test_relative_destination_refused) ... ok
+test_roundtrip_and_external_manifest_tamper (test_supplement.TransferTests.test_roundtrip_and_external_manifest_tamper) ... ok
+test_traversal_and_zip_symlink_refused (test_supplement.TransferTests.test_traversal_and_zip_symlink_refused) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.130s
+
+OK

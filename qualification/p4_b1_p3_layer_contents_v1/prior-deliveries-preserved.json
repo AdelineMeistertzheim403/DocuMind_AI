@@ -1,0 +1,48 @@
+{
+  "checked_ns": 1793876866994071600,
+  "decision": "REVIEW_ONLY_BLOCKED",
+  "deliveries": {
+    "v1": {
+      "files": {
+        "DEBIAN_PROTOCOL.md": "e29136ae00bceb4c6fcd57f8bae9cc23597dc2e4903fefc6e3bd9544eeed1950",
+        "DECISION.json": "5e558d4d399d54963deefa51152a0db78bd93903f242b56d709a79f809e6eedb",
+        "DESIGN_SECURITY.md": "17099b3cc3b40ffebe288c0bf9fbf79c4cb0fbf52e1c6d05d9624cadd02f1d14",
+        "EXIT_CODES.md": "61fab349fb4eef99be1674046a48ec648bd8f41ca081ec929d609a5d75599ecf",
+        "LOCAL_QUALIFICATION.md": "892b30b7f379f6dfb5ccdd226ab53da8002589dfccc8d23548071d2e0767e4e0",
+        "README.md": "ec6b6387b055a9bee01d3288ee3c6fa397ca8552feb68bd8419ff8c196884531",
+        "TRANSFER.md": "70c3f5d7cac4e6eab321d17333c605ef76b167f7834643862990950edaf09965",
+        "comparator.py": "78cd4ac234ee751555641aee0f4a80f6117c0a2284037b2693415fd92ae6c687",
+        "record_tests.py": "1a2fed84de173a3e416ccf85e110999d00e7bd3261444e1cdcef4b266c3c9e92",
+        "seal.py": "91529b8280fc97ba0a511f721de85f296e475b33901918d626248232b5ba6421",
+        "test_comparator.py": "d84b75afe5f0f7ce8a43fcb5ffb05265998a21eaa07050c25f036d415d823afc"
+      },
+      "manifest_sha256": "2165b14ed3159362283de1df877f295ef110c4db64458e702df7f3b0dd059e56",
+      "unchanged": true
+    },
+    "v2": {
+      "files": {
+        "DEBIAN_PROTOCOL.md": "7617284acbf2617725d6f45d8c8ac9f284dc121583f6aa788abc9d532b0d9755",
+        "DECISION.json": "e74e1e5645a826f8bcf64adde67f9eba220afbe69d0874b74c75a865b268e0a3",
+        "DESIGN_SECURITY.md": "a46ccfef764758ae3d3bacb9b3e859c9dddd8f05c69c68157d65397d41d3e5cb",
+        "EXIT_CODES.md": "61fab349fb4eef99be1674046a48ec648bd8f41ca081ec929d609a5d75599ecf",
+        "LOCAL_QUALIFICATION.md": "ba53daf824fa31cdc59be993e903de8222a519212e6a5ae68f0163d5d5bad008",
+        "README.md": "0eece4ec8c9b3a8dd7e98fbc068e323b3dd539ac6adf92b74c2bc75bf7639dec",
+        "REVISION_REPORT.md": "19d63139e93562d658ddaa3d66bc368485fa5c8770a1944bff3273a55adb7d01",
+        "TRANSFER.md": "c1b13d568bbe778158253a116f14f2e8511e2cbfbb85a239b9b6e0570f2ddd72",
+        "comparator.py": "63225aec80a257a246ca492acbaf1dcc73c66a0c49123ffaffc9ad73ee6c383a",
+        "record_tests.py": "1a2fed84de173a3e416ccf85e110999d00e7bd3261444e1cdcef4b266c3c9e92",
+        "seal.py": "91529b8280fc97ba0a511f721de85f296e475b33901918d626248232b5ba6421",
+        "test_comparator.py": "c47dc8de96e46cfb015ce890abb628c3852cfc7d2ff18d1c1551994418003b0c"
+      },
+      "manifest_sha256": "77db188638f19b4b33777b97b5cfe054ef62d38ea9a4525b6f0338fba5cef5df",
+      "unchanged": true
+    }
+  },
+  "formal_b1_contents_closed": false,
+  "go": {
+    "c5": false,
+    "p4": false,
+    "production": false,
+    "runtime": false
+  }
+}

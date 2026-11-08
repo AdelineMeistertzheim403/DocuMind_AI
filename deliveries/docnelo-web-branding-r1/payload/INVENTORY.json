@@ -1,0 +1,465 @@
+{
+  "retained_source_changes": [
+    {
+      "path": "frontend/index.html",
+      "sha256": "e89d016d10a6497e1b1503f5253eb14db6d09fab6f905b7e40b36097b92ab95b",
+      "bytes": 902
+    },
+    {
+      "path": "frontend/public/brand/docnelo/docnelo-horizontal-dark-transparent.png",
+      "sha256": "8076bf4f108a1a9224cb11748257850d6c1fadbaf927fbbe8c38255cdbfca0a1",
+      "bytes": 157551
+    },
+    {
+      "path": "frontend/public/brand/docnelo/docnelo-icon-192.png",
+      "sha256": "157f11b3fa5262d923a2d51ed706e12457d76660365f7afce0154bdec195e600",
+      "bytes": 37118
+    },
+    {
+      "path": "frontend/public/brand/docnelo/docnelo-icon-32.png",
+      "sha256": "1ddc50f4a0792b35c2e31f09177a4e64f2c8b575dc15cd6fd65c71f3d406b7d7",
+      "bytes": 2172
+    },
+    {
+      "path": "frontend/public/brand/docnelo/docnelo-icon-512.png",
+      "sha256": "60815d53cc0e835b11e6bb87b588a1e3fae81c78f0ccbb409c5cdaeee6f9d7e3",
+      "bytes": 100888
+    },
+    {
+      "path": "frontend/public/brand/docnelo/docnelo-icon-64.png",
+      "sha256": "7c96b04cae7479f562747177b7aa73d05fa885f319a0603b5a637b3b11304a5e",
+      "bytes": 6322
+    },
+    {
+      "path": "frontend/public/brand/docnelo/docnelo-tokens.css",
+      "sha256": "070b3432b5698813177f98ddc39f7b2519a3f500448d9c12f257d55dc50dabf8",
+      "bytes": 567
+    },
+    {
+      "path": "frontend/public/brand/docnelo/favicon.ico",
+      "sha256": "f237b74e365f51f078416dd574250a4e9eaffbc534a3a0fed144766588384f07",
+      "bytes": 13918
+    },
+    {
+      "path": "frontend/public/manifest.webmanifest",
+      "sha256": "7a507e4d01514d0c3b8c0fd6688b9d54a164d4464caa3ee5ee71427bd6427132",
+      "bytes": 412
+    },
+    {
+      "path": "frontend/src/components/Assistant.tsx",
+      "sha256": "191ba03a12efa37ca912066e0c746d41a29cb340abc23cebe4361b0c36072a32",
+      "bytes": 10398
+    },
+    {
+      "path": "frontend/src/components/Brand.tsx",
+      "sha256": "d0aa88d89677ec9546e33572939edbce88686c58c97ed8b7a1ae281d30316031",
+      "bytes": 421
+    },
+    {
+      "path": "frontend/src/components/Layout.tsx",
+      "sha256": "5cb2c79c238f00cfc598ce731fb1652944e5f68c995ef98b245ce53bf69ce8bc",
+      "bytes": 6113
+    },
+    {
+      "path": "frontend/src/pages/AISettings.tsx",
+      "sha256": "f9eb1cbf2d19795e00afadb865c177f25826d9e1dbc3afb92abb01263b4bd774",
+      "bytes": 9427
+    },
+    {
+      "path": "frontend/src/pages/Account.tsx",
+      "sha256": "d307c5a18405ee5af92816489fe0246feaf077ee4544dfc4f69a95fc576ad8fb",
+      "bytes": 17960
+    },
+    {
+      "path": "frontend/src/services/api.ts",
+      "sha256": "99a04fbc2ccfb0c9884bc1ba2fbe1f67011139751950e2b38fc101a68018370b",
+      "bytes": 4023
+    },
+    {
+      "path": "frontend/src/styles.css",
+      "sha256": "508b86a619cd7e23853f985e785378cacf84d521a9e94b623d59781f263c4b6c",
+      "bytes": 49683
+    }
+  ],
+  "excluded_workspace_items": [
+    "frontend/server/app.mjs (workspace version)",
+    "frontend/server/app.test.mjs (workspace version)",
+    "frontend/src/components/Workspace.tsx (workspace version)",
+    "frontend/src/services/account.ts (workspace version)",
+    "frontend/src/types/api.ts (workspace version)",
+    "frontend/src/pages/BetaLite.test.tsx",
+    "frontend/src/legal/documents.ts (absent from reproduced historical runtime)",
+    "frontend/src/pages/Legal.tsx (absent from reproduced historical runtime)",
+    "frontend/public/brand/docnelo/docnelo-business-transparent.png",
+    "frontend/public/brand/docnelo/docnelo-business-dark-transparent.png",
+    "frontend/public/brand/docnelo/docnelo-horizontal-transparent.png",
+    "frontend/public/brand/docnelo/docnelo-icon-transparent.png",
+    "all backend/migrations/tools/compose/.env changes in the main workspace"
+  ],
+  "protected_scopes_unchanged": [
+    "frontend/server",
+    "frontend/package.json",
+    "frontend/package-lock.json",
+    "frontend/src/App.tsx",
+    "frontend/src/services/account.ts",
+    "frontend/src/components/Workspace.tsx",
+    "frontend/src/types/api.ts",
+    "frontend/src/components/DocumentTable.tsx",
+    "frontend/src/pages/DocumentDetail.tsx",
+    "backend",
+    "migrations",
+    "tools"
+  ],
+  "dist_files": [
+    {
+      "path": "assets/Analysis-DIX2PiS3.js",
+      "sha256": "c09d2f40510d5a5e4880d4aafba1e2244567e29783c259577ed033bedc4708ad",
+      "bytes": 383679
+    },
+    {
+      "path": "assets/index-BQlf71St.js",
+      "sha256": "b4646fe09fff8b8c5998100b87fbbce498f910a12798c4d063b1dd22490f5f09",
+      "bytes": 416175
+    },
+    {
+      "path": "assets/index-jboJjn68.css",
+      "sha256": "5da0883c013ccb7a6de42b43bc777f398bf112da8afd920c99e4f358900092b0",
+      "bytes": 47851
+    },
+    {
+      "path": "brand/docnelo/docnelo-horizontal-dark-transparent.png",
+      "sha256": "8076bf4f108a1a9224cb11748257850d6c1fadbaf927fbbe8c38255cdbfca0a1",
+      "bytes": 157551
+    },
+    {
+      "path": "brand/docnelo/docnelo-icon-192.png",
+      "sha256": "157f11b3fa5262d923a2d51ed706e12457d76660365f7afce0154bdec195e600",
+      "bytes": 37118
+    },
+    {
+      "path": "brand/docnelo/docnelo-icon-32.png",
+      "sha256": "1ddc50f4a0792b35c2e31f09177a4e64f2c8b575dc15cd6fd65c71f3d406b7d7",
+      "bytes": 2172
+    },
+    {
+      "path": "brand/docnelo/docnelo-icon-512.png",
+      "sha256": "60815d53cc0e835b11e6bb87b588a1e3fae81c78f0ccbb409c5cdaeee6f9d7e3",
+      "bytes": 100888
+    },
+    {
+      "path": "brand/docnelo/docnelo-icon-64.png",
+      "sha256": "7c96b04cae7479f562747177b7aa73d05fa885f319a0603b5a637b3b11304a5e",
+      "bytes": 6322
+    },
+    {
+      "path": "brand/docnelo/docnelo-tokens.css",
+      "sha256": "070b3432b5698813177f98ddc39f7b2519a3f500448d9c12f257d55dc50dabf8",
+      "bytes": 567
+    },
+    {
+      "path": "brand/docnelo/favicon.ico",
+      "sha256": "f237b74e365f51f078416dd574250a4e9eaffbc534a3a0fed144766588384f07",
+      "bytes": 13918
+    },
+    {
+      "path": "favicon.svg",
+      "sha256": "2113501d9de800348e6441f103cee301c45aeab3da4d5b4d65d95163f2cd3d10",
+      "bytes": 270
+    },
+    {
+      "path": "index.html",
+      "sha256": "84c6b52edc2945e90bf530c16dd389a7c1c9800db66c73130131a5730b4c0179",
+      "bytes": 1002
+    },
+    {
+      "path": "manifest.webmanifest",
+      "sha256": "7a507e4d01514d0c3b8c0fd6688b9d54a164d4464caa3ee5ee71427bd6427132",
+      "bytes": 412
+    }
+  ],
+  "excluded_existing_workspace_changes_exact": [
+    {
+      "path": ".env.production.example",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": ".env.public-beta.example",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": ".env.public-beta.images.example",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "backend/account_admin.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "backend/account_api.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "backend/ai/providers.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "backend/ai/settings_api.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "backend/api.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "backend/authentication.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "backend/config.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "backend/lifecycle_bootstrap.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "backend/lifecycle_durability.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "backend/lite_admissions.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "backend/lite_authority.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "backend/lite_deletions.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "backend/lite_reconciliation.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "backend/lite_release.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "backend/lite_snapshot.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "backend/main.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "backend/public_registration.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "backend/recovery_quarantine.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "backend/services/documents.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "compose.public-beta-test.yaml",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "compose.public-beta.vps.registration-gate.override.yaml",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "compose.public-beta.vps.yaml",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "frontend/public/brand/docnelo/docnelo-business-dark-transparent.png",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "frontend/public/brand/docnelo/docnelo-business-transparent.png",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "frontend/public/brand/docnelo/docnelo-horizontal-transparent.png",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "frontend/public/brand/docnelo/docnelo-icon-transparent.png",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "frontend/server/app.mjs",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "frontend/server/app.test.mjs",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "frontend/src/components/Assistant.tsx",
+      "reason": "Workspace version not copied; branding-only edits rebuilt from verified historical source"
+    },
+    {
+      "path": "frontend/src/components/Layout.tsx",
+      "reason": "Workspace version not copied; branding-only edits rebuilt from verified historical source"
+    },
+    {
+      "path": "frontend/src/components/Workspace.tsx",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "frontend/src/legal/documents.ts",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "frontend/src/pages/AISettings.tsx",
+      "reason": "Workspace version not copied; branding-only edits rebuilt from verified historical source"
+    },
+    {
+      "path": "frontend/src/pages/Account.tsx",
+      "reason": "Workspace version not copied; branding-only edits rebuilt from verified historical source"
+    },
+    {
+      "path": "frontend/src/pages/BetaLite.test.tsx",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "frontend/src/services/account.ts",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "frontend/src/services/api.ts",
+      "reason": "Workspace version not copied; branding-only edits rebuilt from verified historical source"
+    },
+    {
+      "path": "frontend/src/styles.css",
+      "reason": "Workspace version not copied; branding-only edits rebuilt from verified historical source"
+    },
+    {
+      "path": "frontend/src/test/app.test.tsx",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "frontend/src/types/api.ts",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "ops/testing/combined_restore_lab.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "ops/testing/prepare_beta_recipe.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "ops/testing/validate_beta_recipe.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "pyproject.toml",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "requirements.runtime.lock",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "requirements.test.lock",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "tests/fixtures/public_beta_browser.mjs",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "tests/test_pinned_builds.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "tests/test_snapshot_backup_integrity.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "tools/backup_local.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "tools/backup_production.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "tools/lifecycle_key_policy.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "tools/lite_authority.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "tools/lite_restore.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "tools/public_beta_backup.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "tools/public_beta_restic_guard.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "tools/retention_production.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "tools/validate_restore.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    },
+    {
+      "path": "tools/verify_snapshot.py",
+      "reason": "Excluded: functional, backend, backup, config, dependency or unrelated change"
+    }
+  ],
+  "retained_from_workspace_byte_for_byte": [
+    "frontend/index.html",
+    "frontend/public/brand/docnelo/docnelo-horizontal-dark-transparent.png",
+    "frontend/public/brand/docnelo/docnelo-icon-192.png",
+    "frontend/public/brand/docnelo/docnelo-icon-32.png",
+    "frontend/public/brand/docnelo/docnelo-icon-512.png",
+    "frontend/public/brand/docnelo/docnelo-icon-64.png",
+    "frontend/public/brand/docnelo/docnelo-tokens.css",
+    "frontend/public/brand/docnelo/favicon.ico",
+    "frontend/public/manifest.webmanifest",
+    "frontend/src/components/Brand.tsx"
+  ],
+  "payload_files": [
+    "DOCNELO_PUBLIC_BETA_BRANDING_R1_DEPLOYMENT_RUNBOOK.md",
+    "DOCNELO_PUBLIC_BETA_BRANDING_R1_FILE_INVENTORY.md",
+    "DOCNELO_PUBLIC_BETA_BRANDING_R1_IMPLEMENTATION_REPORT.md",
+    "DOCNELO_PUBLIC_BETA_BRANDING_R1_RELEASE_MANIFEST.md",
+    "DOCNELO_PUBLIC_BETA_BRANDING_R1_TEST_REPORT.md",
+    "Dockerfile",
+    "INVENTORY.json",
+    "RELEASE.json",
+    "SHA256SUMS",
+    "branding-r1.patch",
+    "browser-results.json",
+    "check-compose.py",
+    "collect_preflight.py",
+    "container-results.json",
+    "image-proof.json",
+    "preservation-result.json",
+    "provenance.json",
+    "verify-state.py",
+    "web-image.tar",
+    "web.r1.override.yaml",
+    "web.rollback.yaml"
+  ]
+}

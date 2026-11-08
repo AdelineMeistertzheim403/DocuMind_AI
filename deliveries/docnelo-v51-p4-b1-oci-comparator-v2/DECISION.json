@@ -1,0 +1,33 @@
+{
+  "delivery": "P4 B1 OCI Comparator v2",
+  "decision": "REVIEW_ONLY_BLOCKED",
+  "formal_b1_contents_closed": false,
+  "go": {"production": false, "runtime": false, "c5": false},
+  "debian13_historical_replay_performed_here": false,
+  "historical_generation_command_attested": false,
+  "v1_resealed_or_modified": false,
+  "v1_sha256sums_anchor": "2165b14ed3159362283de1df877f295ef110c4db64458e702df7f3b0dd059e56",
+  "layer_sources_format_source": "historical manifest supplied by operator; raw archive not opened here",
+  "historical_layer_size_reported": 322534912,
+  "inventory_format_source": "operator-confirmed Debian 13 observation, not locally opened historical bytes",
+  "d1_report_sha256_reported": "2c9be887b1ac88f99037659e1913d51aeefae5c1b5447f1e9cbccaf525633dd4",
+  "d1_status_reported": "PASS_ANCHORED_PROOF_BYTES_ONLY",
+  "historical_d2": {
+    "report_sha256_reported": "2e7eef48a5b66d82e03e59f9c936d935d8317670d647d00917cec51813db7cf0",
+    "regular_files_reported": 9771,
+    "content_differences_reported": 0,
+    "permission_differences_reported": 0,
+    "type_differences_reported": 0,
+    "extra_files_reported": 0,
+    "root_directory_absent_reported": true,
+    "uid_gid_differences_reported": 10334,
+    "original_comparator_returncode": null,
+    "original_comparator_code_sha256": null
+  },
+  "historical_search": {
+    "inaccessible_directory_encountered": true,
+    "permissions_changed": false,
+    "exhaustive_search_claimed": false
+  },
+  "next_authority": "C2-C4 review evidence only; C5 is a distinct explicitly authorized decision"
+}

@@ -1,0 +1,20 @@
+{
+  "debian_namespaces_inspected": false,
+  "debian_p4_executed": false,
+  "files": 874,
+  "note": "Repository bytes only, not POSIX metadata or remote Debian evidence",
+  "scope": [
+    "candidates/recovery-control-directory-v1",
+    "candidates/recovery-control-directory-v1-r2",
+    "candidates/recovery-control-directory-v1-r3",
+    "qualification/quarantine_debian",
+    "qualification/quarantine_inprocess",
+    "qualification/recovery_directory",
+    "qualification/recovery_directory_r3",
+    "qualification/restored_latch",
+    "deliveries/docnelo-v51-restored-latch-fastapi-20261102",
+    "deliveries/docnelo-v51-recovery-directory-candidate-v1-r3",
+    "deliveries/docnelo-v51-pyyaml-wheel-cp311"
+  ],
+  "verdict": "PASS_REPOSITORY_BYTES_PRESERVED"
+}

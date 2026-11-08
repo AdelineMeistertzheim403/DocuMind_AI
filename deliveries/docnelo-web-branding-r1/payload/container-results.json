@@ -1,0 +1,1 @@
+﻿{"status":"passed","checks":18,"environment":"new image / loopback API / no external network","calls":[{"method":"GET","path":"/api/v1/health"},{"method":"GET","path":"/api/v1/auth/options"},{"method":"POST","path":"/api/v1/auth/login"},{"method":"GET","path":"/api/v1/documents"}]}

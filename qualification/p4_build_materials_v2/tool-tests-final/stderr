@@ -1,0 +1,20 @@
+test_gate_cannot_promote_a_modified_native_report (test_materials.GateAndPreservationTests.test_gate_cannot_promote_a_modified_native_report) ... ok
+test_material_gate_is_blocked_and_cli_keeps_numeric_nonzero (test_materials.GateAndPreservationTests.test_material_gate_is_blocked_and_cli_keeps_numeric_nonzero) ... ok
+test_preservation_detects_content_change (test_materials.GateAndPreservationTests.test_preservation_detects_content_change) ... ok
+test_delivery_roundtrip_and_archive_tampering (test_materials.ImageAndTransferTests.test_delivery_roundtrip_and_archive_tampering) ... ok
+test_exact_manifest_and_existing_destination_refusal (test_materials.ImageAndTransferTests.test_exact_manifest_and_existing_destination_refusal) ... ok
+test_target_env_hint_never_approves_layers_or_debian (test_materials.ImageAndTransferTests.test_target_env_hint_never_approves_layers_or_debian) ... ok
+test_wrong_python_base_rejects_without_starting (test_materials.ImageAndTransferTests.test_wrong_python_base_rejects_without_starting) ... ok
+test_malformed_wrong_arch_and_missing_section_table_refuse (test_materials.NativeTests.test_malformed_wrong_arch_and_missing_section_table_refuse) ... ok
+test_origin_search_is_direct_only_and_unsupported_tokens_block (test_materials.NativeTests.test_origin_search_is_direct_only_and_unsupported_tokens_block) ... ok
+test_real_elf_has_versioned_system_needs_without_execution (test_materials.NativeTests.test_real_elf_has_versioned_system_needs_without_execution) ... ok
+test_hash_and_exhaustive_record_integrity (test_materials.WheelTests.test_hash_and_exhaustive_record_integrity) ... ok
+test_internal_tag_mismatch_and_zip_traversal (test_materials.WheelTests.test_internal_tag_mismatch_and_zip_traversal) ... ok
+test_inventory_cannot_hide_actual_requires_dist (test_materials.WheelTests.test_inventory_cannot_hide_actual_requires_dist) ... ok
+test_published_metadata_match_is_not_approval (test_materials.WheelTests.test_published_metadata_match_is_not_approval) ... ok
+test_selection_has_no_unexplained_package_and_preserves_binary_extra (test_materials.WheelTests.test_selection_has_no_unexplained_package_and_preserves_binary_extra) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 0.249s
+
+OK

@@ -1,0 +1,300 @@
+﻿# DocuMind AI — Public beta (5 testeurs) — VPS compose (isolé)
+# Synthetic recipe reference: documind-s14-6-recipe-4a10 (public mode).
+#
+# Notes:
+# - No Beta Lite mechanisms.
+# - API runs non-root (image USER app). Lifecycle provisioning is one-shot privileged init.
+# - Images are supplied externally (tag OR digest). Do not assume RepoDigest exists.
+name: documind-public-beta
+services:
+  db:
+    image: ${POSTGRES_IMAGE:-documind-postgres-vector:17}
+    labels: {traefik.enable: 'false'}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-documind_public_beta}
+      POSTGRES_USER: ${POSTGRES_USER:-documind_public_beta}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a dedicated PostgreSQL password}
+    volumes:
+      - public_beta_database:/var/lib/postgresql/data
+    networks: [data]
+    mem_limit: 1g
+    cpus: 1
+    pids_limit: 128
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging: &logging
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+  # One-shot privileged lifecycle provisioning. Must run BEFORE starting the API.
+  lifecycle-init:
+    image: ${BACKEND_IMAGE:?Set BACKEND_IMAGE (tag or digest)}
+    labels: {traefik.enable: 'false'}
+    user: '0:0'
+    env_file:
+      - ${PUBLIC_BETA_ENV_FILE:-.env.public-beta}
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-documind_public_beta}:${POSTGRES_PASSWORD:?}@db:5432/${POSTGRES_DB:-documind_public_beta}
+      STORAGE_DIR: /app/var/documents
+      EXTRACTION_MODE: sandbox
+      MAX_CONCURRENT_WORKERS: '2'
+      WORKER_MEMORY_MB: '512'
+      WORKER_TIMEOUT_SECONDS: '30'
+      API_KEYS: '{}'
+      LEGACY_API_ENABLED: 'false'
+      AI_ENABLED: 'false'
+      OWNER_DEMO_ENABLED: 'false'
+      LIFECYCLE_DATA_ROOT: /app/lifecycle
+      LIFECYCLE_BACKUP_LOCK_PATH: /app/lifecycle/.backup.lock
+      # Five lifecycle stores (SQLite)
+      LIFECYCLE_REGISTRY_PATH: /app/lifecycle/registry.sqlite
+      LIFECYCLE_CONFIRMATION_PATH: /app/lifecycle/confirmation.sqlite
+      LIFECYCLE_AUTHENTICATED_CONFIRMATION_PATH: /app/lifecycle/authenticated-confirmation.sqlite
+      LIFECYCLE_HOLDS_PATH: /app/lifecycle/holds.sqlite
+      LIFECYCLE_ADMISSION_ANCHOR_PATH: /app/lifecycle/admission-anchor.sqlite
+      # Lifecycle keys (root-owned, group-readable)
+      LIFECYCLE_AUTHENTICATION_KEY_PATH: /app/lifecycle/keys/authentication.key
+      LIFECYCLE_ADMISSION_KEY_PATH: /app/lifecycle/keys/admission.key
+    volumes:
+      - public_beta_lifecycle:/app/lifecycle
+    networks: [data]
+    depends_on: {db: {condition: service_healthy}}
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE]
+    security_opt: ["no-new-privileges:true"]
+    init: true
+    entrypoint: [python]
+    command:
+      - -c
+      - |
+        import os
+        import secrets
+        import pwd
+        from pathlib import Path
+
+        from backend.lifecycle_admissions import AdmissionAnchor
+        from backend.lifecycle_authenticated import AuthenticatedConfirmationStore
+        from backend.lifecycle_durability import ConfirmationStore
+        from backend.lifecycle_holds import HoldStore
+        from backend.lifecycle_registry import Registry
+
+        app = pwd.getpwnam('app')
+        app_uid, app_gid = app.pw_uid, app.pw_gid
+
+        root = Path(os.environ['LIFECYCLE_DATA_ROOT'])
+        lock_path = Path(os.environ['LIFECYCLE_BACKUP_LOCK_PATH'])
+
+        def chmod(path: Path, mode: int) -> None:
+          os.chmod(path, mode)
+        def chown(path: Path, uid: int, gid: int) -> None:
+          os.chown(path, uid, gid)
+
+        root.mkdir(parents=True, exist_ok=True)
+        chown(root, app_uid, app_gid)
+        chmod(root, 0o700)
+
+        store_paths = [
+          Path(os.environ['LIFECYCLE_REGISTRY_PATH']),
+          Path(os.environ['LIFECYCLE_CONFIRMATION_PATH']),
+          Path(os.environ['LIFECYCLE_AUTHENTICATED_CONFIRMATION_PATH']),
+          Path(os.environ['LIFECYCLE_HOLDS_PATH']),
+          Path(os.environ['LIFECYCLE_ADMISSION_ANCHOR_PATH']),
+        ]
+        for path in store_paths:
+          path.parent.mkdir(parents=True, exist_ok=True)
+          chown(path.parent, app_uid, app_gid)
+          chmod(path.parent, 0o700)
+
+        keys_dir = Path(os.environ['LIFECYCLE_AUTHENTICATION_KEY_PATH']).parent
+        keys_dir.mkdir(parents=True, exist_ok=True)
+        chown(keys_dir, 0, app_gid)
+        chmod(keys_dir, 0o750)
+
+        def ensure_key(path: Path) -> None:
+          if path.exists():
+            return
+          fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+          try:
+            os.write(fd, secrets.token_bytes(32))
+          finally:
+            os.close(fd)
+          chown(path, 0, app_gid)
+          chmod(path, 0o440)
+
+        ensure_key(Path(os.environ['LIFECYCLE_AUTHENTICATION_KEY_PATH']))
+        ensure_key(Path(os.environ['LIFECYCLE_ADMISSION_KEY_PATH']))
+
+        registry = Path(os.environ['LIFECYCLE_REGISTRY_PATH'])
+        witness = Path(os.environ['LIFECYCLE_CONFIRMATION_PATH'])
+        auth_path = Path(os.environ['LIFECYCLE_AUTHENTICATED_CONFIRMATION_PATH'])
+        holds = Path(os.environ['LIFECYCLE_HOLDS_PATH'])
+        anchor = Path(os.environ['LIFECYCLE_ADMISSION_ANCHOR_PATH'])
+
+        if not registry.exists():
+          Registry(registry).initialize()
+        if not witness.exists():
+          ConfirmationStore(witness).initialize()
+
+        auth = AuthenticatedConfirmationStore(
+          auth_path,
+          Path(os.environ['LIFECYCLE_AUTHENTICATION_KEY_PATH']).read_bytes(),
+          os.environ.get('LIFECYCLE_AUTHENTICATED_NAMESPACE', 'documind-public-beta'),
+        )
+        if not auth_path.exists():
+          auth.initialize()
+
+        if not holds.exists():
+          HoldStore(holds).initialize()
+
+        if not anchor.exists():
+          AdmissionAnchor(anchor, Path(os.environ['LIFECYCLE_ADMISSION_KEY_PATH']).read_bytes()).initialize()
+
+        # Lock file owned by API identity, writable only by it.
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        if not lock_path.exists():
+          fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+          os.close(fd)
+        chown(lock_path, app_uid, app_gid)
+        chmod(lock_path, 0o600)
+
+        # Harden lifecycle root after provisioning.
+        chmod(root, 0o500)
+
+  api:
+    image: ${BACKEND_IMAGE:?Set BACKEND_IMAGE (tag or digest)}
+    labels: {traefik.enable: 'false'}
+    env_file:
+      - ${PUBLIC_BETA_ENV_FILE:-.env.public-beta}
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-documind_public_beta}:${POSTGRES_PASSWORD:?}@db:5432/${POSTGRES_DB:-documind_public_beta}
+      ACCOUNT_BASE_URL: https://${APP_HOST:?Set beta hostname}
+      STORAGE_DIR: /app/var/documents
+      EXTRACTION_MODE: sandbox
+      API_KEYS: '{}'
+      LEGACY_API_ENABLED: 'false'
+      OWNER_DEMO_ENABLED: 'false'
+      AI_ENABLED: 'false'
+      BFF_SERVICE_KEY: ${BFF_SERVICE_KEY:?Set an independent BFF service key}
+      REGISTRATION_MODE: ${REGISTRATION_MODE:-disabled}
+      APPLICATION_PROFILE: ${APPLICATION_PROFILE:-standard}
+      PUBLIC_REGISTRATION_LIMIT: ${PUBLIC_REGISTRATION_LIMIT:-5}
+      PUBLIC_REGISTRATION_PER_HOUR: ${PUBLIC_REGISTRATION_PER_HOUR:-10}
+      RECOVERY_STATE_PATH: /run/documind/recovery-state.json
+      LIFECYCLE_DATA_ROOT: /app/lifecycle
+      LIFECYCLE_BACKUP_LOCK_PATH: /app/lifecycle/.backup.lock
+      # Five lifecycle stores (SQLite)
+      LIFECYCLE_REGISTRY_PATH: /app/lifecycle/registry.sqlite
+      LIFECYCLE_CONFIRMATION_PATH: /app/lifecycle/confirmation.sqlite
+      LIFECYCLE_AUTHENTICATED_CONFIRMATION_PATH: /app/lifecycle/authenticated-confirmation.sqlite
+      LIFECYCLE_HOLDS_PATH: /app/lifecycle/holds.sqlite
+      LIFECYCLE_ADMISSION_ANCHOR_PATH: /app/lifecycle/admission-anchor.sqlite
+      # Lifecycle keys (root-owned, group-readable)
+      LIFECYCLE_AUTHENTICATION_KEY_PATH: /app/lifecycle/keys/authentication.key
+      LIFECYCLE_ADMISSION_KEY_PATH: /app/lifecycle/keys/admission.key
+    volumes:
+      - public_beta_documents:/app/var
+      - public_beta_lifecycle:/app/lifecycle
+      - type: bind
+        source: ${RECOVERY_CONTROL_FILE:?Set operator-managed recovery latch file}
+        target: /run/documind/recovery-state.json
+        read_only: true
+        bind:
+          create_host_path: false
+    networks: [data,application,outbound]
+    depends_on: {db: {condition: service_healthy}}
+    mem_limit: 1536m
+    cpus: 2
+    pids_limit: 64
+    init: true
+    stop_grace_period: 150s
+    security_opt: ["no-new-privileges:true"]
+    read_only: true
+    tmpfs: ["/tmp:size=256m,mode=1777"]
+    # Migrations are performed explicitly by the deployment workflow.
+    command: ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log", "--limit-concurrency", "32"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health',timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    logging: *logging
+
+  web:
+    image: ${FRONTEND_IMAGE:?Set FRONTEND_IMAGE (tag or digest)}
+    environment:
+      BFF_SERVICE_KEY: ${BFF_SERVICE_KEY:?}
+      BFF_BACKEND_URL: http://api:8000
+      BFF_HOST: 0.0.0.0
+      BFF_PORT: 3000
+      BFF_ALLOWED_HOSTS: ${APP_HOST:?Set beta hostname}
+      BFF_TRUSTED_PROXY_IPS: ${BFF_TRUSTED_PROXY_IPS:?Set actual proxy IP on the docker network}
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-10485760}
+      UPLOAD_MAX_CONCURRENT: ${UPLOAD_MAX_CONCURRENT:-2}
+      UPLOAD_MAX_PREFLIGHTS: ${UPLOAD_MAX_PREFLIGHTS:-8}
+      UPLOAD_AUTH_TIMEOUT_SECONDS: ${UPLOAD_AUTH_TIMEOUT_SECONDS:-3}
+      UPLOAD_READ_TIMEOUT_SECONDS: ${UPLOAD_READ_TIMEOUT_SECONDS:-30}
+      UPLOAD_IDLE_TIMEOUT_SECONDS: ${UPLOAD_IDLE_TIMEOUT_SECONDS:-5}
+      UPLOAD_TOTAL_TIMEOUT_SECONDS: ${UPLOAD_TOTAL_TIMEOUT_SECONDS:-75}
+      WORKER_TIMEOUT_SECONDS: ${WORKER_TIMEOUT_SECONDS:-30}
+      AI_TIMEOUT_SECONDS: ${AI_TIMEOUT_SECONDS:-30}
+      AI_MAX_SUMMARY_STEPS: ${AI_MAX_SUMMARY_STEPS:-5}
+    networks: [application,web]
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: web
+      traefik.http.routers.documind-public-beta.rule: Host(`${APP_HOST:?Set beta hostname}`)
+      traefik.http.routers.documind-public-beta.entrypoints: websecure
+      traefik.http.routers.documind-public-beta.tls: 'true'
+      traefik.http.routers.documind-public-beta.tls.certresolver: letsencrypt
+      traefik.http.routers.documind-public-beta.service: documind-public-beta
+      traefik.http.routers.documind-public-beta.middlewares: documind-public-beta-headers@docker
+      # Upload admission limiting.
+      traefik.http.routers.documind-public-beta-upload.rule: Host(`${APP_HOST:?Set beta hostname}`) && Method(`POST`) && Path(`/bff/documents`)
+      traefik.http.routers.documind-public-beta-upload.entrypoints: websecure
+      traefik.http.routers.documind-public-beta-upload.tls: 'true'
+      traefik.http.routers.documind-public-beta-upload.tls.certresolver: letsencrypt
+      traefik.http.routers.documind-public-beta-upload.service: documind-public-beta
+      traefik.http.routers.documind-public-beta-upload.priority: '100'
+      traefik.http.routers.documind-public-beta-upload.middlewares: documind-public-beta-headers@docker,documind-public-beta-upload-capacity@docker
+      traefik.http.middlewares.documind-public-beta-upload-capacity.inflightreq.amount: ${UPLOAD_MAX_PREFLIGHTS:-8}
+      traefik.http.middlewares.documind-public-beta-upload-capacity.inflightreq.sourcecriterion.requesthost: 'true'
+      traefik.http.services.documind-public-beta.loadbalancer.server.port: '3000'
+      traefik.http.services.documind-public-beta.loadbalancer.passhostheader: 'true'
+      traefik.http.middlewares.documind-public-beta-headers.headers.customrequestheaders.X-Forwarded-Proto: https
+      traefik.http.middlewares.documind-public-beta-headers.headers.contenttypenosniff: 'true'
+      traefik.http.middlewares.documind-public-beta-headers.headers.referrerpolicy: no-referrer
+      traefik.http.middlewares.documind-public-beta-headers.headers.stsseconds: '31536000'
+    depends_on: {api: {condition: service_healthy}}
+    mem_limit: 512m
+    cpus: 1
+    pids_limit: 64
+    init: true
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: ["/tmp:size=32m"]
+    healthcheck:
+      test: ["CMD", "node", "server/healthcheck.mjs"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging: *logging
+
+networks:
+  data: {internal: true}
+  application: {internal: true}
+  web:
+    external: true
+    name: web
+  outbound: {}
+
+volumes:
+  public_beta_database: {}
+  public_beta_documents: {}
+  public_beta_lifecycle: {}
+
+

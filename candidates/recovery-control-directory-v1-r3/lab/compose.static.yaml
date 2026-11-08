@@ -1,0 +1,36 @@
+# DEFERRED minimal reader only. Never combine with an application Compose file.
+name: docnelo-rcd-static
+services:
+  api:
+    image: ${LAB_IMAGE:?Use an approved already-loaded sha256 image ID}
+    pull_policy: never
+    user: '${LAB_READER_UID:?Verified non-root UID}:${LAB_READER_PRIMARY_GID:?Verified primary GID}'
+    group_add: ['${RECOVERY_READER_GID:?Verified dedicated reader GID}']
+    environment:
+      RECOVERY_CONTROL_VERSION: '1'
+      RECOVERY_CONTROL_DIR: /run/documind-control
+      RECOVERY_CONTROL_SOURCE_DIR: ${RECOVERY_CONTROL_DIR:?Absolute new synthetic control directory}
+      RECOVERY_READER_GID: ${RECOVERY_READER_GID:?Verified dedicated reader GID}
+      RECOVERY_STATE_PATH: /run/documind-control/recovery-state.json
+    entrypoint: ['${LAB_PYTHON:?Absolute Python path in the approved image}', '-I', '-B', /probe.py]
+    command: [--idle]
+    network_mode: none
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    pids_limit: 64
+    mem_limit: 128m
+    cpus: .5
+    volumes:
+      - type: bind
+        source: ${RECOVERY_CONTROL_DIR:?Absolute new synthetic control directory}
+        target: /run/documind-control
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${LAB_PROBE:?Absolute inventoried docker_reader.py path}
+        target: /probe.py
+        read_only: true
+        bind:
+          create_host_path: false

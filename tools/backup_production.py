@@ -501,7 +501,7 @@ def execute(root, report):
                 backup_helper.create_backup(active.compose, destination, env=active.env)
             manifest = json.loads((destination / 'manifest.json').read_text())
             if (manifest.get('migration') != active.release['schema_revision']
-                    or manifest.get('backup_format_version') != 3
+                    or manifest.get('backup_format_version') not in {3, 4}
                     or manifest.get('capture_complete') is not True
                     or manifest.get('s2_recovery_authorized') is not False
                     or manifest.get('recovery_disposition') !=

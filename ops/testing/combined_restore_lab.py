@@ -45,6 +45,7 @@ def main():
     root = repo / 'var' / name
     root.mkdir(exist_ok=False)
     (root / '.synthetic-only').write_text('documind-isolated-restore-lab-v1\n', encoding='utf-8')
+    (root / 'recovery-state.json').write_text('{"format":1,"state":"quarantined"}\n', encoding='utf-8')
     (root / 'preflight.json').write_text(json.dumps({
         'name': name, 'endpoint': context['Endpoints']['docker']['Host'],
         'images': [{k: image[k] for k in ('Id', 'RepoTags', 'Architecture', 'Os')} for image in image_info],
@@ -74,6 +75,7 @@ def main():
     env = {'PYTHONPATH': '/src', 'PYTHONDONTWRITEBYTECODE': '1',
            'AI_ENABLED': 'false', 'REGISTRATION_MODE': 'disabled', 'PUBLIC_LEGAL_READY': 'false',
            'DATABASE_URL': 'postgresql+psycopg://synthetic:synthetic@db:5432/documind_source',
+           'RECOVERY_STATE_PATH': '/run/documind/recovery-state.json',
            'LIFECYCLE_DATA_ROOT': '/app/lifecycle', 'LIFECYCLE_BACKUP_LOCK_PATH': '/app/lifecycle/.backup.lock'}
     variables = {'registry': 'REGISTRY', 'witness': 'CONFIRMATION', 'authenticated': 'AUTHENTICATED_CONFIRMATION',
                  'holds': 'HOLDS', 'admission_anchor': 'ADMISSION_ANCHOR'}
@@ -83,6 +85,7 @@ def main():
     api = {'image': images[0], 'user': '0:0', 'pull_policy': 'never', 'working_dir': '/src', 'entrypoint': ['python'],
            'environment': env, 'networks': ['isolated'], 'volumes': [
                bind(source, '/src', True), bind(root, '/evidence'), bind(materials, '/materials', True),
+               bind(root / 'recovery-state.json', '/run/documind/recovery-state.json', True),
                {'type': 'volume', 'source': 'documents', 'target': '/app/var'},
                {'type': 'volume', 'source': 'lifecycle', 'target': '/app/lifecycle'}]}
     config = {'name': name, 'services': {

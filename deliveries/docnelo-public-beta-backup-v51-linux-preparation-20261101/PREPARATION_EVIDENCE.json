@@ -1,0 +1,115 @@
+{
+  "product": "Docnelo Public Beta",
+  "purpose": "V5.1 isolated Linux qualification preparation only",
+  "date": "2026-11-01",
+  "decision": "NO_GO",
+  "production_decision": "NO_GO",
+  "lifecycle10_decision": "NO_GO",
+  "linux_scenarios_executed": 0,
+  "linux_execution_authorized_target_identified": false,
+  "isolation_established": false,
+  "linux_commands_executed": false,
+  "docker_daemon_queried": false,
+  "vps_accessed": false,
+  "backup_restore_modules_imported": false,
+  "fixtures_created": false,
+  "release_scripts_modified": false,
+  "seal_verification_completed_at_utc": "2026-11-01T10:57:32.477953+00:00",
+  "observations": {
+    "host_os": "Windows",
+    "host_python_version": "3.13.7",
+    "docker_client_version": "29.8.2",
+    "docker_client_build": "7fc2dff",
+    "docker_current_context": "desktop-linux",
+    "docker_contexts": [
+      {
+        "name": "default",
+        "endpoint_kind": "local_named_pipe",
+        "current": false
+      },
+      {
+        "name": "desktop-linux",
+        "endpoint_kind": "local_named_pipe",
+        "current": true
+      }
+    ],
+    "wsl_distributions": [
+      {"name": "Debian", "state": "Running", "wsl_version": 2},
+      {"name": "Ubuntu", "state": "Stopped", "wsl_version": 2},
+      {"name": "docker-desktop", "state": "Running", "wsl_version": 2}
+    ],
+    "linux_runtime_versions": null,
+    "docker_engine_version": null,
+    "compose_version": null,
+    "restic_version": null,
+    "postgresql_tool_versions": null,
+    "linux_uid_gid": null,
+    "runtime_measurements": null
+  },
+  "observed_commands": [
+    "Get-Command wsl,docker,python,ssh -ErrorAction SilentlyContinue",
+    "wsl --list --verbose",
+    "docker --version",
+    "docker context ls --format '{{.Name}} {{.DockerEndpoint}} {{.Current}}'",
+    "python --version",
+    "python -B - (standard-library local SHA-256 verification only)"
+  ],
+  "release_checks": [
+    {
+      "path": "deliveries\\docnelo-public-beta-backup-v5-20261031",
+      "manifest_sha256": "abeb44119afd6a10bf6bbc15b229b0aa8b8317f5c28ee36d12ace124946a91ea",
+      "verified_entries": 18,
+      "status": "LOCAL_INTEGRITY_VERIFIED",
+      "external_authenticity_established": false
+    },
+    {
+      "path": "deliveries\\docnelo-public-beta-backup-v5.1-20261031",
+      "manifest_sha256": "676d6d3f707c58f4dda150cef5cfd37196b7cf8e162434a7af042357574f6eda",
+      "verified_entries": 18,
+      "status": "LOCAL_INTEGRITY_VERIFIED",
+      "external_authenticity_established": false
+    }
+  ],
+  "input_documents": [
+    {
+      "path": "DOCNELO_PUBLIC_BETA_BACKUP_RESTORE_COMPATIBILITY_AUDIT.md",
+      "sha256": "c9f6dbcd93e0d54239702c968c238dca4bf3d57e2d7e7d706ea969f0dabe8bb0"
+    },
+    {
+      "path": "DOCNELO_PUBLIC_BETA_BACKUP_RESTORE_LAB_QUALIFICATION_PLAN.md",
+      "sha256": "efd9761748d5b978b571df0b713c71f8b6fca314a67cf8e9585d0c49539355ab"
+    }
+  ],
+  "linux_lot_results": [
+    {"lot": "L1", "status": "NOT_EXECUTED", "local_preparation_only": "18/18 seal entries verified; no Linux imports or runtime qualification"},
+    {"lot": "L2", "status": "NOT_EXECUTED"},
+    {"lot": "L3", "status": "NOT_EXECUTED"},
+    {"lot": "L4", "status": "NOT_EXECUTED"},
+    {"lot": "L5", "status": "NOT_EXECUTED"},
+    {"lot": "L6", "status": "NOT_EXECUTED"},
+    {"lot": "L7", "status": "NOT_EXECUTED"},
+    {"lot": "L8", "status": "NOT_EXECUTED"},
+    {"lot": "L9", "status": "NOT_EXECUTED"},
+    {"lot": "L10", "status": "NOT_EXECUTED"},
+    {"lot": "L11", "status": "NOT_EXECUTED"},
+    {"lot": "L12", "status": "NOT_EXECUTED"},
+    {"lot": "L13", "status": "NOT_EXECUTED"},
+    {"lot": "L14", "status": "NOT_EXECUTED"},
+    {"lot": "L15", "status": "NOT_EXECUTED"},
+    {"lot": "L16", "status": "NOT_EXECUTED"},
+    {"lot": "L17", "status": "NOT_EXECUTED"}
+  ],
+  "common_execution_blockers": [
+    "P1: no dedicated authorized Linux target established",
+    "P2: production-free isolation not demonstrated",
+    "P3: dedicated lab-only daemon and resource inventory not established"
+  ],
+  "historical_test_results_reexecuted": false,
+  "notes": [
+    "Client/context/WSL inventory is not an isolation certificate.",
+    "Release checks establish local integrity relative to manifests, not external authenticity.",
+    "Source-level incompatibilities are not Linux execution results.",
+    "No real data or keys were used, read or copied in this preparation.",
+    "This JSON is an evidence summary, not a raw execution log or attestation of a Linux laboratory."
+  ]
+}

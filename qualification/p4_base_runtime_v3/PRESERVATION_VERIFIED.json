@@ -1,0 +1,23 @@
+{
+  "files": 1072,
+  "posix_metadata_qualified": false,
+  "remote_debian_evidence_accessed": false,
+  "scope": [
+    "candidates/recovery-control-directory-v1",
+    "candidates/recovery-control-directory-v1-r2",
+    "candidates/recovery-control-directory-v1-r3",
+    "qualification/quarantine_debian",
+    "qualification/quarantine_inprocess",
+    "qualification/recovery_directory",
+    "qualification/recovery_directory_r3",
+    "qualification/restored_latch",
+    "deliveries/docnelo-v51-restored-latch-fastapi-20261102",
+    "deliveries/docnelo-v51-recovery-directory-candidate-v1-r3",
+    "deliveries/docnelo-v51-pyyaml-wheel-cp311",
+    "qualification/p4_asgi_offline_v1",
+    "deliveries/docnelo-v51-p4-asgi-offline-v1",
+    "qualification/p4_build_materials_v2",
+    "deliveries/docnelo-v51-p4-build-materials-v2"
+  ],
+  "status": "PASS_SCOPED_REPOSITORY_BYTES_UNCHANGED"
+}

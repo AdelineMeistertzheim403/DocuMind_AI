@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "C:\Users\Adeline\Documents\DocuMind_AI\qualification\p4_build_materials_v2\bootstrap_probe.py", line 71, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\Adeline\Documents\DocuMind_AI\qualification\p4_build_materials_v2\bootstrap_probe.py", line 59, in main
+    need(code == 0 and not violations, 'pip version probe failed')
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Adeline\Documents\DocuMind_AI\qualification\p4_build_materials_v2\common.py", line 15, in need
+    raise ValueError(message)
+ValueError: pip version probe failed

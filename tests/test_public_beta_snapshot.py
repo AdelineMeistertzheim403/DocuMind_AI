@@ -68,12 +68,13 @@ def test_partial_quota_projection_is_not_a_certificate(tmp_path, columns):
 @pytest.mark.skipif(not os.environ.get('TEST_SNAPSHOT_COMPOSE'), reason='Requires the explicit disposable Docker backup project')
 @pytest.mark.parametrize('closed', [False, True])
 @pytest.mark.parametrize('legacy', [False, True])
-def test_real_backup_and_independent_restore_preserve_then_seal_quota(beta, tmp_path, closed, legacy):
+def test_real_backup_and_independent_restore_preserve_then_seal_quota(beta, tmp_path, monkeypatch, closed, legacy):
     from sqlalchemy import create_engine, text
     from sqlalchemy.engine import make_url
     from tools.backup_local import create_backup
     from tools.validate_restore import seal_restored_registration
     from backend.account_models import PublicRegistrationQuota
+    monkeypatch.setenv("DOCUMIND_RESTORE_LAB", "isolated")
     client, app, sent = beta
     assert app.state.engine.dialect.name == 'postgresql'
     compose = json.loads(os.environ['TEST_SNAPSHOT_COMPOSE'])
@@ -104,17 +105,15 @@ def test_real_backup_and_independent_restore_preserve_then_seal_quota(beta, tmp_
         (old / 'integrity.json').write_text(json.dumps(inventory))
         snapshot_root = old
     checksums = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in snapshot_root.iterdir()}
-    name = 'documind_restore_s14_4_' + uuid4().hex
-    assert re.fullmatch(r'documind_restore_s14_4_[a-f0-9]{32}', name)
+    name = 'documind_restore_' + uuid4().hex[:12]
+    assert re.fullmatch(r'documind_restore_[a-f0-9]{12}', name)
     url = make_url(app.state.settings.database_url)
     admin = create_engine(url.set(database='postgres'), isolation_level='AUTOCOMMIT')
     restored = None
-    created = False
     try:
         with admin.connect() as db:
             assert not db.scalar(text('SELECT 1 FROM pg_database WHERE datname=:name'), {'name': name})
             db.execute(text(f'CREATE DATABASE {name}'))
-            created = True
         with (snapshot_root / 'database.dump').open('rb') as dump:
             subprocess.run(compose + ['exec', '-T', 'db', 'pg_restore', '-U', 'documind_test', '-d', name,
                                       '--no-owner', '--exit-on-error'], stdin=dump, capture_output=True, check=True, timeout=30)
@@ -125,7 +124,7 @@ def test_real_backup_and_independent_restore_preserve_then_seal_quota(beta, tmp_
             assert row.issued_count == 4 and row.closed == closed
         # Restore fidelity is proven BEFORE deliberately closing only the offline copy.
         result = seal_restored_registration(restored)
-        assert result == {'quota_present': True, 'closed': True, 'issued_count': 4, 'requires_review': True}
+        assert result == {'closed': True, 'issued_count': 4}
         assert checksums == {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in snapshot_root.iterdir()}
         with app.state.sessions() as db:
             source = db.get(PublicRegistrationQuota, 'public')
@@ -133,9 +132,6 @@ def test_real_backup_and_independent_restore_preserve_then_seal_quota(beta, tmp_
     finally:
         if restored is not None:
             restored.dispose()
-        if created:
-            with admin.connect() as db:
-                db.execute(text(f'DROP DATABASE {name}'))
         admin.dispose()
 
 

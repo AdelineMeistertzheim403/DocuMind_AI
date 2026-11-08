@@ -1,0 +1,12 @@
+{
+  "review_only": true,
+  "build_authorized": false,
+  "inventory_sha256": null,
+  "base_archive": null,
+  "cpython": null,
+  "native_closure": null,
+  "wheel_provenance": null,
+  "bootstrap": null,
+  "recipe": null,
+  "independent_review": null
+}

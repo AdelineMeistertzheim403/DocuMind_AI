@@ -1,0 +1,44 @@
+{
+  "format": 1,
+  "synthetic_only": true,
+  "scope_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "inventory_complete": true,
+  "exceptions_complete": true,
+  "dependencies_complete": true,
+  "backups": [
+    {
+      "id": "1111111111111111111111111111111111111111111111111111111111111111",
+      "kind": "local",
+      "created_at": "2026-10-27T12:00:00Z",
+      "classification": "ordinary",
+      "metadata": "verified",
+      "restore_evidence": true,
+      "dependencies": []
+    },
+    {
+      "id": "2222222222222222222222222222222222222222222222222222222222222222",
+      "kind": "remote",
+      "created_at": "2026-10-27T12:00:00Z",
+      "classification": "ordinary",
+      "metadata": "verified",
+      "restore_evidence": true,
+      "dependencies": ["3333333333333333333333333333333333333333333333333333333333333333"]
+    }
+  ],
+  "objects": [
+    {
+      "id": "3333333333333333333333333333333333333333333333333333333333333333",
+      "snapshot_ids": ["2222222222222222222222222222222222222222222222222222222222222222"],
+      "versions": [
+        {
+          "id": "4444444444444444444444444444444444444444444444444444444444444444",
+          "logical_deleted": false,
+          "physical_present": true
+        }
+      ],
+      "replicated": false,
+      "locked": false
+    }
+  ],
+  "exceptions": []
+}

@@ -1,0 +1,19 @@
+[Unit]
+Description=Optional fixed-content lifecycle inventory alert
+
+[Service]
+Type=oneshot
+User=debian
+Group=debian
+WorkingDirectory=/srv/documind-lifecycle/source
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/srv/documind-lifecycle/venv/bin/python -m tools.lifecycle_alert
+TimeoutStartSec=45s
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+StandardOutput=journal
+StandardError=journal
+LogNamespace=documind-lifecycle

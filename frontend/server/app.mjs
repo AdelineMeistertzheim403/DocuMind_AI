@@ -1,4 +1,4 @@
-import express from 'express'
+﻿import express from 'express'
 import helmet from 'helmet'
 import { Transform, Readable } from 'node:stream'
 import { existsSync } from 'node:fs'
@@ -11,6 +11,7 @@ const detailRoute = new RegExp(`^/bff/documents/${uuid}$`)
 const downloadRoute = new RegExp(`^/bff/documents/${uuid}/download$`)
 const analyzeRoute = new RegExp(`^/bff/documents/${uuid}/analyze$`)
 const analysisRoute = new RegExp(`^/bff/documents/${uuid}/analysis$`)
+const deletionStatusRoute = new RegExp(`^/bff/documents/${uuid}/deletion-status$`)
 const aiPost = new RegExp(`^/bff/documents/${uuid}/(?:summarize|ask)$`)
 const aiGet = new RegExp(`^/bff/documents/${uuid}/(?:summaries|ai-history)$`)
 const indexRoute = new RegExp(`^/bff/documents/${uuid}/index$`)
@@ -50,6 +51,7 @@ const messages = {
   401: 'La connexion au service est mal configurée. Vérifiez la clé du BFF côté serveur.',
   402: 'Budget IA insuffisant.', 403: 'Cette opération nécessite une connexion HTTPS ou est désactivée.',
   409: 'Une opération est déjà en cours ou les paramètres de session doivent être vérifiés.',
+  410: 'Accès retiré ; suppression administrative en attente.',
   404: 'Ce document ou cette analyse est introuvable.',
   413: 'Le fichier dépasse la taille autorisée.',
   415: 'Seuls les fichiers PDF et TXT sont acceptés.',
@@ -69,6 +71,7 @@ function routeAllowed(method, path) {
   return (path === '/bff/documents' && ['GET', 'POST'].includes(method)) ||
     (downloadRoute.test(path) && method === 'GET') ||
     (detailRoute.test(path) && ['GET', 'DELETE'].includes(method)) ||
+    (deletionStatusRoute.test(path) && method === 'GET') ||
     (analyzeRoute.test(path) && method === 'POST') ||
     (analysisRoute.test(path) && method === 'GET') ||
     (aiPost.test(path) && method === 'POST') || (aiGet.test(path) && method === 'GET') ||
@@ -330,7 +333,8 @@ export function createApp(config, upstreamFetch = fetch, {auditSink}={}) {
         res.set('Set-Cookie', `__Host-documind=${data.session_token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${Math.min(3600, Number(data.expires_in) || 1800)}`)
         return res.json({ connected: true })
       }
-      if (['/bff/auth/logout','/bff/account/password','/bff/account/deletion-request'].includes(req.path)) res.set('Set-Cookie', '__Host-documind=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0')
+      if (['/bff/auth/logout','/bff/account/password'].includes(req.path) ||
+          req.path === '/bff/account/deletion-request' && data.state !== 'awaiting_confirmation') res.set('Set-Cookie', '__Host-documind=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0')
       // Never forward upstream headers, cookies, redirects, or a supplied client API key.
       return res.status(response.status).json(data)
     } catch {
@@ -348,6 +352,11 @@ export function createApp(config, upstreamFetch = fetch, {auditSink}={}) {
     }
   })
 
+
+  app.get('/bff/ui-config', (req, res) => {
+    res.set('Cache-Control', 'no-store')
+    res.json({ environment_label: process.env.UI_ENVIRONMENT_LABEL || '' })
+  })
   if (existsSync(config.dist)) {
     app.use(express.static(config.dist, { index: false }))
     app.get('/{*path}', (req, res) => res.sendFile(`${config.dist}/index.html`))

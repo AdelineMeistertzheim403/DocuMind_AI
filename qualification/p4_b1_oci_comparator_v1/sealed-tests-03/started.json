@@ -1,0 +1,47 @@
+{
+  "argv": [
+    "/usr/bin/python3.11",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/mnt/c/Users/Adeline/Documents/DocuMind_AI/deliveries/docnelo-v51-p4-b1-oci-comparator-v1",
+    "-p",
+    "test_comparator.py",
+    "-v"
+  ],
+  "code_sha256": {
+    "comparator.py": "78cd4ac234ee751555641aee0f4a80f6117c0a2284037b2693415fd92ae6c687",
+    "record_tests.py": "1a2fed84de173a3e416ccf85e110999d00e7bd3261444e1cdcef4b266c3c9e92",
+    "seal.py": "91529b8280fc97ba0a511f721de85f296e475b33901918d626248232b5ba6421",
+    "test_comparator.py": "d84b75afe5f0f7ce8a43fcb5ffb05265998a21eaa07050c25f036d415d823afc"
+  },
+  "complete": false,
+  "cwd": "/mnt/c/Users/Adeline/Documents/DocuMind_AI/deliveries/docnelo-v51-p4-b1-oci-comparator-v1",
+  "os_release": {
+    "BUG_REPORT_URL": "https://bugs.debian.org/",
+    "HOME_URL": "https://www.debian.org/",
+    "ID": "debian",
+    "NAME": "Debian GNU/Linux",
+    "PRETTY_NAME": "Debian GNU/Linux 12 (bookworm)",
+    "SUPPORT_URL": "https://www.debian.org/support",
+    "VERSION": "12 (bookworm)",
+    "VERSION_CODENAME": "bookworm",
+    "VERSION_ID": "12"
+  },
+  "platform": "Linux-6.18.54.1-microsoft-standard-WSL2-x86_64-with-glibc2.36",
+  "python": "3.11.2 (main, Oct  7 2026, 12:35:07) [GCC 12.2.0]",
+  "recorder_argv": [
+    "python3.11",
+    "-I",
+    "-B",
+    "-c",
+    "import pathlib,runpy,sys; sys.argv=['record_tests.py','--release-anchor','2165b14ed3159362283de1df877f295ef110c4db64458e702df7f3b0dd059e56','--out',str(pathlib.Path.cwd().parents[1].joinpath('qualification','p4_b1_oci_comparator_v1','sealed-tests-03'))]; runpy.run_path('record_tests.py',run_name='__main__')"
+  ],
+  "release_anchor": "2165b14ed3159362283de1df877f295ef110c4db64458e702df7f3b0dd059e56",
+  "returncode": null,
+  "start_ns": 1793874317194004315,
+  "timeout": 120
+}

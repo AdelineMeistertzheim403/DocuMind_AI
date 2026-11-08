@@ -1,0 +1,16 @@
+{
+  "scope": "unit/static/ASGI only; never Docker qualification",
+  "preparation": true,
+  "platform": "win32",
+  "python": "3.13.7 (tags/v3.13.7:bcee1c3, Aug 14 2025, 14:15:11) [MSC v.1944 64 bit (AMD64)]",
+  "input_manifest_sha256": "d34045fcdeb87254c649cc844f7396a98fb4c6a51d7b82924281905296d51a4d",
+  "verdict": "FAILED",
+  "forbidden_io_events": [],
+  "collected": 118,
+  "outcomes": {
+    "passed": 73,
+    "failed": 1
+  },
+  "pytest_exit_code": 1,
+  "error": "Campaign failed"
+}

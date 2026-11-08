@@ -1,0 +1,210 @@
+name: Approved VPS deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full 40-character SHA of a successful published CI release
+        required: true
+        type: string
+      ci_run_id:
+        description: Successful CI run ID containing that release artifact
+        required: true
+        type: string
+      operation:
+        description: Deploy or application rollback (no database downgrade)
+        type: choice
+        options: [deploy, rollback]
+        default: deploy
+      initialize:
+        description: Approve first installation ONLY when all three persistent volumes are absent
+        type: boolean
+        default: false
+      allow_migration:
+        description: Approve an upgrade when the database revision changes
+        type: boolean
+        default: false
+      approve_public_beta:
+        description: Approve public/5 preparation ONLY with an already closed SQL gate; never opens admissions
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+  deployments: write
+
+concurrency:
+  group: documind-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    environment:
+      name: production
+      url: ${{ vars.ACCOUNT_BASE_URL }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Verify approval configuration and exact source CI run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CI_RUN_ID: ${{ inputs.ci_run_id }}
+          APP_HOST: ${{ vars.APP_HOST }}
+          ACCOUNT_BASE_URL: ${{ vars.ACCOUNT_BASE_URL }}
+        run: |
+          python - <<'PY'
+          import json,os,re,subprocess
+          def api(path):
+              return json.loads(subprocess.check_output(['gh','api',path],text=True))
+          host=os.environ['APP_HOST']; origin=os.environ['ACCOUNT_BASE_URL']
+          assert re.fullmatch(r'(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}',host) and len(host)<=253, 'Configure a production DNS hostname'
+          reserved=('example.com','example.org','example.net','test','example','invalid','localhost')
+          assert not any(host.lower()==suffix or host.lower().endswith('.'+suffix) for suffix in reserved), 'Example or local hostname refused'
+          assert origin==f'https://{host}', 'ACCOUNT_BASE_URL must match the configured HTTPS APP_HOST'
+          repo=os.environ['GITHUB_REPOSITORY']; sha=os.environ['RELEASE_SHA']; run_id=os.environ['CI_RUN_ID']
+          assert re.fullmatch('[a-f0-9]{40}',sha),'Full release SHA required'
+          assert re.fullmatch('[0-9]+',run_id),'Invalid CI run ID'
+          environment=api(f'repos/{repo}/environments/production')
+          assert any(rule['type']=='required_reviewers' and rule.get('reviewers') for rule in environment.get('protection_rules',[])), 'Configure required reviewers on production; deployment refused'
+          run=api(f'repos/{repo}/actions/runs/{run_id}')
+          workflow=api(f'repos/{repo}/actions/workflows/ci.yml')
+          assert run['workflow_id']==workflow['id'] and run['head_repository']['full_name']==repo
+          assert run['status']=='completed' and run['conclusion']=='success'
+          assert run['head_sha']==sha and run['head_branch']=='main'
+          assert run['event'] in ('push','workflow_dispatch')
+          PY
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: documind-release-${{ inputs.release_sha }}
+          path: release-bundle
+          run-id: ${{ inputs.ci_run_id }}
+          github-token: ${{ github.token }}
+      - name: Validate the immutable release
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          APPROVE_PUBLIC_BETA: ${{ inputs.approve_public_beta }}
+          CI_RUN_ID: ${{ inputs.ci_run_id }}
+          OPERATION: ${{ inputs.operation }}
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from tools.release_manifest import validate_release
+          from tools.release_security import validate_operational_bundle,BUNDLE_FILES,LEGACY_BUNDLE_FILES,STATEMENT
+          data=validate_release(json.loads(Path('release-bundle/release.json').read_text()))
+          assert data['git_sha']==os.environ['RELEASE_SHA']
+          actual={p.name for p in Path('release-bundle').iterdir()}
+          secure=set(BUNDLE_FILES)|{STATEMENT}
+          legacy_secure=set(LEGACY_BUNDLE_FILES)|{STATEMENT}
+          assert actual in (secure,legacy_secure), 'Deployment requires an attested operational bundle'
+          statement,_=validate_operational_bundle(
+              Path('release-bundle'),data,rollback=os.environ['OPERATION']=='rollback')
+          if actual==legacy_secure:
+              assert os.environ['OPERATION']=='rollback'
+              assert os.environ['APPROVE_PUBLIC_BETA']!='true'
+          assert statement['producer']['repository']==os.environ['GITHUB_REPOSITORY']
+          assert statement['producer']['run_id']==os.environ['CI_RUN_ID']
+          assert set(statement['bundle_sha256']) == actual-{STATEMENT}
+          if os.environ['APPROVE_PUBLIC_BETA']=='true':
+              assert actual==secure, 'Public beta requires an attested bundle and independent host approval'
+          if os.environ['OPERATION']=='rollback':
+              assert actual in (secure,legacy_secure), 'Rollback requires an attested bundle'
+          PY
+      - name: Configure verified SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          python - <<'PY'
+          import os,re
+          from pathlib import Path,PurePosixPath
+          assert re.fullmatch(r'[a-zA-Z0-9.-]+',os.environ['VPS_HOST'])
+          assert re.fullmatch(r'[a-zA-Z0-9_-]+',os.environ['VPS_USER'])
+          assert os.environ['VPS_PORT'].isdigit() and 1<=int(os.environ['VPS_PORT'])<=65535
+          path=os.environ['VPS_DEPLOY_PATH']
+          assert re.fullmatch(r'/[a-zA-Z0-9_./-]+',path) and '..' not in PurePosixPath(path).parts and path!='/'
+          directory=Path(os.environ['RUNNER_TEMP'])/'documind-ssh';directory.mkdir(mode=0o700)
+          for name,key in [('key','VPS_SSH_KEY'),('known_hosts','VPS_KNOWN_HOSTS')]:
+              assert os.environ[key]
+              p=directory/name;p.write_text(os.environ[key]+'\n');p.chmod(0o600)
+          PY
+      - name: Stage reviewed release without touching other applications
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          SSH=(-F /dev/null -i "$RUNNER_TEMP/documind-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$RUNNER_TEMP/documind-ssh/known_hosts" -o ConnectTimeout=15)
+          TARGET="$VPS_DEPLOY_PATH/releases/$RELEASE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          CONTROL="$VPS_DEPLOY_PATH/deploy-controls/$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          mkdir deploy-control
+          cp release-bundle/deploy_production.py release-bundle/backup_local.py \
+            release-bundle/release_manifest.py release-bundle/public_beta_policy.py \
+            release-bundle/release_security.py deploy-control/
+          ssh "${SSH[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "umask 077; mkdir -p '$TARGET'"
+          ssh "${SSH[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "umask 077; mkdir -p '$CONTROL'"
+          scp "${SSH[@]}" -P "$VPS_PORT" release-bundle/* "$VPS_USER@$VPS_HOST:$TARGET/"
+          scp "${SSH[@]}" -P "$VPS_PORT" deploy-control/* "$VPS_USER@$VPS_HOST:$CONTROL/"
+      - name: Backup, pull, migrate and verify the approved deployment
+        id: rollout
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH }}
+          REGISTRY_PULL_USERNAME: ${{ secrets.REGISTRY_PULL_USERNAME }}
+          REGISTRY_PULL_PASSWORD: ${{ secrets.REGISTRY_PULL_PASSWORD }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          INITIALIZE: ${{ inputs.initialize }}
+          ALLOW_MIGRATION: ${{ inputs.allow_migration }}
+          APPROVE_PUBLIC_BETA: ${{ inputs.approve_public_beta }}
+          OPERATION: ${{ inputs.operation }}
+        run: |
+          SSH=(-F /dev/null -i "$RUNNER_TEMP/documind-ssh/key" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$RUNNER_TEMP/documind-ssh/known_hosts" -o ConnectTimeout=15 -o ServerAliveInterval=30)
+          TARGET="$VPS_DEPLOY_PATH/releases/$RELEASE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          CONTROL="$VPS_DEPLOY_PATH/deploy-controls/$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          FLAGS=''
+          if [ "$INITIALIZE" = true ]; then FLAGS="$FLAGS --initialize"; fi
+          if [ "$ALLOW_MIGRATION" = true ]; then FLAGS="$FLAGS --allow-migration"; fi
+          if [ "$APPROVE_PUBLIC_BETA" = true ]; then FLAGS="$FLAGS --approve-public-beta"; fi
+          if [ "$OPERATION" = rollback ]; then FLAGS="$FLAGS --rollback"; fi
+          python -c 'import json,os; print(json.dumps({"username":os.environ["REGISTRY_PULL_USERNAME"],"password":os.environ["REGISTRY_PULL_PASSWORD"]}))' |
+            ssh "${SSH[@]}" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
+              "python3 '$CONTROL/deploy_production.py' --bundle '$TARGET' --root '$VPS_DEPLOY_PATH' --registry-login $FLAGS"
+      - name: Collect deployment report
+        if: always() && (steps.rollout.outcome == 'success' || steps.rollout.outcome == 'failure')
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          TARGET="$VPS_DEPLOY_PATH/releases/$RELEASE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          ssh -F /dev/null -i "$RUNNER_TEMP/documind-ssh/key" -p "$VPS_PORT" \
+            -o BatchMode=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$RUNNER_TEMP/documind-ssh/known_hosts" \
+            "$VPS_USER@$VPS_HOST" "cat '$VPS_DEPLOY_PATH/var/deployment-reports/$RELEASE_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json'" > deployment-report.json
+          cat deployment-report.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: deployment-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: deployment-report.json
+          if-no-files-found: warn
+          retention-days: 90

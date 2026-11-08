@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 import tempfile
 import threading
 import queue
@@ -76,16 +76,21 @@ class RequestSizeLimit:
             await self.app(scope, replay, send)
 
 
-def create_app(settings=None):
+def create_app(settings=None, *, lite_confirmation=None):
     settings = settings or Settings()
 
     @asynccontextmanager
     async def lifespan(app):
+        summary_started = False
         if not settings.api_keys and not settings.bff_service_key.get_secret_value():
             emit('system.security_config.invalid', reason_code='security_unavailable')
             raise RuntimeError("Configurez API_KEYS avant de démarrer le serveur")
         recovery_state = read_recovery_state(settings.recovery_state_path)
         app.state.recovery_ready_at_start = recovery_state == 'ready'
+        if recovery_state == 'serving_closed':
+            from .lite_release import startup
+            await asyncio.to_thread(startup, app)
+            app.state.recovery_ready_at_start = True
         if not app.state.recovery_ready_at_start:
             emit('system.recovery.quarantine', reason_code='recovery_quarantined')
         if app.state.recovery_ready_at_start and settings.extraction_mode == 'sandbox':
@@ -97,11 +102,13 @@ def create_app(settings=None):
                 raise RuntimeError('Confinement requis indisponible') from None
         if app.state.recovery_ready_at_start:
             settings.storage_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
-            from .rag.indexing import recover_jobs
-            recover_jobs(app)
-            from .ai.long_summary import recover
-            recover(app)
-            app.state.summary_worker.thread.start()
+            if settings.ai_enabled:
+                from .rag.indexing import recover_jobs
+                recover_jobs(app)
+                from .ai.long_summary import recover
+                recover(app)
+                app.state.summary_worker.thread.start()
+                summary_started = True
 
             def deliver_mail():
                 from .account_api import send_reset,send_verification
@@ -143,7 +150,7 @@ def create_app(settings=None):
                 cleanup.cancel()
                 with suppress(asyncio.CancelledError):
                     await cleanup
-            if app.state.recovery_ready_at_start:
+            if summary_started:
                 await asyncio.to_thread(app.state.summary_worker.stop)
             if mail_thread is not None:
                 app.state.mail_stopping.set()
@@ -152,8 +159,13 @@ def create_app(settings=None):
             app.state.authentication_engine.dispose()
             app.state.engine.dispose()
 
-    app = FastAPI(title="DocuMind AI", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="Docnelo", version="0.1.0", lifespan=lifespan)
     app.state.settings = settings
+    # Python-only seam for isolated contract tests. No env/HTTP authority provider.
+    app.state.lite_confirmation = lite_confirmation
+    if lite_confirmation is None and settings.application_profile == 'beta_lite':
+        from .lite_authority import provisioned_adapter
+        app.state.lite_confirmation = provisioned_adapter(settings)
     app.state.recovery_ready_at_start = False
     app.state.engine = make_engine(settings.database_url)
     app.state.sessions = make_sessions(app.state.engine)
@@ -177,6 +189,8 @@ def create_app(settings=None):
     app.add_middleware(IPAdmission)
     app.add_middleware(SecurityAudit)
     app.add_middleware(RecoveryQuarantine)
+    from .lite_admissions import LiteBoundary
+    app.add_middleware(LiteBoundary)
     app.include_router(router)
     app.include_router(ai_router)
     app.include_router(settings_router)

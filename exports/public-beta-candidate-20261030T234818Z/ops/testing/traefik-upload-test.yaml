@@ -1,0 +1,32 @@
+http:
+  routers:
+    documind-test:
+      rule: Host(`documind.test`)
+      entryPoints: [websecure]
+      tls: {}
+      service: bff
+      middlewares: [https]
+    upload-test:
+      rule: Host(`documind.test`) && Method(`POST`) && Path(`/bff/documents`)
+      priority: 100
+      entryPoints: [websecure]
+      tls: {}
+      service: bff
+      middlewares: [https, uploads]
+  services:
+    bff:
+      loadBalancer:
+        servers: [{url: 'http://web:3000'}]
+        passHostHeader: true
+  middlewares:
+    https:
+      headers:
+        customRequestHeaders: {X-Forwarded-Proto: https}
+    uploads:
+      inFlightReq:
+        amount: 8
+        sourceCriterion: {requestHost: true}
+tls:
+  certificates:
+    - certFile: /certs/documind.test.crt
+      keyFile: /certs/documind.test.key

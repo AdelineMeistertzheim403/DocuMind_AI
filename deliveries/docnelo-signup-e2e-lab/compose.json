@@ -1,0 +1,504 @@
+{
+  "name": "docnelo-signup-lab-7c98f505cd",
+  "services": {
+    "db": {
+      "image": "sha256:d2e0a72a9da278610fc926cc8d125827c0069f33feaafa011aae890572ec95c3",
+      "pull_policy": "never",
+      "networks": [
+        "isolated"
+      ],
+      "read_only": true,
+      "cap_drop": [
+        "ALL"
+      ],
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "labels": {
+        "docnelo.lab": "docnelo-signup-lab-7c98f505cd",
+        "traefik.enable": "false"
+      },
+      "pids_limit": 128,
+      "mem_limit": "1g",
+      "tmpfs": [
+        "/tmp:size=64m,mode=1777",
+        "/var/run/postgresql:uid=70,gid=70,mode=0700"
+      ],
+      "user": "70:70",
+      "environment": {
+        "POSTGRES_USER": "synthetic",
+        "POSTGRES_PASSWORD": "lab-only-password",
+        "POSTGRES_DB": "synthetic"
+      },
+      "volumes": [
+        "database_retry:/var/lib/postgresql/data"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "synthetic",
+          "-d",
+          "synthetic"
+        ],
+        "interval": "2s",
+        "retries": 30
+      }
+    },
+    "api": {
+      "image": "sha256:4aa850b6fb8d16b32fd731d94b232b2f817f461892b3f39a28e7557a25a5eb3d",
+      "pull_policy": "never",
+      "networks": [
+        "isolated"
+      ],
+      "read_only": true,
+      "cap_drop": [
+        "ALL"
+      ],
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "labels": {
+        "docnelo.lab": "docnelo-signup-lab-7c98f505cd",
+        "traefik.enable": "false"
+      },
+      "pids_limit": 128,
+      "mem_limit": "1536m",
+      "tmpfs": [
+        "/tmp:size=64m,mode=1777"
+      ],
+      "environment": {
+        "DATABASE_URL": "postgresql+psycopg://synthetic:lab-only-password@db:5432/synthetic",
+        "BFF_SERVICE_KEY": "516a925909df51ff71fdfff14811ca47131379ba705c3deb51b80a39221f859a",
+        "REGISTRATION_MODE": "public",
+        "APPLICATION_PROFILE": "standard",
+        "PUBLIC_REGISTRATION_LIMIT": "5",
+        "PUBLIC_REGISTRATION_PER_HOUR": "10",
+        "PUBLIC_LEGAL_READY": "true",
+        "PUBLIC_OPERATOR_NAME": "Synthetic laboratory operator",
+        "PUBLIC_CONTACT_EMAIL": "operator@example.test",
+        "PUBLIC_TERMS_VERSION": "lab-only-v1",
+        "PUBLIC_TERMS_URL": "https://localhost:19446/lab-legal/terms",
+        "PUBLIC_PRIVACY_URL": "https://localhost:19446/lab-legal/privacy",
+        "PUBLIC_LEGAL_NOTICE_URL": "https://localhost:19446/lab-legal/notice",
+        "ACCOUNT_BASE_URL": "https://localhost:19446",
+        "SMTP_HOST": "smtp",
+        "SMTP_PORT": "8025",
+        "SMTP_STARTTLS": "true",
+        "SMTP_FROM": "sender@example.test",
+        "SMTP_USERNAME": "",
+        "SMTP_PASSWORD": "",
+        "SSL_CERT_FILE": "/certs/lab.crt",
+        "AI_ENABLED": "false",
+        "OWNER_DEMO_ENABLED": "false",
+        "LEGACY_API_ENABLED": "false",
+        "API_KEYS": "{}",
+        "LIFECYCLE_DURABLE_RECEIPTS_REQUIRED": "true",
+        "LIFECYCLE_SYNTHETIC_MUTATIONS_ENABLED": "false",
+        "STORAGE_DIR": "/app/var/documents",
+        "EXTRACTION_MODE": "sandbox",
+        "RECOVERY_STATE_PATH": "/control/recovery.json",
+        "LIFECYCLE_DATA_ROOT": "/app/lifecycle",
+        "LIFECYCLE_BACKUP_LOCK_PATH": "/app/lifecycle/.backup.lock",
+        "LIFECYCLE_AUTHENTICATED_NAMESPACE": "docnelo-signup-lab-7c98f505cd",
+        "LIFECYCLE_AUTHENTICATION_KEY_PATH": "/app/lifecycle/keys/authentication.key",
+        "LIFECYCLE_ADMISSION_KEY_PATH": "/app/lifecycle/keys/admission.key",
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "LIFECYCLE_REGISTRY_PATH": "/app/lifecycle/registry/registry.sqlite",
+        "LIFECYCLE_CONFIRMATION_PATH": "/app/lifecycle/confirmation/confirmation.sqlite",
+        "LIFECYCLE_AUTHENTICATED_CONFIRMATION_PATH": "/app/lifecycle/authenticated/authenticated.sqlite",
+        "LIFECYCLE_HOLDS_PATH": "/app/lifecycle/holds/holds.sqlite",
+        "LIFECYCLE_ADMISSION_ANCHOR_PATH": "/app/lifecycle/admissions/admissions.sqlite"
+      },
+      "volumes": [
+        "documents:/app/var",
+        "lifecycle:/app/lifecycle",
+        "./tls:/certs:ro",
+        "./recovery.json:/control/recovery.json:ro"
+      ],
+      "command": [
+        "uvicorn",
+        "backend.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--workers",
+        "1",
+        "--no-access-log"
+      ],
+      "depends_on": {
+        "db": {
+          "condition": "service_healthy"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health',timeout=3)"
+        ],
+        "interval": "3s",
+        "retries": 30
+      }
+    },
+    "lifecycle-init": {
+      "image": "sha256:4aa850b6fb8d16b32fd731d94b232b2f817f461892b3f39a28e7557a25a5eb3d",
+      "pull_policy": "never",
+      "networks": [
+        "isolated"
+      ],
+      "read_only": true,
+      "cap_drop": [
+        "ALL"
+      ],
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "labels": {
+        "docnelo.lab": "docnelo-signup-lab-7c98f505cd",
+        "traefik.enable": "false"
+      },
+      "pids_limit": 128,
+      "mem_limit": "1536m",
+      "tmpfs": [
+        "/tmp:size=64m,mode=1777"
+      ],
+      "environment": {
+        "DATABASE_URL": "postgresql+psycopg://synthetic:lab-only-password@db:5432/synthetic",
+        "BFF_SERVICE_KEY": "516a925909df51ff71fdfff14811ca47131379ba705c3deb51b80a39221f859a",
+        "REGISTRATION_MODE": "public",
+        "APPLICATION_PROFILE": "standard",
+        "PUBLIC_REGISTRATION_LIMIT": "5",
+        "PUBLIC_REGISTRATION_PER_HOUR": "10",
+        "PUBLIC_LEGAL_READY": "true",
+        "PUBLIC_OPERATOR_NAME": "Synthetic laboratory operator",
+        "PUBLIC_CONTACT_EMAIL": "operator@example.test",
+        "PUBLIC_TERMS_VERSION": "lab-only-v1",
+        "PUBLIC_TERMS_URL": "https://localhost:19446/lab-legal/terms",
+        "PUBLIC_PRIVACY_URL": "https://localhost:19446/lab-legal/privacy",
+        "PUBLIC_LEGAL_NOTICE_URL": "https://localhost:19446/lab-legal/notice",
+        "ACCOUNT_BASE_URL": "https://localhost:19446",
+        "SMTP_HOST": "smtp",
+        "SMTP_PORT": "8025",
+        "SMTP_STARTTLS": "true",
+        "SMTP_FROM": "sender@example.test",
+        "SMTP_USERNAME": "",
+        "SMTP_PASSWORD": "",
+        "SSL_CERT_FILE": "/certs/lab.crt",
+        "AI_ENABLED": "false",
+        "OWNER_DEMO_ENABLED": "false",
+        "LEGACY_API_ENABLED": "false",
+        "API_KEYS": "{}",
+        "LIFECYCLE_DURABLE_RECEIPTS_REQUIRED": "true",
+        "LIFECYCLE_SYNTHETIC_MUTATIONS_ENABLED": "false",
+        "STORAGE_DIR": "/app/var/documents",
+        "EXTRACTION_MODE": "sandbox",
+        "RECOVERY_STATE_PATH": "/control/recovery.json",
+        "LIFECYCLE_DATA_ROOT": "/app/lifecycle",
+        "LIFECYCLE_BACKUP_LOCK_PATH": "/app/lifecycle/.backup.lock",
+        "LIFECYCLE_AUTHENTICATED_NAMESPACE": "docnelo-signup-lab-7c98f505cd",
+        "LIFECYCLE_AUTHENTICATION_KEY_PATH": "/app/lifecycle/keys/authentication.key",
+        "LIFECYCLE_ADMISSION_KEY_PATH": "/app/lifecycle/keys/admission.key",
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "LIFECYCLE_REGISTRY_PATH": "/app/lifecycle/registry/registry.sqlite",
+        "LIFECYCLE_CONFIRMATION_PATH": "/app/lifecycle/confirmation/confirmation.sqlite",
+        "LIFECYCLE_AUTHENTICATED_CONFIRMATION_PATH": "/app/lifecycle/authenticated/authenticated.sqlite",
+        "LIFECYCLE_HOLDS_PATH": "/app/lifecycle/holds/holds.sqlite",
+        "LIFECYCLE_ADMISSION_ANCHOR_PATH": "/app/lifecycle/admissions/admissions.sqlite"
+      },
+      "volumes": [
+        "documents:/app/var",
+        "lifecycle:/app/lifecycle",
+        "./tls:/certs:ro",
+        "./recovery.json:/control/recovery.json:ro",
+        "./lifecycle_init.py:/lab/lifecycle_init.py:ro"
+      ],
+      "user": "0:0",
+      "entrypoint": [
+        "python"
+      ],
+      "command": [
+        "/lab/lifecycle_init.py"
+      ],
+      "cap_add": [
+        "CHOWN",
+        "FOWNER",
+        "DAC_OVERRIDE",
+        "SETUID",
+        "SETGID"
+      ],
+      "profiles": [
+        "tools"
+      ]
+    },
+    "migrate": {
+      "image": "sha256:4aa850b6fb8d16b32fd731d94b232b2f817f461892b3f39a28e7557a25a5eb3d",
+      "pull_policy": "never",
+      "networks": [
+        "isolated"
+      ],
+      "read_only": true,
+      "cap_drop": [
+        "ALL"
+      ],
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "labels": {
+        "docnelo.lab": "docnelo-signup-lab-7c98f505cd",
+        "traefik.enable": "false"
+      },
+      "pids_limit": 128,
+      "mem_limit": "1536m",
+      "tmpfs": [
+        "/tmp:size=64m,mode=1777"
+      ],
+      "environment": {
+        "DATABASE_URL": "postgresql+psycopg://synthetic:lab-only-password@db:5432/synthetic",
+        "BFF_SERVICE_KEY": "516a925909df51ff71fdfff14811ca47131379ba705c3deb51b80a39221f859a",
+        "REGISTRATION_MODE": "public",
+        "APPLICATION_PROFILE": "standard",
+        "PUBLIC_REGISTRATION_LIMIT": "5",
+        "PUBLIC_REGISTRATION_PER_HOUR": "10",
+        "PUBLIC_LEGAL_READY": "true",
+        "PUBLIC_OPERATOR_NAME": "Synthetic laboratory operator",
+        "PUBLIC_CONTACT_EMAIL": "operator@example.test",
+        "PUBLIC_TERMS_VERSION": "lab-only-v1",
+        "PUBLIC_TERMS_URL": "https://localhost:19446/lab-legal/terms",
+        "PUBLIC_PRIVACY_URL": "https://localhost:19446/lab-legal/privacy",
+        "PUBLIC_LEGAL_NOTICE_URL": "https://localhost:19446/lab-legal/notice",
+        "ACCOUNT_BASE_URL": "https://localhost:19446",
+        "SMTP_HOST": "smtp",
+        "SMTP_PORT": "8025",
+        "SMTP_STARTTLS": "true",
+        "SMTP_FROM": "sender@example.test",
+        "SMTP_USERNAME": "",
+        "SMTP_PASSWORD": "",
+        "SSL_CERT_FILE": "/certs/lab.crt",
+        "AI_ENABLED": "false",
+        "OWNER_DEMO_ENABLED": "false",
+        "LEGACY_API_ENABLED": "false",
+        "API_KEYS": "{}",
+        "LIFECYCLE_DURABLE_RECEIPTS_REQUIRED": "true",
+        "LIFECYCLE_SYNTHETIC_MUTATIONS_ENABLED": "false",
+        "STORAGE_DIR": "/app/var/documents",
+        "EXTRACTION_MODE": "sandbox",
+        "RECOVERY_STATE_PATH": "/control/recovery.json",
+        "LIFECYCLE_DATA_ROOT": "/app/lifecycle",
+        "LIFECYCLE_BACKUP_LOCK_PATH": "/app/lifecycle/.backup.lock",
+        "LIFECYCLE_AUTHENTICATED_NAMESPACE": "docnelo-signup-lab-7c98f505cd",
+        "LIFECYCLE_AUTHENTICATION_KEY_PATH": "/app/lifecycle/keys/authentication.key",
+        "LIFECYCLE_ADMISSION_KEY_PATH": "/app/lifecycle/keys/admission.key",
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "LIFECYCLE_REGISTRY_PATH": "/app/lifecycle/registry/registry.sqlite",
+        "LIFECYCLE_CONFIRMATION_PATH": "/app/lifecycle/confirmation/confirmation.sqlite",
+        "LIFECYCLE_AUTHENTICATED_CONFIRMATION_PATH": "/app/lifecycle/authenticated/authenticated.sqlite",
+        "LIFECYCLE_HOLDS_PATH": "/app/lifecycle/holds/holds.sqlite",
+        "LIFECYCLE_ADMISSION_ANCHOR_PATH": "/app/lifecycle/admissions/admissions.sqlite"
+      },
+      "volumes": [
+        "documents:/app/var",
+        "lifecycle:/app/lifecycle",
+        "./tls:/certs:ro",
+        "./recovery.json:/control/recovery.json:ro"
+      ],
+      "entrypoint": [
+        "alembic"
+      ],
+      "command": [
+        "upgrade",
+        "head"
+      ],
+      "profiles": [
+        "tools"
+      ],
+      "depends_on": {
+        "db": {
+          "condition": "service_healthy"
+        }
+      }
+    },
+    "web": {
+      "image": "sha256:ebdbc7fba1c61c03349088ca093470c78eec9dd91c5e2aa92ab1d8c0db5be362",
+      "pull_policy": "never",
+      "networks": [
+        "isolated"
+      ],
+      "read_only": true,
+      "cap_drop": [
+        "ALL"
+      ],
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "labels": {
+        "docnelo.lab": "docnelo-signup-lab-7c98f505cd",
+        "traefik.enable": "false"
+      },
+      "pids_limit": 128,
+      "mem_limit": "512m",
+      "tmpfs": [
+        "/tmp:size=64m,mode=1777"
+      ],
+      "environment": {
+        "BFF_SERVICE_KEY": "516a925909df51ff71fdfff14811ca47131379ba705c3deb51b80a39221f859a",
+        "BFF_BACKEND_URL": "http://api:8000",
+        "BFF_HOST": "0.0.0.0",
+        "BFF_PORT": "3000",
+        "BFF_ALLOWED_HOSTS": "localhost,127.0.0.1",
+        "DOCUMIND_GATEWAY_TOKEN": "6ba13b38ebc90ff97670fa83a4de45bbadd569c2f575708567d9ac3e558f38f6",
+        "BFF_TRUSTED_PROXY_IPS": ""
+      }
+    },
+    "smtp": {
+      "image": "sha256:526917bd27ecc837a7b683c0ca396fcdf315dde81c879100bffda874a3abeb1d",
+      "pull_policy": "never",
+      "networks": [
+        "isolated"
+      ],
+      "read_only": true,
+      "cap_drop": [
+        "ALL"
+      ],
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "labels": {
+        "docnelo.lab": "docnelo-signup-lab-7c98f505cd",
+        "traefik.enable": "false"
+      },
+      "pids_limit": 128,
+      "mem_limit": "512m",
+      "tmpfs": [
+        "/tmp:size=64m,mode=1777"
+      ],
+      "user": "0:0",
+      "working_dir": "/fixture",
+      "environment": {
+        "DOCUMIND_TEST_ONLY": "sprint-14-6",
+        "PYTHONPATH": "/fixture",
+        "PYTHONDONTWRITEBYTECODE": "1"
+      },
+      "entrypoint": [
+        "python"
+      ],
+      "command": [
+        "-m",
+        "tests.fixtures.public_beta_smtp"
+      ],
+      "volumes": [
+        "./fixtures:/fixture:ro",
+        "./tls/lab.crt:/certs/recipe.crt:ro",
+        "./tls/lab.key:/certs/recipe.key:ro",
+        "capture:/capture"
+      ]
+    },
+    "legal": {
+      "image": "sha256:4aa850b6fb8d16b32fd731d94b232b2f817f461892b3f39a28e7557a25a5eb3d",
+      "pull_policy": "never",
+      "networks": [
+        "isolated"
+      ],
+      "read_only": true,
+      "cap_drop": [
+        "ALL"
+      ],
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "labels": {
+        "docnelo.lab": "docnelo-signup-lab-7c98f505cd",
+        "traefik.enable": "false"
+      },
+      "pids_limit": 128,
+      "mem_limit": "512m",
+      "tmpfs": [
+        "/tmp:size=64m,mode=1777"
+      ],
+      "entrypoint": [
+        "python"
+      ],
+      "command": [
+        "-m",
+        "http.server",
+        "8080",
+        "--directory",
+        "/legal"
+      ],
+      "volumes": [
+        "./legal:/legal:ro"
+      ]
+    },
+    "proxy": {
+      "image": "sha256:ff8877338069e690053302ba9a8d8eeb47259467774ea90826f77a32e787a488",
+      "pull_policy": "never",
+      "networks": [
+        "isolated"
+      ],
+      "read_only": true,
+      "cap_drop": [
+        "ALL"
+      ],
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "labels": {
+        "docnelo.lab": "docnelo-signup-lab-7c98f505cd",
+        "traefik.enable": "false"
+      },
+      "pids_limit": 128,
+      "mem_limit": "512m",
+      "tmpfs": [
+        "/tmp:size=64m,mode=1777"
+      ],
+      "user": "1000:1000",
+      "command": [
+        "--entrypoints.lab.address=:8443",
+        "--providers.file.filename=/config/proxy.json",
+        "--api=false"
+      ],
+      "volumes": [
+        "./proxy.json:/config/proxy.json:ro",
+        "./tls:/certs:ro"
+      ]
+    }
+  },
+  "networks": {
+    "isolated": {
+      "internal": true,
+      "labels": {
+        "docnelo.lab": "docnelo-signup-lab-7c98f505cd"
+      }
+    }
+  },
+  "volumes": {
+    "database": {
+      "labels": {
+        "docnelo.lab": "docnelo-signup-lab-7c98f505cd"
+      }
+    },
+    "documents": {
+      "labels": {
+        "docnelo.lab": "docnelo-signup-lab-7c98f505cd"
+      }
+    },
+    "lifecycle": {
+      "labels": {
+        "docnelo.lab": "docnelo-signup-lab-7c98f505cd"
+      }
+    },
+    "capture": {
+      "labels": {
+        "docnelo.lab": "docnelo-signup-lab-7c98f505cd"
+      }
+    },
+    "database_retry": {
+      "labels": {
+        "docnelo.lab": "docnelo-signup-lab-7c98f505cd"
+      }
+    }
+  }
+}

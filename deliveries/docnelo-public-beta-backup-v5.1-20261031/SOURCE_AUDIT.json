@@ -1,0 +1,180 @@
+{
+  "files": [
+    {
+      "path": "tools/public_beta_backup.py",
+      "bytes": 9493,
+      "sha256": "7b4dfe83f941fb4bc8317af3b37534f7105c369be82d170183499c4522ad8607",
+      "python311_grammar": "passed",
+      "imports": [
+        "__future__:annotations",
+        "argparse",
+        "contextlib:contextmanager",
+        "datetime:datetime,timezone",
+        "fcntl",
+        "json",
+        "os",
+        "pathlib:Path",
+        "re",
+        "subprocess",
+        "tools.public_beta_restic_guard:load_public_beta_restic_env,record_public_beta_repository_id,validate_public_beta_destination,verify_public_beta_repository",
+        "tools:backup_local,verify_snapshot",
+        "uuid:uuid4"
+      ]
+    },
+    {
+      "path": "tools/public_beta_restic_guard.py",
+      "bytes": 10515,
+      "sha256": "72c2da58dcda0020e0f0cffe6a31d0017a7d252d367d3cdc72c4b0e76a6b3bde",
+      "python311_grammar": "passed",
+      "imports": [
+        "__future__:annotations",
+        "argparse",
+        "fcntl",
+        "json",
+        "os",
+        "pathlib:Path",
+        "re",
+        "shlex",
+        "subprocess"
+      ]
+    },
+    {
+      "path": "tools/backup_local.py",
+      "bytes": 22085,
+      "sha256": "c431234d9113966d94201ce23ab386f6b86dc8ba9b51222c5df2cb15794cf75c",
+      "python311_grammar": "passed",
+      "imports": [
+        ".lifecycle_key_policy:validate_key_member",
+        "argparse",
+        "contextlib:contextmanager",
+        "datetime:datetime,timezone",
+        "hashlib",
+        "json",
+        "lifecycle_key_policy:validate_key_member",
+        "os",
+        "pathlib:Path",
+        "pathlib:PurePosixPath",
+        "subprocess",
+        "tarfile",
+        "tempfile",
+        "uuid:uuid4"
+      ]
+    },
+    {
+      "path": "tools/verify_snapshot.py",
+      "bytes": 17164,
+      "sha256": "0ccbf6c01ad2a3eceaef31e64376ad9e4a071524f454a6794eb4c82f248e5532",
+      "python311_grammar": "passed",
+      "imports": [
+        ".lifecycle_key_policy:validate_key_member,validate_key_permissions",
+        "argparse",
+        "hashlib",
+        "json",
+        "lifecycle_key_policy:validate_key_member,validate_key_permissions",
+        "os",
+        "pathlib:Path",
+        "re",
+        "sqlalchemy:create_engine,text",
+        "sqlite3",
+        "subprocess",
+        "tarfile",
+        "tempfile"
+      ]
+    },
+    {
+      "path": "tools/validate_restore.py",
+      "bytes": 19345,
+      "sha256": "b3c39b07b09135b8c7793629f5963c1dd85977e387f373ba3bf9fba534f50899",
+      "python311_grammar": "passed",
+      "imports": [
+        ".lifecycle_key_policy:validate_key_member",
+        ".verify_snapshot:verify_capture,verify_snapshot",
+        "argparse",
+        "hashlib",
+        "json",
+        "lifecycle_key_policy:validate_key_member",
+        "os",
+        "pathlib:Path,PurePosixPath",
+        "re",
+        "shutil",
+        "sqlalchemy.engine:make_url",
+        "sqlalchemy:create_engine,text",
+        "sqlite3",
+        "stat",
+        "subprocess",
+        "tarfile",
+        "uuid:UUID",
+        "verify_snapshot:verify_capture,verify_snapshot"
+      ]
+    },
+    {
+      "path": "tools/lifecycle_key_policy.py",
+      "bytes": 1359,
+      "sha256": "5f1d23507ecf19717fe248b15974f7dcf13d7325c312c949db1cc59edda50bee",
+      "python311_grammar": "passed",
+      "imports": []
+    },
+    {
+      "path": "backend/__init__.py",
+      "bytes": 68,
+      "sha256": "f27626e9bc2006f7197829822c9ca134be511f40a8abef53c9dae1bae8bfed25",
+      "python311_grammar": "passed",
+      "imports": []
+    },
+    {
+      "path": "backend/lifecycle_snapshot.py",
+      "bytes": 8036,
+      "sha256": "e5ec61e50467e7376fdd266ba800262e811e55001bb44b1ee77ec32ba2e30733",
+      "python311_grammar": "passed",
+      "imports": [
+        ".lifecycle_backup_lock:lifecycle_store_lock",
+        "__future__:annotations",
+        "datetime:datetime,timezone",
+        "hashlib",
+        "io",
+        "json",
+        "os",
+        "pathlib:Path",
+        "sqlite3",
+        "stat",
+        "sys",
+        "tarfile",
+        "tempfile",
+        "uuid:UUID"
+      ]
+    },
+    {
+      "path": "backend/lifecycle_backup_lock.py",
+      "bytes": 2356,
+      "sha256": "24427332fdbf3589d4efebfab50d375eb49bbe13b30cfb6ad54ccd3f75c90d19",
+      "python311_grammar": "passed",
+      "imports": [
+        "contextlib:contextmanager,nullcontext",
+        "fcntl",
+        "msvcrt",
+        "os",
+        "pathlib:Path",
+        "stat"
+      ]
+    },
+    {
+      "path": "ops/public_beta/BACKUP_ENCRYPTED_OFF_VPS.md",
+      "bytes": 6421,
+      "sha256": "fd5908e20421b1458b848da6206098e31babf6ace8f09e1c022f2497bb4302b2"
+    },
+    {
+      "path": "ops/public_beta/VPS_BACKUP_RESTORE_RUNBOOK.md",
+      "bytes": 5500,
+      "sha256": "fc09997c7c98bdb2c5e1cd565644c3ac041dac744cc083aee6b12798fc5a37ed"
+    },
+    {
+      "path": "ops/public_beta/BACKUP_RESTORE_V5_1_PERMISSIONS_REPORT.md",
+      "bytes": 11890,
+      "sha256": "f99aaac206155735b4c656d54697dc67ada38a756e0c0f76a3333f4ba151b398"
+    }
+  ],
+  "dynamic_imports": [
+    "time in backup_local"
+  ],
+  "runtime_image_module": "backend.lifecycle_snapshot -> backend.lifecycle_backup_lock"
+}

@@ -1,0 +1,172 @@
+# Local recipe only. Always supply a unique -p and an explicit fictitious --env-file.
+services:
+  db:
+    image: documind-postgres-vector:17
+    pull_policy: never
+    labels: {documind.test: sprint-14-6}
+    user: '70:70'
+    environment: {POSTGRES_USER: documind_test, POSTGRES_PASSWORD: fictitious-s14-6-only, POSTGRES_DB: documind_beta_recipe}
+    networks: [data]
+    tmpfs: ['/var/lib/postgresql/data:rw,noexec,nosuid,size=768m,uid=70,gid=70,mode=0700']
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 1g
+    cpus: 1
+    pids_limit: 128
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U documind_test -d documind_beta_recipe']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    logging: &logs {driver: json-file, options: {max-size: 10m, max-file: '3'}}
+  api:
+    image: documind-s14-6-api:local
+    pull_policy: never
+    labels: {documind.test: sprint-14-6}
+    env_file: ${BETA_RECIPE_ENV:?Provide the newly generated fictitious recipe env}
+    environment:
+      DATABASE_URL: postgresql+psycopg://documind_test:fictitious-s14-6-only@db:5432/documind_beta_recipe
+      STORAGE_DIR: /app/var/documents
+      EXTRACTION_MODE: sandbox
+      WORKER_MEMORY_MB: '512'
+      WORKER_TIMEOUT_SECONDS: '30'
+      MAX_CONCURRENT_WORKERS: '2'
+      API_KEYS: '{}'
+      LEGACY_API_ENABLED: 'false'
+      AI_ENABLED: 'false'
+      OWNER_DEMO_ENABLED: 'false'
+      SSL_CERT_FILE: /certs/recipe.crt
+    volumes: ['recipe_documents:/app/var', '${BETA_RECIPE_DIR:?}/tls:/certs:ro']
+    networks: [data,application]
+    depends_on: {db: {condition: service_healthy}}
+    command: [uvicorn, 'backend.main:app', --host, '0.0.0.0', --port, '8000', --workers, '1', --no-access-log, --limit-concurrency, '32']
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    init: true
+    stop_grace_period: 150s
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=256m,mode=1777']
+    mem_limit: 1536m
+    cpus: 2
+    pids_limit: 64
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health',timeout=3)"]
+      interval: 3s
+      timeout: 5s
+      start_period: 30s
+      retries: 20
+    logging: *logs
+  web:
+    image: documind-s14-6-web:local
+    pull_policy: never
+    labels: {documind.test: sprint-14-6}
+    environment:
+      BFF_SERVICE_KEY: fictitious-s14-6-service-key-no-real-secret-0001
+      BFF_BACKEND_URL: http://api:8000
+      BFF_HOST: '0.0.0.0'
+      BFF_PORT: '3000'
+      BFF_ALLOWED_HOSTS: documind.test
+      BFF_TRUSTED_PROXY_IPS: 172.30.246.10
+    networks: [application,proxy]
+    depends_on: {api: {condition: service_healthy}}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    init: true
+    tmpfs: ['/tmp:size=32m']
+    mem_limit: 512m
+    cpus: 1
+    pids_limit: 64
+    healthcheck:
+      test: [CMD, node, server/healthcheck.mjs]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+    logging: *logs
+  smtp:
+    image: documind-s14-6-proofs:local
+    pull_policy: never
+    labels: {documind.test: sprint-14-6}
+    init: true
+    environment: {DOCUMIND_TEST_ONLY: sprint-14-6}
+    command: [python, -m, tests.fixtures.public_beta_smtp]
+    volumes: ['${BETA_RECIPE_DIR:?}/tls:/certs:ro', '${BETA_RECIPE_DIR:?}/capture:/capture']
+    networks: [application]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 128m
+    cpus: .5
+    pids_limit: 32
+    logging: *logs
+  traefik:
+    image: traefik:v3.3
+    pull_policy: never
+    labels: {documind.test: sprint-14-6}
+    user: '1000:1000'
+    command:
+      - --entrypoints.alpha.address=:8443
+      - --entrypoints.beta.address=:8444
+      - --entrypoints.gamma.address=:8445
+      - --entrypoints.alpha.transport.respondingtimeouts.readtimeout=60s
+      - --entrypoints.alpha.transport.respondingtimeouts.writetimeout=90s
+      - --entrypoints.beta.transport.respondingtimeouts.readtimeout=60s
+      - --entrypoints.beta.transport.respondingtimeouts.writetimeout=90s
+      - --entrypoints.gamma.transport.respondingtimeouts.readtimeout=60s
+      - --entrypoints.gamma.transport.respondingtimeouts.writetimeout=90s
+      - --providers.file.filename=/etc/traefik/recipe.yaml
+      - --api=false
+      - --accesslog=true
+      - --accesslog.format=json
+      - --accesslog.fields.defaultmode=drop
+      - --accesslog.fields.headers.defaultmode=drop
+      - --accesslog.fields.names.DownstreamStatus=keep
+      - --accesslog.fields.names.Duration=keep
+    volumes: ['./ops/testing/traefik-public-beta-test.yaml:/etc/traefik/recipe.yaml:ro', '${BETA_RECIPE_DIR:?}/tls:/certs:ro']
+    networks:
+      proxy: {ipv4_address: 172.30.246.10}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 256m
+    cpus: 1
+    pids_limit: 64
+    logging: *logs
+  relay-alpha: &relay
+    image: documind-s14-6-proofs:local
+    pull_policy: never
+    labels: {documind.test: sprint-14-6}
+    init: true
+    environment: {DOCUMIND_TEST_ONLY: sprint-14-6, RELAY_TARGET_PORT: '8443'}
+    command: [python, -m, tests.fixtures.public_beta_tcp_relay]
+    ports: ['127.0.0.1:19443:8443']
+    networks:
+      proxy: {ipv4_address: 172.30.246.21}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 128m
+    cpus: .5
+    pids_limit: 64
+    logging: *logs
+  relay-beta:
+    <<: *relay
+    environment: {DOCUMIND_TEST_ONLY: sprint-14-6, RELAY_TARGET_PORT: '8444'}
+    ports: ['127.0.0.1:19444:8443']
+    networks:
+      proxy: {ipv4_address: 172.30.246.22}
+  relay-gamma:
+    <<: *relay
+    environment: {DOCUMIND_TEST_ONLY: sprint-14-6, RELAY_TARGET_PORT: '8445'}
+    ports: ['127.0.0.1:19445:8443']
+    networks:
+      proxy: {ipv4_address: 172.30.246.23}
+networks:
+  data: {internal: true, labels: {documind.test: sprint-14-6}}
+  application: {internal: true, labels: {documind.test: sprint-14-6}}
+  proxy:
+    driver_opts: {com.docker.network.bridge.enable_ip_masquerade: 'false'}
+    ipam: {config: [{subnet: 172.30.246.0/24}]}
+    labels: {documind.test: sprint-14-6}
+volumes:
+  recipe_documents: {labels: {documind.test: sprint-14-6}}

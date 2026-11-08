@@ -1,0 +1,15 @@
+{
+  "comparator_sha256": "78cd4ac234ee751555641aee0f4a80f6117c0a2284037b2693415fd92ae6c687",
+  "decision": "REVIEW_ONLY_BLOCKED",
+  "delivery": "docnelo-v51-p4-b1-oci-comparator-v1",
+  "external_trusted_channel_required": true,
+  "formal_b1_contents_closed": false,
+  "go": {
+    "c5": false,
+    "production": false,
+    "runtime": false
+  },
+  "payload_files": 11,
+  "sha256sums": "2165b14ed3159362283de1df877f295ef110c4db64458e702df7f3b0dd059e56",
+  "signature": false
+}

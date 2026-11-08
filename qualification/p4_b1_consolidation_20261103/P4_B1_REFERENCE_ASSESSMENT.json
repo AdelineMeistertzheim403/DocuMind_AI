@@ -1,0 +1,17 @@
+{
+  "all_present_entries_have_reported_ownership_difference": true,
+  "build_go": false,
+  "create_go": false,
+  "decision": "BLOCKED",
+  "formal_b1_contents_closed": false,
+  "full_metadata_equality": false,
+  "layer_entries": 10334,
+  "missing_root_is_not_file_content_divergence": true,
+  "production_go": false,
+  "raw_b1_evidence_verified_here": false,
+  "references_sha256": "8e016a5e337b0eef2ad02afca257b66ab8eae67600f4ee0bb8f4f366ff6e2d1b",
+  "reported_regular_file_content_identity_supported": true,
+  "source_entries": 10335,
+  "start_go": false,
+  "status": "REPORTED_COUNTS_CONSISTENT_NOT_A_NEW_MEASUREMENT"
+}

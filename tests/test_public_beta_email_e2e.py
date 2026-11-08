@@ -74,7 +74,8 @@ def test_browser_signup_smtp_verify_login_document_and_ai_denied(app,mail_certif
     monkeypatch.setattr('backend.account_api.ssl.create_default_context',lambda:original(cafile=str(cert)))
     with FakeSMTP(mail_certificate,starttls=True) as smtp:
         settings=Settings(_env_file=None,**{**app.state.settings.model_dump(),**PUBLIC,
-            'public_registration_limit':5,'public_registration_per_hour':3,'public_challenge_difficulty':12,
+            'public_registration_limit':5,'public_registration_requires_approval':False,
+            'public_registration_per_hour':3,'public_challenge_difficulty':12,
             'ai_enabled':False,'smtp_host':'127.0.0.1','smtp_port':smtp.port,'smtp_starttls':True,
             'account_base_url':'https://localhost','storage_dir':tmp_path/'documents'})
         application=create_app(settings)
@@ -129,7 +130,8 @@ def live_beta(app,mail_certificate,monkeypatch,tmp_path):
     monkeypatch.setattr('backend.account_api.ssl.create_default_context',lambda:original(cafile=str(cert)))
     with FakeSMTP(mail_certificate,starttls=True) as smtp:
         settings=Settings(_env_file=None,**{**app.state.settings.model_dump(),**PUBLIC,
-            'public_registration_limit':5,'public_registration_per_hour':3,'public_challenge_difficulty':12,
+            'public_registration_limit':5,'public_registration_requires_approval':False,
+            'public_registration_per_hour':3,'public_challenge_difficulty':12,
             'ai_enabled':False,'smtp_host':'127.0.0.1','smtp_port':smtp.port,'smtp_starttls':True,
             'storage_dir':tmp_path/'documents'})
         application=create_app(settings)

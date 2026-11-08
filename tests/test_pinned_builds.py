@@ -102,8 +102,9 @@ def test_image_closures_keep_functional_versions_and_separate_test_tools():
     runtime = hashed_lock('requirements.runtime.lock')
     extra = hashed_lock('requirements.test.lock')
     build = hashed_lock('requirements.build.lock')
-    assert len(runtime) == 44
-    assert set(extra) == {'cryptography', 'iniconfig', 'packaging', 'pluggy', 'pygments', 'pytest'}
+    assert len(runtime) == 45
+    assert runtime['cryptography'] == '50.0.2'
+    assert set(extra) == {'iniconfig', 'packaging', 'pluggy', 'pygments', 'pytest'}
     assert not runtime.keys() & extra.keys()
     assert set(build) == {'pip', 'setuptools', 'wheel', 'packaging'}
     pins = {}

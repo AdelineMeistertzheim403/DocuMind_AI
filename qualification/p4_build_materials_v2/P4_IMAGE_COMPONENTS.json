@@ -1,0 +1,167 @@
+{
+  "archive_catalog_sha256": "2c04150e169ae132590b723d99883f876f10922d53c5b875de62b55abf914160",
+  "archive_count": 9,
+  "base": {
+    "approved": false,
+    "archive_sha256": null,
+    "image_id": null,
+    "provenance": null,
+    "status": "NO_COMPATIBLE_BASE_IDENTIFIED_IN_AVAILABLE_EVIDENCE"
+  },
+  "bootstrap": {
+    "preparation_version_probe": "PASS_ZIP_BOOTSTRAP_PROBE_PREPARATION_ONLY",
+    "probe_sha256": "ab31f1bd4681662242acfdadbeebd3e6f9e487b7ffc7b77b0a8b0e0cf765dc1d",
+    "target_qualified": false
+  },
+  "build_go": false,
+  "candidate_recipe_issued": false,
+  "components_missing": [
+    {
+      "approved": false,
+      "component": "Debian base",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "target": "Debian13/linux-amd64",
+      "version_observed": null
+    },
+    {
+      "approved": false,
+      "component": "CPython interpreter, libpython, stdlib and build configuration",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "target": "CPython3.11.18",
+      "version_observed": null
+    },
+    {
+      "approved": false,
+      "component": "ELF PT_INTERP and glibc providers",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "target": "actual loader and Debian13 glibc",
+      "version_observed": null
+    },
+    {
+      "approved": false,
+      "component": "recursive base libraries, symlinks, ld cache and version definitions",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "target": "ELF64/x86_64",
+      "version_observed": null
+    },
+    {
+      "approved": false,
+      "component": "offline builder driver, frontend and local base resolution proof",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "target": "Debian Docker toolchain",
+      "version_observed": null
+    },
+    {
+      "approved": false,
+      "component": "target bootstrap and native imports evidence",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "target": "Debian13/CPython3.11.18",
+      "version_observed": null
+    },
+    {
+      "approved": false,
+      "component": "independently reviewed offline assembly recipe and authorizations",
+      "provenance": null,
+      "sha256": null,
+      "status": "NOT_SUPPLIED_OR_VERIFIED_FOR_P4",
+      "target": "P4 only",
+      "version_observed": null
+    }
+  ],
+  "create_go": false,
+  "decision": "BLOCKED",
+  "inventory_sha256": "60f0d9f0b668409bba75914b5ef40027036c54ac69de96b05b8e813032813c20",
+  "local_daemon_query": {
+    "argv": [
+      "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe",
+      "--host",
+      "npipe:////./pipe/docker_engine",
+      "image",
+      "ls",
+      "--no-trunc",
+      "--digests",
+      "--format",
+      "{{json .}}"
+    ],
+    "complete": true,
+    "end_ns": 1793697639663629100,
+    "python": "3.13.7 (tags/v3.13.7:bcee1c3, Aug 14 2025, 14:15:11) [MSC v.1944 64 bit (AMD64)]",
+    "python_executable": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\.venv\\Scripts\\python.exe",
+    "returncode": 1,
+    "sha256": {
+      "stderr": "f3351d149943b644b5a67e60aefb964cf9512c1ae06cb460a0a3bbf17685f5ac",
+      "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "start_ns": 1793697639627446600
+  },
+  "native": {
+    "approved": false,
+    "direct_edges": 120,
+    "elf_files": 32,
+    "report_sha256": "4712e353bcf4f94f48cb0b16a40a357468e72bf414560419bd3392158144ff84",
+    "unresolved": [
+      "ld-linux-x86-64.so.2",
+      "libc.so.6",
+      "libdl.so.2",
+      "libgcc_s.so.1",
+      "libm.so.6",
+      "libpthread.so.0",
+      "libresolv.so.2",
+      "librt.so.1",
+      "libstdc++.so.6",
+      "libz.so.1"
+    ]
+  },
+  "pip": {
+    "artifact_signature_verified": false,
+    "artifact_url": "https://files.pythonhosted.org/packages/b7/3f/945ef7ab14dc4f9d7f40288d2df998d1837ee0888ec3659c813487572faa/pip-25.2-py3-none-any.whl",
+    "bytes": 1752557,
+    "endpoint": "https://pypi.org/pypi/pip/25.2/json",
+    "filename": "pip-25.2-py3-none-any.whl",
+    "independent_approval": false,
+    "metadata_sha256": "df150de441227bd6fac209b5759f162558400cecd6c07e48b31295e08c5a0de4",
+    "original_download_receipt_available": false,
+    "published_at": "2025-07-30T21:50:13.323040Z",
+    "receipt_sha256": "760f047af1936fb39c4f746fe046df993c48b266ff76c8b071b6c8b609d661e2",
+    "sha256": "6d67a2b4e7f14d8b31b8b52648866fa717f45a1eb70e83002f4331d07e953717",
+    "status": "MATCHED_PYPI_HTTPS_METADATA_NOT_SIGNED_APPROVAL"
+  },
+  "production_go": false,
+  "pyyaml": {
+    "artifact_signature_verified": false,
+    "artifact_url": "https://files.pythonhosted.org/packages/71/60/917329f640924b18ff085ab889a11c763e0b573da888e8404ff486657602/pyyaml-6.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "bytes": 806638,
+    "endpoint": "https://pypi.org/pypi/PyYAML/6.0.3/json",
+    "filename": "pyyaml-6.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+    "independent_approval": false,
+    "metadata_sha256": "c3f35597bc2f08cc990c2a5fe57bef6687b3a3d7c61d8b0ba4cc067777eb1def",
+    "original_download_receipt_available": false,
+    "published_at": "2025-09-25T21:32:04.553491Z",
+    "receipt_sha256": "c9c57488f1de83d618721ad28be373c0ac7c3776a7418a63d612342813d836ab",
+    "sha256": "b8bb0864c5a28024fac8a632c443c87c5aa6f215c0b126c449ae1a150412f31d",
+    "status": "MATCHED_PYPI_HTTPS_METADATA_NOT_SIGNED_APPROVAL"
+  },
+  "review_only": true,
+  "start_go": false,
+  "wheels": {
+    "approval": "NOT_APPROVED",
+    "checks_sha256": "6e2435cd6a56621784d1e3da881c75c56e17731f80ed27f4118df2c56a830090",
+    "content_integrity": "PASS",
+    "count": 43,
+    "inventory_sha256": "60f0d9f0b668409bba75914b5ef40027036c54ac69de96b05b8e813032813c20",
+    "static_tags": "PASS",
+    "target_abi": "NOT_EXECUTED"
+  }
+}

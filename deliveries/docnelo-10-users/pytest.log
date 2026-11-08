@@ -1,0 +1,16 @@
+.........{"timestamp":"2026-10-31T16:25:12.552Z","level":"INFO","service":"documind-api","event":"auth.login.success","operation":"login","outcome":"success","request_id":"e92f69adffdd4ad0be8ef907bdef90c0","http_status":200,"reason_code":"completed"}
+...........{"timestamp":"2026-10-31T16:25:21.278Z","level":"INFO","service":"documind-api","event":"account.registration.requested","operation":"register","outcome":"success","request_id":"d618963d52db4c9ab7a0f8f1f478276a","http_status":202,"reason_code":"completed"}
+....{"timestamp":"2026-10-31T16:25:30.367Z","level":"INFO","service":"documind-api","event":"account.registration.requested","operation":"register","outcome":"success","request_id":"810b00c3a2f24f41aaebc771283b4a47","http_status":202,"reason_code":"completed"}
+.{"timestamp":"2026-10-31T16:25:31.810Z","level":"INFO","service":"documind-api","event":"auth.login.success","operation":"login","outcome":"success","request_id":"0188ffa3d2504912a81353881e3011e2","http_status":200,"reason_code":"completed"}
+.........{"timestamp":"2026-10-31T16:25:39.666Z","level":"INFO","service":"documind-api","event":"account.registration.requested","operation":"register","outcome":"success","request_id":"dc4520c678cb43ed9943f14d1a798a4d","http_status":202,"reason_code":"quota"}
+....{"timestamp":"2026-10-31T16:25:43.459Z","level":"INFO","service":"documind-api","event":"account.email.verified","operation":"account","outcome":"success","request_id":"59d22d930d6947039cc3fe14f6aa4884","http_status":200,"reason_code":"completed"}
+.................................. [ 38%]
+........................................................................ [ 76%]
+............................................                             [100%]
+=============================== warnings summary ===============================
+../usr/local/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /usr/local/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+188 passed, 1 warning in 219.85s (0:03:39)

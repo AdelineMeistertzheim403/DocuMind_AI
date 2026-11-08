@@ -1,0 +1,214 @@
+{
+  "build_go": false,
+  "conditional_stdlib_provider_families_not_a_closed_list": [
+    "libssl3t64",
+    "libffi8",
+    "libbz2-1.0",
+    "liblzma5",
+    "libsqlite3-0",
+    "libexpat1",
+    "libreadline8t64",
+    "libncursesw6"
+  ],
+  "cpython": {
+    "binary_sha256": null,
+    "build_recipe_sha256": null,
+    "observed_version": null,
+    "provenance_verified": false,
+    "source_archive_sha256": null,
+    "status": "ARTIFACT_NOT_SUPPLIED",
+    "target_version": "3.11.18"
+  },
+  "create_go": false,
+  "decision": "BLOCKED",
+  "dockerfile_issued": false,
+  "p3": {
+    "base_for_p4_approved": false,
+    "image_archive_sha256": null,
+    "independently_inspected_here": false,
+    "operator_reported_image_id": "sha256:bbe90dab376fcd41b3495cad1264c017323ed68ed0915c601ea5fd229cbf6abd",
+    "operator_reported_rootfs_entries": 9771,
+    "rootfs_manifest_sha256": null,
+    "rootfs_supplied_here": false
+  },
+  "p4_image_id": null,
+  "p4_rootfs_manifest_sha256": null,
+  "production_go": false,
+  "review_only": true,
+  "start_go": false,
+  "system_requirements": [
+    {
+      "approved": false,
+      "architecture_target": "amd64",
+      "candidate_debian_package_not_verified": "libc6:amd64",
+      "file_sha256": null,
+      "file_version": null,
+      "p3_operator_report_only": "PRESENT_NAME_ONLY",
+      "package_version": null,
+      "provenance_verified": false,
+      "required_versions": [
+        "GLIBC_2.3"
+      ],
+      "soname_required": "ld-linux-x86-64.so.2",
+      "status": "PROVIDER_BYTES_NOT_SUPPLIED"
+    },
+    {
+      "approved": false,
+      "architecture_target": "amd64",
+      "candidate_debian_package_not_verified": "libc6:amd64",
+      "file_sha256": null,
+      "file_version": null,
+      "p3_operator_report_only": "PRESENT_NAME_ONLY",
+      "package_version": null,
+      "provenance_verified": false,
+      "required_versions": [
+        "GLIBC_2.12",
+        "GLIBC_2.14",
+        "GLIBC_2.15",
+        "GLIBC_2.16",
+        "GLIBC_2.17",
+        "GLIBC_2.2.5",
+        "GLIBC_2.25",
+        "GLIBC_2.3",
+        "GLIBC_2.3.4",
+        "GLIBC_2.4",
+        "GLIBC_2.6",
+        "GLIBC_2.7",
+        "GLIBC_2.8"
+      ],
+      "soname_required": "libc.so.6",
+      "status": "PROVIDER_BYTES_NOT_SUPPLIED"
+    },
+    {
+      "approved": false,
+      "architecture_target": "amd64",
+      "candidate_debian_package_not_verified": "libc6:amd64",
+      "file_sha256": null,
+      "file_version": null,
+      "p3_operator_report_only": "ABSENT_NAME",
+      "package_version": null,
+      "provenance_verified": false,
+      "required_versions": [
+        "GLIBC_2.2.5"
+      ],
+      "soname_required": "libdl.so.2",
+      "status": "PROVIDER_BYTES_NOT_SUPPLIED"
+    },
+    {
+      "approved": false,
+      "architecture_target": "amd64",
+      "candidate_debian_package_not_verified": "libgcc-s1:amd64",
+      "file_sha256": null,
+      "file_version": null,
+      "p3_operator_report_only": "ABSENT_NAME",
+      "package_version": null,
+      "provenance_verified": false,
+      "required_versions": [
+        "GCC_3.0",
+        "GCC_3.3",
+        "GCC_4.2.0"
+      ],
+      "soname_required": "libgcc_s.so.1",
+      "status": "PROVIDER_BYTES_NOT_SUPPLIED"
+    },
+    {
+      "approved": false,
+      "architecture_target": "amd64",
+      "candidate_debian_package_not_verified": "libc6:amd64",
+      "file_sha256": null,
+      "file_version": null,
+      "p3_operator_report_only": "PRESENT_NAME_ONLY",
+      "package_version": null,
+      "provenance_verified": false,
+      "required_versions": [
+        "GLIBC_2.2.5"
+      ],
+      "soname_required": "libm.so.6",
+      "status": "PROVIDER_BYTES_NOT_SUPPLIED"
+    },
+    {
+      "approved": false,
+      "architecture_target": "amd64",
+      "candidate_debian_package_not_verified": "libc6:amd64",
+      "file_sha256": null,
+      "file_version": null,
+      "p3_operator_report_only": "ABSENT_NAME",
+      "package_version": null,
+      "provenance_verified": false,
+      "required_versions": [
+        "GLIBC_2.2.5",
+        "GLIBC_2.3.2"
+      ],
+      "soname_required": "libpthread.so.0",
+      "status": "PROVIDER_BYTES_NOT_SUPPLIED"
+    },
+    {
+      "approved": false,
+      "architecture_target": "amd64",
+      "candidate_debian_package_not_verified": "libc6:amd64",
+      "file_sha256": null,
+      "file_version": null,
+      "p3_operator_report_only": "ABSENT_NAME",
+      "package_version": null,
+      "provenance_verified": false,
+      "required_versions": [
+        "GLIBC_2.2.5"
+      ],
+      "soname_required": "libresolv.so.2",
+      "status": "PROVIDER_BYTES_NOT_SUPPLIED"
+    },
+    {
+      "approved": false,
+      "architecture_target": "amd64",
+      "candidate_debian_package_not_verified": "libc6:amd64",
+      "file_sha256": null,
+      "file_version": null,
+      "p3_operator_report_only": "ABSENT_NAME",
+      "package_version": null,
+      "provenance_verified": false,
+      "required_versions": [
+        "GLIBC_2.2.5"
+      ],
+      "soname_required": "librt.so.1",
+      "status": "PROVIDER_BYTES_NOT_SUPPLIED"
+    },
+    {
+      "approved": false,
+      "architecture_target": "amd64",
+      "candidate_debian_package_not_verified": "libstdc++6:amd64",
+      "file_sha256": null,
+      "file_version": null,
+      "p3_operator_report_only": "ABSENT_NAME",
+      "package_version": null,
+      "provenance_verified": false,
+      "required_versions": [
+        "CXXABI_1.3",
+        "CXXABI_1.3.7",
+        "CXXABI_1.3.9",
+        "GLIBCXX_3.4",
+        "GLIBCXX_3.4.11",
+        "GLIBCXX_3.4.21"
+      ],
+      "soname_required": "libstdc++.so.6",
+      "status": "PROVIDER_BYTES_NOT_SUPPLIED"
+    },
+    {
+      "approved": false,
+      "architecture_target": "amd64",
+      "candidate_debian_package_not_verified": "zlib1g:amd64",
+      "file_sha256": null,
+      "file_version": null,
+      "p3_operator_report_only": "PRESENT_NAME_ONLY",
+      "package_version": null,
+      "provenance_verified": false,
+      "required_versions": [],
+      "soname_required": "libz.so.1",
+      "status": "PROVIDER_BYTES_NOT_SUPPLIED"
+    }
+  ],
+  "target": {
+    "architecture": "linux/amd64",
+    "os": "Debian13",
+    "python": "CPython3.11.18"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "argv": [
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\.venv\\Scripts\\python.exe",
+    "-I",
+    "-B",
+    "-c",
+    "import pathlib,sys,time\nroot,reproduced=map(pathlib.Path,sys.argv[1:]);sys.path.insert(0,str(root))\nfrom common import digest,load,need,write_new\nexpected={'native-review-command':2,'tool-tests':0,'tool-tests-final':0,'tool-tests-seal':0,'wheel-recheck':0,'preservation-command':0,'review-reproduction':2,'source-validation':0}\nreceipts={}\nfor name,code in expected.items():\n    path=root/name/'receipt.json'; receipt=load(path)\n    need(receipt['complete'] is True and type(receipt['returncode']) is int and receipt['returncode']==code,'Receipt incomplete or unexpected: '+name)\n    for item,value in receipt['sha256'].items(): need(digest(path.parent/item)==value,'Capture changed')\n    receipts[name]={'returncode':code,'receipt_sha256':digest(path)}\nneed('Ran 9 tests' in (root/'tool-tests-seal'/'stderr').read_text() and '\\nOK\\n' in (root/'tool-tests-seal'/'stderr').read_text(),'Final tests incomplete')\nreports={}\nfor name in ('P4_RUNTIME_COMPONENTS.json','P4_NATIVE_CLOSURE_REVIEW.json','P4_PREPARATION_DECISION.json'):\n    need((root/name).read_bytes()==(reproduced/name).read_bytes(),'Report reproduction mismatch')\n    reports[name]=digest(root/name)\nfor name,origin in load(root/'INPUTS.json')['tools_copied_exactly'].items():\n    need(digest(root/name)==origin['sha256'],'Copied tool changed')\nneed(load(root/'PRESERVATION_VERIFIED.json')['files']==1072,'Unexpected preservation scope')\nwrite_new(root/'LOCAL_CHECKS.json',{'status':'PASS_PREPARATION_TOOLS_ONLY','preparation_decision':'BLOCKED','observed_ns':time.time_ns(),'python':sys.version,'platform':sys.platform,'tool_tests':9,'receipts':receipts,'reproduced_reports_sha256':reports,'historical_files_unchanged':1072,'real_p3_rootfs_inspected':False,'real_linux_posix_rootfs_inventory_executed':False,'actual_docker_layer_or_image_inspected':False,'image_comparison_test_scope':'synthetic tar/config fixtures only','linux_target_abi_executed':False,'asgi_campaign_executed':False,'docker_commands':0,'network_downloads':0,'packages_installed':0,'build_go':False,'create_go':False,'start_go':False,'production_go':False})\nprint('PASS_PREPARATION_TOOLS_ONLY; decision BLOCKED; real P3/runtime ABI not qualified')",
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\qualification\\p4_base_runtime_v3",
+    "C:\\Users\\Adeline\\.copilot\\session-state\\e350b227-e5b4-47b0-873a-e4dd918941a0\\files\\p4-v3-review-check"
+  ],
+  "complete": true,
+  "end_ns": 1793700825856994400,
+  "python": "3.13.7 (tags/v3.13.7:bcee1c3, Aug 14 2025, 14:15:11) [MSC v.1944 64 bit (AMD64)]",
+  "python_executable": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\.venv\\Scripts\\python.exe",
+  "returncode": 0,
+  "sha256": {
+    "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stdout": "5bd584cfa1a990d21a94acef13038279ed4bab66048ff0ac60a36b43a06d1c57"
+  },
+  "start_ns": 1793700825775038800
+}

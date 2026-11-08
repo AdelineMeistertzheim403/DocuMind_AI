@@ -27,7 +27,9 @@ STATE = Path('/var/lib/documind-retention')
 FILES = {'manifest.json', 'integrity.json', 'database.dump', 'documents.tar.gz'}
 ARCHIVES = {'database.dump', 'documents.tar.gz'}
 V3_PAYLOADS = ARCHIVES | {'lifecycle.sqlite.tar.gz', 'integrity.json'}
+V4_PAYLOADS = V3_PAYLOADS | {'recovery-state.json'}
 V3_FILES = V3_PAYLOADS | {'manifest.json'}
+V4_FILES = V4_PAYLOADS | {'manifest.json'}
 STORE_VERSIONS = {'registry':1,'witness':1,'authenticated':2,'holds':2,'admission_anchor':2}
 STORE_TABLES = {
     'registry': {'requests','admission_watermark','document_erasures'},
@@ -65,16 +67,20 @@ def full_id(value):
 
 def archive_layout(manifest):
     version = manifest.get('backup_format_version', 1) if isinstance(manifest, dict) else None
-    if type(version) is not int or version not in (1, 2, 3):
+    if type(version) is not int or version not in (1, 2, 3, 4):
         raise RetentionError('unsupported_archive_format')
-    return (V3_FILES, V3_PAYLOADS) if version == 3 else (FILES, ARCHIVES)
+    if version == 4:
+        return (V4_FILES, V4_PAYLOADS)
+    if version == 3:
+        return (V3_FILES, V3_PAYLOADS)
+    return (FILES, ARCHIVES)
 
 
 def validate_v3_declaration(manifest):
     stores=manifest.get('lifecycle_stores'); hashes=manifest.get('lifecycle_store_sha256')
     if (manifest.get('capture_complete') is not True or manifest.get('s2_recovery_authorized') is not False
             or manifest.get('recovery_disposition')!='quarantine_pending_independent_freshness_and_operator_review'
-            or manifest.get('capture_scope')!=['postgresql','documents','lifecycle_sqlite']
+            or manifest.get('capture_scope') not in (['postgresql','documents','lifecycle_sqlite'], ['postgresql','documents','lifecycle_sqlite','recovery_state'])
             or not isinstance(manifest.get('capture_id'),str)
             or not re.fullmatch('[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}',manifest['capture_id'])
             or not isinstance(stores,dict) or set(stores)!=set(STORE_VERSIONS)

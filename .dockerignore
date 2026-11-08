@@ -13,3 +13,17 @@ docs
 frontend
 *.pdf
 *.db
+deliveries
+candidates
+exports
+qualification
+docnelo-lab-wheels
+.tmp*
+*.patch
+*.log
+*.zip
+*.sig
+DOCNELO_*.md
+DOCUMIND_*.md
+PHASE_15_*.md
+P4_B1_*.md

@@ -1,7 +1,31 @@
-import type { Analysis, AnalyzeOptions, DocumentDetail, DocumentList, DocumentSummary, Health } from '../types/api'
+﻿import type { Analysis, AnalyzeOptions, DocumentDetail, DocumentList, DocumentSummary, Health, UiConfig } from '../types/api'
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string) { super(message); this.name = 'ApiError' }
+}
+
+export interface DeletionStatus {
+  operation_id: string
+  state: 'awaiting_confirmation' | 'access_restricted' | 'closure_confirmed' | 'account_closed' | 'processing' | 'completed' | 'failed_recoverable'
+  completed: boolean
+  message: string
+}
+
+export function deletionMessage(result: DeletionStatus | void) {
+  if (!result) return 'Suppression effectuée. Les copies de sauvegarde sont traitées séparément.'
+  const messages: Record<DeletionStatus['state'], string> = {
+    awaiting_confirmation: 'Demande envoyée, en attente de confirmation administrative. Aucun effacement définitif annoncé.',
+    access_restricted: 'Accès retiré. Suppression administrative en attente.',
+    closure_confirmed: 'Fermeture confirmée : accès interdit. Désactivation administrative en cours ; purge non terminée.',
+    account_closed: 'Compte fermé. Purge administrative en attente.',
+    processing: 'Suppression en cours de rapprochement administratif.',
+    failed_recoverable: 'Traitement interrompu. Reprise et vérification administratives nécessaires.',
+    completed: 'Suppression terminée et confirmée. Les copies de sauvegarde restent traitées séparément.',
+  }
+  if (!messages[result.state] || result.completed !== (result.state === 'completed')) {
+    throw new ApiError(502, 'Statut de suppression incohérent.')
+  }
+  return messages[result.state]
 }
 
 const fallback: Record<number, string> = {
@@ -24,7 +48,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   catch (error) {
     if (error instanceof ApiError) throw error
     if (error instanceof DOMException && error.name === 'AbortError') throw error
-    throw new ApiError(0, 'Connexion interrompue. Vérifiez que DocuMind est démarré.')
+    throw new ApiError(0, 'Connexion interrompue. Vérifiez que Docnelo est démarré.')
   }
   if (!response.ok) {
     let message = fallback[response.status] || 'Une erreur est survenue. Réessayez.'
@@ -39,6 +63,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
 export const api = {
   config: () => request<{ max_upload_bytes: number }>('/config'),
   health: () => request<Health>('/health'),
+  uiConfig: () => request<UiConfig>('/ui-config'),
   documents: (offset = 0, limit = 12, signal?: AbortSignal) => request<DocumentList>(`/documents?offset=${offset}&limit=${limit}`, { signal }),
   document: (id: string, signal?: AbortSignal) => request<DocumentDetail>(`/documents/${encodeURIComponent(id)}`, { signal }),
   analysis: (id: string, signal?: AbortSignal) => request<Analysis>(`/documents/${encodeURIComponent(id)}/analysis`, { signal }),
@@ -49,7 +74,8 @@ export const api = {
   analyze: (id: string, options: Partial<AnalyzeOptions> = {}) => request<Analysis>(`/documents/${encodeURIComponent(id)}/analyze`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(options),
   }),
-  remove: (id: string) => request<void>(`/documents/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  remove: (id: string) => request<DeletionStatus | void>(`/documents/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  deletionStatus: (id: string) => request<DeletionStatus>(`/documents/${encodeURIComponent(id)}/deletion-status`),
 }
 
 export function validateFile(file: File, maximum: number): string | null {

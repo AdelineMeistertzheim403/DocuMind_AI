@@ -20,6 +20,7 @@ from tests.test_upload_admission import raw_request, multipart, completed
 
 PASSWORD='Fictitious-public-password-123!'
 PUBLIC={'registration_mode':'public','legacy_api_enabled':False,'owner_demo_enabled':False,'ai_enabled':False,
+    'public_registration_requires_approval':False,  # Historical email-only regression profile.
     'public_registration_limit':4,'public_registration_per_hour':10,'public_challenge_difficulty':10,
     'public_legal_ready':True,'public_operator_name':'Fictitious operator','public_contact_email':'contact@example.test',
     'public_legal_notice_url':'https://documind.example.test/legal','public_privacy_url':'https://documind.example.test/privacy',

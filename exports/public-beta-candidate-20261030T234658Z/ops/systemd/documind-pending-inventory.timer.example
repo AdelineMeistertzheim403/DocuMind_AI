@@ -1,0 +1,11 @@
+[Unit]
+Description=Proposed daily pending-account inventory; approval before installation
+
+[Timer]
+OnCalendar=*-*-* 09:30:00 Europe/Paris
+Persistent=true
+RandomizedDelaySec=0
+Unit=documind-pending-inventory.service
+
+[Install]
+WantedBy=timers.target

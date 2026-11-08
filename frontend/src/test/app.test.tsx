@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+﻿import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
@@ -24,6 +24,7 @@ beforeEach(() => {
   vi.spyOn(ai, 'summaries').mockResolvedValue({ items: [], total: 0, offset: 0, limit: 10 })
   vi.spyOn(ai, 'history').mockResolvedValue({ items: [], total: 0, offset: 0, limit: 10 })
   vi.spyOn(api, 'health').mockResolvedValue({ status: 'ok', database: 'ok' })
+  vi.spyOn(api, 'uiConfig').mockResolvedValue({ environment_label: '' })
   vi.spyOn(api, 'config').mockResolvedValue({ max_upload_bytes: 10485760 })
   vi.spyOn(api, 'documents').mockResolvedValue({ items: [document], total: 1, offset: 0, limit: 12 })
   vi.spyOn(api, 'document').mockResolvedValue(document)
@@ -79,7 +80,7 @@ describe('Parcours documentaire', () => {
     await user.click(screen.getByRole('button', { name: 'Conserver' }))
     expect(remove).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: 'Supprimer Exemple.txt' }))
-    await user.click(screen.getByRole('button', { name: 'Supprimer définitivement' }))
+    await user.click(screen.getByRole('button', { name: 'Demander la suppression' }))
     await waitFor(() => expect(remove).toHaveBeenCalledWith(document.id, expect.anything()))
     expect(await screen.findByText('Document supprimé.')).toBeInTheDocument()
   })
@@ -88,6 +89,25 @@ describe('Parcours documentaire', () => {
     mount('/documents')
     expect(await screen.findByRole('alert')).toHaveTextContent('Service occupé')
     expect(screen.getByRole('button', { name: /Réessayer/ })).toBeInTheDocument()
+  })
+  it('distingue demande, restriction, erreur reprenable et clôture indépendante', async () => {
+    vi.spyOn(api, 'remove').mockResolvedValue({operation_id: document.id, state:'awaiting_confirmation', completed:false, message:''})
+    const status = vi.spyOn(api, 'deletionStatus').mockResolvedValue({operation_id: document.id,
+      state:'access_restricted', completed:false, message:''})
+    const {user} = mount('/documents')
+    await user.click(await screen.findByRole('button', {name:'Supprimer Exemple.txt'}))
+    await user.click(screen.getByRole('button', {name:'Demander la suppression'}))
+    expect(await screen.findByText(/Demande envoyée, en attente/)).toBeVisible()
+    expect(screen.queryByText('Document supprimé.')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', {name:'Actualiser le statut de suppression'}))
+    expect(await screen.findByText(/Accès retiré. Suppression administrative/)).toBeVisible()
+    status.mockResolvedValue({operation_id: document.id, state:'failed_recoverable', completed:false, message:''})
+    await user.click(screen.getByRole('button', {name:'Actualiser le statut de suppression'}))
+    expect(await screen.findByText(/Traitement interrompu/)).toBeVisible()
+    status.mockResolvedValue({operation_id: document.id, state:'completed', completed:true, message:''})
+    await user.click(screen.getByRole('button', {name:'Actualiser le statut de suppression'}))
+    expect(await screen.findByText(/Suppression terminée et confirmée/)).toBeVisible()
+    expect(screen.queryByRole('button', {name:'Actualiser le statut de suppression'})).not.toBeInTheDocument()
   })
   it('annonce explicitement une recherche limitée à la page chargée', async () => {
     const { user } = mount('/documents')

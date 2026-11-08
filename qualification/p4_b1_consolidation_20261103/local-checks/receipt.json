@@ -1,0 +1,20 @@
+{
+  "argv": [
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\.venv\\Scripts\\python.exe",
+    "-I",
+    "-B",
+    "-c",
+    "import pathlib,sys,time\nroot=pathlib.Path(sys.argv[1]);sys.path.insert(0,str(root))\nfrom common import digest,load,need,write_new\nreceipts={}\nfor name in ('tool-tests','preservation-command','reference-assessment','source-validation'):\n    path=root/name/'receipt.json'; receipt=load(path)\n    need(receipt['complete'] is True and type(receipt['returncode']) is int and receipt['returncode']==0,'Incomplete local capture')\n    for item,value in receipt['sha256'].items(): need(digest(path.parent/item)==value,'Capture changed')\n    receipts[name]={'returncode':receipt['returncode'],'receipt_sha256':digest(path)}\nneed('Ran 9 tests' in (root/'tool-tests'/'stderr').read_text() and '\\nOK\\n' in (root/'tool-tests'/'stderr').read_text(),'Final tool tests incomplete')\nfor name,origin in load(root/'TOOLS_ORIGIN.json').items(): need(digest(root/name)==origin['sha256'],'Copied helper changed')\nneed(load(root/'PRESERVATION_VERIFIED.json')['files']==1184,'Historical scope mismatch')\ndecision=load(root/'P4_B1_DECISION.json');need(decision['decision']=='BLOCKED' and all(v is False for k,v in decision.items() if k.endswith('_go')) and decision['b1_contents']['formally_closed'] is False,'Decision must remain blocked without formal closure')\nassessment=load(root/'P4_B1_REFERENCE_ASSESSMENT.json')\nneed(assessment['references_sha256']==digest(root/'P4_B1_OBSERVED_REFERENCES.json'),'Reference binding mismatch')\nwrite_new(root/'LOCAL_CHECKS.json',{'status':'PASS_SUPPLEMENT_TOOLS_ONLY','decision':'BLOCKED','observed_ns':time.time_ns(),'python':sys.version,'platform':sys.platform,'synthetic_tool_tests':9,'receipts':receipts,'historical_scoped_files_unchanged':1184,'raw_b1_evidence_verified_here':False,'p3_archive_or_rootfs_reexamined':False,'historical_b1_comparator_reexecuted':False,'historical_campaigns_reexecuted':False,'wheels_native_qualification_repeated':False,'docker_commands':0,'network_downloads':0,'packages_installed':0,'b1_contents_formally_closed':False,'build_go':False,'create_go':False,'start_go':False,'run_go':False,'pull_go':False,'import_go':False,'production_go':False})\nprint('PASS_SUPPLEMENT_TOOLS_ONLY; B1 formal review pending; overall BLOCKED')",
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\qualification\\p4_b1_consolidation_20261103"
+  ],
+  "complete": true,
+  "end_ns": 1793704413988574200,
+  "python": "3.13.7 (tags/v3.13.7:bcee1c3, Aug 14 2025, 14:15:11) [MSC v.1944 64 bit (AMD64)]",
+  "python_executable": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\.venv\\Scripts\\python.exe",
+  "returncode": 0,
+  "sha256": {
+    "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stdout": "60ad8a1fbb19cd268edcee35067ef05892278e462c4c27d2b0ed16add3dc8a85"
+  },
+  "start_ns": 1793704413923743700
+}

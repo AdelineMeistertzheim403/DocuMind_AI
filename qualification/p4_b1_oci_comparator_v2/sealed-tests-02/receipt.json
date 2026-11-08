@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "/usr/bin/python3.11",
+    "-I",
+    "-B",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "/mnt/c/Users/Adeline/Documents/DocuMind_AI/deliveries/docnelo-v51-p4-b1-oci-comparator-v2",
+    "-p",
+    "test_comparator.py",
+    "-v"
+  ],
+  "code_sha256": {
+    "comparator.py": "63225aec80a257a246ca492acbaf1dcc73c66a0c49123ffaffc9ad73ee6c383a",
+    "record_tests.py": "1a2fed84de173a3e416ccf85e110999d00e7bd3261444e1cdcef4b266c3c9e92",
+    "seal.py": "91529b8280fc97ba0a511f721de85f296e475b33901918d626248232b5ba6421",
+    "test_comparator.py": "c47dc8de96e46cfb015ce890abb628c3852cfc7d2ff18d1c1551994418003b0c"
+  },
+  "complete": true,
+  "cwd": "/mnt/c/Users/Adeline/Documents/DocuMind_AI/deliveries/docnelo-v51-p4-b1-oci-comparator-v2",
+  "end_ns": 1793874770619291909,
+  "os_release": {
+    "BUG_REPORT_URL": "https://bugs.debian.org/",
+    "HOME_URL": "https://www.debian.org/",
+    "ID": "debian",
+    "NAME": "Debian GNU/Linux",
+    "PRETTY_NAME": "Debian GNU/Linux 12 (bookworm)",
+    "SUPPORT_URL": "https://www.debian.org/support",
+    "VERSION": "12 (bookworm)",
+    "VERSION_CODENAME": "bookworm",
+    "VERSION_ID": "12"
+  },
+  "platform": "Linux-6.18.54.1-microsoft-standard-WSL2-x86_64-with-glibc2.36",
+  "python": "3.11.2 (main, Oct  7 2026, 12:35:07) [GCC 12.2.0]",
+  "recorder_argv": [
+    "python3.11",
+    "-I",
+    "-B",
+    "-c",
+    "import pathlib,runpy,sys; sys.argv=['record_tests.py','--release-anchor','77db188638f19b4b33777b97b5cfe054ef62d38ea9a4525b6f0338fba5cef5df','--out',str(pathlib.Path.cwd().parents[1].joinpath('qualification','p4_b1_oci_comparator_v2','sealed-tests-02'))]; runpy.run_path('record_tests.py',run_name='__main__')"
+  ],
+  "release_anchor": "77db188638f19b4b33777b97b5cfe054ef62d38ea9a4525b6f0338fba5cef5df",
+  "returncode": 0,
+  "sha256": {
+    "stderr": "e5d3401621b8ecb455d386508017e7bbf56c9cdf8e7a54c01c3039d69f6b445d",
+    "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "start_ns": 1793874769928948885,
+  "timeout": 120
+}

@@ -1,0 +1,18 @@
+/* Palette proposée à partir du logo Docnelo choisi. À rapprocher des tokens réels du site. */
+:root {
+  --docnelo-navy: #0B1D3B;
+  --docnelo-blue: #126BEE;
+  --docnelo-azure: #5BAAF5;
+  --docnelo-mint: #3AD8B4;
+  --docnelo-background: #F7FAFD;
+  --docnelo-surface: #FFFFFF;
+  --docnelo-text: #0B1D3B;
+  --docnelo-muted: #53677E;
+  --docnelo-accent: #087D85; /* texte accessible sur blanc, à vérifier par contexte */
+}
+[data-theme="dark"] {
+  --docnelo-background: #091426;
+  --docnelo-surface: #12243D;
+  --docnelo-text: #F2F8FF;
+  --docnelo-muted: #ADBED0;
+}

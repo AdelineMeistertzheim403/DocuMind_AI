@@ -1,0 +1,4 @@
+services:
+  web:
+    image: "documind-public-beta-web:docnelo-r1-22b6428-v2"
+    pull_policy: never

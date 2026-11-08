@@ -1,0 +1,173 @@
+{
+  "local_python": "3.13.7",
+  "python_3_11_runtime_executed": false,
+  "files": [
+    {
+      "path": "tools/public_beta_backup.py",
+      "bytes": 9493,
+      "sha256": "7b4dfe83f941fb4bc8317af3b37534f7105c369be82d170183499c4522ad8607",
+      "imports": [
+        "__future__:annotations",
+        "argparse",
+        "contextlib:contextmanager",
+        "datetime:datetime,timezone",
+        "fcntl",
+        "json",
+        "os",
+        "pathlib:Path",
+        "re",
+        "subprocess",
+        "tools.public_beta_restic_guard:load_public_beta_restic_env,record_public_beta_repository_id,validate_public_beta_destination,verify_public_beta_repository",
+        "tools:backup_local,verify_snapshot",
+        "uuid:uuid4"
+      ],
+      "python_3_11_grammar": "passed",
+      "compile_on_local_python": "passed"
+    },
+    {
+      "path": "tools/public_beta_restic_guard.py",
+      "bytes": 10515,
+      "sha256": "72c2da58dcda0020e0f0cffe6a31d0017a7d252d367d3cdc72c4b0e76a6b3bde",
+      "imports": [
+        "__future__:annotations",
+        "argparse",
+        "fcntl",
+        "json",
+        "os",
+        "pathlib:Path",
+        "re",
+        "shlex",
+        "subprocess"
+      ],
+      "python_3_11_grammar": "passed",
+      "compile_on_local_python": "passed"
+    },
+    {
+      "path": "tools/backup_local.py",
+      "bytes": 21907,
+      "sha256": "fb1f98b332a1eff86f63cadce1f2d235ad99536c1dfc382eefc118efd4e26345",
+      "imports": [
+        "argparse",
+        "contextlib:contextmanager",
+        "datetime:datetime,timezone",
+        "dynamic:time",
+        "hashlib",
+        "json",
+        "os",
+        "pathlib:Path",
+        "pathlib:PurePosixPath",
+        "subprocess",
+        "tarfile",
+        "tempfile",
+        "uuid:uuid4"
+      ],
+      "python_3_11_grammar": "passed",
+      "compile_on_local_python": "passed"
+    },
+    {
+      "path": "tools/verify_snapshot.py",
+      "bytes": 16571,
+      "sha256": "10d01c00228561307349b14c8818ab3f493a5c993d1b62c5d81c42a6fb48de3e",
+      "imports": [
+        "argparse",
+        "hashlib",
+        "json",
+        "os",
+        "pathlib:Path",
+        "re",
+        "sqlalchemy:create_engine,text",
+        "sqlite3",
+        "subprocess",
+        "tarfile",
+        "tempfile"
+      ],
+      "python_3_11_grammar": "passed",
+      "compile_on_local_python": "passed"
+    },
+    {
+      "path": "tools/validate_restore.py",
+      "bytes": 18125,
+      "sha256": "9a7d64968d3e63b758d8b2c01374bdd322940965215fb8e794d333213d2dbe32",
+      "imports": [
+        ".verify_snapshot:verify_capture,verify_snapshot",
+        "argparse",
+        "hashlib",
+        "json",
+        "os",
+        "pathlib:Path,PurePosixPath",
+        "re",
+        "shutil",
+        "sqlalchemy.engine:make_url",
+        "sqlalchemy:create_engine,text",
+        "sqlite3",
+        "subprocess",
+        "tarfile",
+        "uuid:UUID",
+        "verify_snapshot:verify_capture,verify_snapshot"
+      ],
+      "python_3_11_grammar": "passed",
+      "compile_on_local_python": "passed"
+    },
+    {
+      "path": "backend/__init__.py",
+      "bytes": 68,
+      "sha256": "f27626e9bc2006f7197829822c9ca134be511f40a8abef53c9dae1bae8bfed25",
+      "imports": [],
+      "python_3_11_grammar": "passed",
+      "compile_on_local_python": "passed"
+    },
+    {
+      "path": "backend/lifecycle_snapshot.py",
+      "bytes": 8036,
+      "sha256": "e5ec61e50467e7376fdd266ba800262e811e55001bb44b1ee77ec32ba2e30733",
+      "imports": [
+        ".lifecycle_backup_lock:lifecycle_store_lock",
+        "__future__:annotations",
+        "datetime:datetime,timezone",
+        "hashlib",
+        "io",
+        "json",
+        "os",
+        "pathlib:Path",
+        "sqlite3",
+        "stat",
+        "sys",
+        "tarfile",
+        "tempfile",
+        "uuid:UUID"
+      ],
+      "python_3_11_grammar": "passed",
+      "compile_on_local_python": "passed"
+    },
+    {
+      "path": "backend/lifecycle_backup_lock.py",
+      "bytes": 2356,
+      "sha256": "24427332fdbf3589d4efebfab50d375eb49bbe13b30cfb6ad54ccd3f75c90d19",
+      "imports": [
+        "contextlib:contextmanager,nullcontext",
+        "fcntl",
+        "msvcrt",
+        "os",
+        "pathlib:Path",
+        "stat"
+      ],
+      "python_3_11_grammar": "passed",
+      "compile_on_local_python": "passed"
+    },
+    {
+      "path": "ops/public_beta/BACKUP_ENCRYPTED_OFF_VPS.md",
+      "bytes": 6421,
+      "sha256": "fd5908e20421b1458b848da6206098e31babf6ace8f09e1c022f2497bb4302b2"
+    },
+    {
+      "path": "ops/public_beta/VPS_BACKUP_RESTORE_RUNBOOK.md",
+      "bytes": 5500,
+      "sha256": "fc09997c7c98bdb2c5e1cd565644c3ac041dac744cc083aee6b12798fc5a37ed"
+    },
+    {
+      "path": "ops/public_beta/BACKUP_RESTORE_V5_KEYS_REPORT.md",
+      "bytes": 7160,
+      "sha256": "ba52ff74de67a54fdc6745b8a5b716018c1c259583462a39edb171a56ae5e63a"
+    }
+  ]
+}

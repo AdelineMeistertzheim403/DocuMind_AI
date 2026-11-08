@@ -1,0 +1,12 @@
+{
+  "scope": "unit/static/ASGI only; never Docker qualification",
+  "preparation": true,
+  "platform": "win32",
+  "python": "3.13.7 (tags/v3.13.7:bcee1c3, Aug 14 2025, 14:15:11) [MSC v.1944 64 bit (AMD64)]",
+  "input_manifest_sha256": "7a6e06599001c57712e11d853f43901ede324eeebe87fe758b85eaac9c7a8a45",
+  "verdict": "FAILED",
+  "forbidden_io_events": [
+    "socket.gethostname"
+  ],
+  "error": "Forbidden I/O: socket.gethostname"
+}

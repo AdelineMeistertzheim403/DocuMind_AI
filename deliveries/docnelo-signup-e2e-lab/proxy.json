@@ -1,0 +1,74 @@
+{
+  "http": {
+    "routers": {
+      "lab": {
+        "entryPoints": [
+          "lab"
+        ],
+        "rule": "Host(`localhost`) || Host(`127.0.0.1`)",
+        "service": "web",
+        "tls": {},
+        "middlewares": [
+          "gateway"
+        ]
+      },
+      "legal": {
+        "entryPoints": [
+          "lab"
+        ],
+        "rule": "PathPrefix(`/lab-legal/`)",
+        "priority": 100,
+        "service": "legal",
+        "tls": {},
+        "middlewares": [
+          "strip"
+        ]
+      }
+    },
+    "services": {
+      "web": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "http://web:3000"
+            }
+          ]
+        }
+      },
+      "legal": {
+        "loadBalancer": {
+          "servers": [
+            {
+              "url": "http://legal:8080"
+            }
+          ]
+        }
+      }
+    },
+    "middlewares": {
+      "gateway": {
+        "headers": {
+          "customRequestHeaders": {
+            "X-Documind-Gateway": "6ba13b38ebc90ff97670fa83a4de45bbadd569c2f575708567d9ac3e558f38f6",
+            "X-Forwarded-Proto": "https"
+          }
+        }
+      },
+      "strip": {
+        "stripPrefix": {
+          "prefixes": [
+            "/lab-legal"
+          ]
+        }
+      }
+    }
+  },
+  "tls": {
+    "certificates": [
+      {
+        "certFile": "/certs/lab.crt",
+        "keyFile": "/certs/lab.key"
+      }
+    ]
+  }
+}

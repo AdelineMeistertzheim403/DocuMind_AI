@@ -1,0 +1,10 @@
+{
+  "exit_code": 0,
+  "network": "internal-only",
+  "postgres": "17/vector, fresh tmpfs, no host ports or volumes",
+  "tests": [
+    "tests/test_ten_users_process_restart.py"
+  ],
+  "scope": "exported candidate API",
+  "strict_lifecycle_ten_qualified": false
+}

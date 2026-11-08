@@ -1,0 +1,396 @@
+{
+  "export": "exports\\public-beta-candidate-20261030T234818Z",
+  "active_api_attested": false,
+  "files": [
+    {
+      "path": "backend/__init__.py",
+      "sha256": "f27626e9bc2006f7197829822c9ca134be511f40a8abef53c9dae1bae8bfed25",
+      "r2_sha256": "f27626e9bc2006f7197829822c9ca134be511f40a8abef53c9dae1bae8bfed25",
+      "different": false
+    },
+    {
+      "path": "backend/account_admin.py",
+      "sha256": "a78e9deff2062951adcd054e9fb408f446f9b588f0b9a486cad6ce262c73d136",
+      "r2_sha256": "5303c4b9e6ea7561f76a85f9d762034a1ff68e8b4360eb646b27bd2cd6e688bb",
+      "different": true
+    },
+    {
+      "path": "backend/account_api.py",
+      "sha256": "d15106a56ca66a959d3a50f44846d9c378003be74089678dfc959b9c6a4cfa4e",
+      "r2_sha256": "980eb2f1288173c94f4ccf2c353178dc69ae328fdee89803c6be5c5de9a794bf",
+      "different": true
+    },
+    {
+      "path": "backend/account_models.py",
+      "sha256": "1e5210c7d84e036279f0f4b0f84c29848f713b7dfbb1933b513ade5e220fd860",
+      "r2_sha256": "1e5210c7d84e036279f0f4b0f84c29848f713b7dfbb1933b513ade5e220fd860",
+      "different": false
+    },
+    {
+      "path": "backend/accounts.py",
+      "sha256": "bfc6a88b9b750987fafa9b533d6259d586838228717253c8963cae781238c9ba",
+      "r2_sha256": "bfc6a88b9b750987fafa9b533d6259d586838228717253c8963cae781238c9ba",
+      "different": false
+    },
+    {
+      "path": "backend/ai/__init__.py",
+      "sha256": "b85a1ed9c3969c26da6cdb806e8a7571bb50a3a4b003c3dd55c7858a71c5f3bc",
+      "r2_sha256": "b85a1ed9c3969c26da6cdb806e8a7571bb50a3a4b003c3dd55c7858a71c5f3bc",
+      "different": false
+    },
+    {
+      "path": "backend/ai/api.py",
+      "sha256": "7b95bed9c6b3fc803df62d1b883fa09e71335533624e088a84cda8e560a6970b",
+      "r2_sha256": "7b95bed9c6b3fc803df62d1b883fa09e71335533624e088a84cda8e560a6970b",
+      "different": false
+    },
+    {
+      "path": "backend/ai/long_api.py",
+      "sha256": "da148812f842c98adc963c1328f82dc4e2f88d1a319a21fbeb4118bce3a2766d",
+      "r2_sha256": "da148812f842c98adc963c1328f82dc4e2f88d1a319a21fbeb4118bce3a2766d",
+      "different": false
+    },
+    {
+      "path": "backend/ai/long_models.py",
+      "sha256": "dff14e0da85896ff17bdc8b587e797cca1c3e84ed3ea8fe4e3b8cfe4f9824ed6",
+      "r2_sha256": "dff14e0da85896ff17bdc8b587e797cca1c3e84ed3ea8fe4e3b8cfe4f9824ed6",
+      "different": false
+    },
+    {
+      "path": "backend/ai/long_plan.py",
+      "sha256": "a286f84e89989927dcd838de5fa4127fa9cc54045a4146ad722267f7f7c1e364",
+      "r2_sha256": "a286f84e89989927dcd838de5fa4127fa9cc54045a4146ad722267f7f7c1e364",
+      "different": false
+    },
+    {
+      "path": "backend/ai/long_summary.py",
+      "sha256": "f6eca3b13c3fa69ff18bdf62d1436e0188d5ae8c1fb43c171c2e52b9502c253c",
+      "r2_sha256": "f6eca3b13c3fa69ff18bdf62d1436e0188d5ae8c1fb43c171c2e52b9502c253c",
+      "different": false
+    },
+    {
+      "path": "backend/ai/maintenance.py",
+      "sha256": "426b2826fc4859bab6689d8a013eb55abe9af6176d6db5eac42e52b79b2cbb4a",
+      "r2_sha256": "426b2826fc4859bab6689d8a013eb55abe9af6176d6db5eac42e52b79b2cbb4a",
+      "different": false
+    },
+    {
+      "path": "backend/ai/models.py",
+      "sha256": "e4be6f52e0e27678c34f8c793a17cf9b7328ead5559392b0f736787aade9b8bc",
+      "r2_sha256": "e4be6f52e0e27678c34f8c793a17cf9b7328ead5559392b0f736787aade9b8bc",
+      "different": false
+    },
+    {
+      "path": "backend/ai/providers.py",
+      "sha256": "619e202c30bc72712d965e3f4fcc90435e2f4f7afa7e90f0497202fecdb1eb99",
+      "r2_sha256": "619e202c30bc72712d965e3f4fcc90435e2f4f7afa7e90f0497202fecdb1eb99",
+      "different": false
+    },
+    {
+      "path": "backend/ai/retrieval.py",
+      "sha256": "a923bf9e963a10abce5589a96d2ac5d1c153cc386a9c17a87cb02f6e20e0dbbf",
+      "r2_sha256": "a923bf9e963a10abce5589a96d2ac5d1c153cc386a9c17a87cb02f6e20e0dbbf",
+      "different": false
+    },
+    {
+      "path": "backend/ai/schemas.py",
+      "sha256": "ed748c4b75a71778a2509d178f056d13f06af741ccd2520bade4d9ee0d023099",
+      "r2_sha256": "ed748c4b75a71778a2509d178f056d13f06af741ccd2520bade4d9ee0d023099",
+      "different": false
+    },
+    {
+      "path": "backend/ai/service.py",
+      "sha256": "323eca5f8315066ce1f8c6d27feddb1c142063d4cb3a798f9904a6f52c6a6e69",
+      "r2_sha256": "323eca5f8315066ce1f8c6d27feddb1c142063d4cb3a798f9904a6f52c6a6e69",
+      "different": false
+    },
+    {
+      "path": "backend/ai/settings_api.py",
+      "sha256": "3cc9628ff22abcd7b75b3518ea2cebaaf630a474736a831dde032dd1735c22a8",
+      "r2_sha256": "4d12b2cc439689ec1665124370f59fa0b36ee46559e342cbdd4f70ce974cd7d9",
+      "different": true
+    },
+    {
+      "path": "backend/api.py",
+      "sha256": "667f69a169e3aa2921987ede5a6e16c539e9106a3a05f2b547d47c52980b3fdf",
+      "r2_sha256": "d6b641c46b4ea3c46b51e7821a36bf51b6e2b6c38ccb6aeccad71d6e91e644dd",
+      "different": true
+    },
+    {
+      "path": "backend/audit_middleware.py",
+      "sha256": "d22dccac5ea5c9093805161877b23b9448582e776c85937a198e3225e1041aec",
+      "r2_sha256": "d22dccac5ea5c9093805161877b23b9448582e776c85937a198e3225e1041aec",
+      "different": false
+    },
+    {
+      "path": "backend/auth.py",
+      "sha256": "606c2a0d44d5b8bbced74a9d4f739415e9a3798b25809c9f55f3b2d46a1b67ae",
+      "r2_sha256": "606c2a0d44d5b8bbced74a9d4f739415e9a3798b25809c9f55f3b2d46a1b67ae",
+      "different": false
+    },
+    {
+      "path": "backend/authentication.py",
+      "sha256": "1b463e1b5bf45d996f49eb211424a5d0448a592e10c5020092771b0da9d32119",
+      "r2_sha256": "778012a1efdb5e7045be5122bb051c058376846ec42e5c7650b4783b0b9c1a8f",
+      "different": true
+    },
+    {
+      "path": "backend/config.py",
+      "sha256": "d56c3c664a3416836dbcf34b90aff4a4fc19c645b5ba329049f571aa0ee6a90e",
+      "r2_sha256": "0a6f641621eb833fd52489de7eabcc61b7ff0b185398a606719c7ff3b3f34b68",
+      "different": true
+    },
+    {
+      "path": "backend/db.py",
+      "sha256": "5cd2599b858ff2f052f985be7170d635fdf7f6110e3db13fbf7d734e3c6570da",
+      "r2_sha256": "5cd2599b858ff2f052f985be7170d635fdf7f6110e3db13fbf7d734e3c6570da",
+      "different": false
+    },
+    {
+      "path": "backend/derived_mutations.py",
+      "sha256": "f40e5c830e1547023ecd84e12080dcf69d994438f17929d5e3a539c786f28df7",
+      "r2_sha256": "f40e5c830e1547023ecd84e12080dcf69d994438f17929d5e3a539c786f28df7",
+      "different": false
+    },
+    {
+      "path": "backend/gateway.py",
+      "sha256": "f74f5e1a4558e9464e827e471512d1599dc1d9ccc6623c47fa779485aca7be0a",
+      "r2_sha256": "f74f5e1a4558e9464e827e471512d1599dc1d9ccc6623c47fa779485aca7be0a",
+      "different": false
+    },
+    {
+      "path": "backend/lifecycle_admissions.py",
+      "sha256": "ad58eb3c97f392274c4cf8e6e5c74e72e27ae44f8fb9b7d5e3ca421b5c35de1f",
+      "r2_sha256": "ad58eb3c97f392274c4cf8e6e5c74e72e27ae44f8fb9b7d5e3ca421b5c35de1f",
+      "different": false
+    },
+    {
+      "path": "backend/lifecycle_authenticated.py",
+      "sha256": "5ed7dcfa9c1abed911f0dfa328366f5ebb9f83f1a22850cb768c2f6cc52661d3",
+      "r2_sha256": "5ed7dcfa9c1abed911f0dfa328366f5ebb9f83f1a22850cb768c2f6cc52661d3",
+      "different": false
+    },
+    {
+      "path": "backend/lifecycle_backup_lock.py",
+      "sha256": "24427332fdbf3589d4efebfab50d375eb49bbe13b30cfb6ad54ccd3f75c90d19",
+      "r2_sha256": "24427332fdbf3589d4efebfab50d375eb49bbe13b30cfb6ad54ccd3f75c90d19",
+      "different": false
+    },
+    {
+      "path": "backend/lifecycle_durability.py",
+      "sha256": "e406615b3cd2228111ccde92bd535e9cb2a2f7da279206ba6bbd55dcacb21c54",
+      "r2_sha256": "b3c5c0a1f7ba3754fe2b06b9b7b9d0b0ac881de5a5d622757745a3d76699fe41",
+      "different": true
+    },
+    {
+      "path": "backend/lifecycle_holds.py",
+      "sha256": "02ae0b3b9f37d93a8b40a7ff59b7817cf411a5fc494951984daa6a57b9bb4935",
+      "r2_sha256": "02ae0b3b9f37d93a8b40a7ff59b7817cf411a5fc494951984daa6a57b9bb4935",
+      "different": false
+    },
+    {
+      "path": "backend/lifecycle_registry.py",
+      "sha256": "db878f9eae915136da9566c242240fda932657b546144cb7ff3cc412e62b482b",
+      "r2_sha256": "db878f9eae915136da9566c242240fda932657b546144cb7ff3cc412e62b482b",
+      "different": false
+    },
+    {
+      "path": "backend/lifecycle_retention_policy.py",
+      "sha256": "fb4292ee48ae63615420a760c2ed747b3059002103ed3f906a9f4bc51471a480",
+      "r2_sha256": "fb4292ee48ae63615420a760c2ed747b3059002103ed3f906a9f4bc51471a480",
+      "different": false
+    },
+    {
+      "path": "backend/lifecycle_snapshot.py",
+      "sha256": "e5ec61e50467e7376fdd266ba800262e811e55001bb44b1ee77ec32ba2e30733",
+      "r2_sha256": "e5ec61e50467e7376fdd266ba800262e811e55001bb44b1ee77ec32ba2e30733",
+      "different": false
+    },
+    {
+      "path": "backend/lite_admissions.py",
+      "sha256": "f53a53efa2eacfb6720e9d405ebd9e6b8bfc8c8a69008a09cb3a18bd5f868eb2",
+      "r2_sha256": null,
+      "different": true
+    },
+    {
+      "path": "backend/lite_authority.py",
+      "sha256": "fe6e62ec85db35af026816fb15a38a2d8896274b194eec638dfc85a9aed14b67",
+      "r2_sha256": null,
+      "different": true
+    },
+    {
+      "path": "backend/lite_deletions.py",
+      "sha256": "5e5a6d0bf51dd0d769c4b2dcf285ca1ad3c813af91e361ade861799563dae89e",
+      "r2_sha256": null,
+      "different": true
+    },
+    {
+      "path": "backend/lite_reconciliation.py",
+      "sha256": "ef8efe53b91a745aee405213dbfbcbc228b146eb2178f67f0228aaefb534c081",
+      "r2_sha256": null,
+      "different": true
+    },
+    {
+      "path": "backend/lite_release.py",
+      "sha256": "aa0ef17bd0ecc7703d7af5c032d417aabb456d6451aa33b4ecd75be7fbc90308",
+      "r2_sha256": null,
+      "different": true
+    },
+    {
+      "path": "backend/lite_snapshot.py",
+      "sha256": "274abbe9e5252566dae6c93d5b9a747e47cb903fbc376d839866278974ce0863",
+      "r2_sha256": null,
+      "different": true
+    },
+    {
+      "path": "backend/main.py",
+      "sha256": "cc103351075f995ce4028d47b081fb87f107fd7c4828d40679b128b5cf8047f8",
+      "r2_sha256": "1c350b03f4245ded531158ba8aaabd13ad3af7ed6e95ee5223b5f5ec59d54a36",
+      "different": true
+    },
+    {
+      "path": "backend/maintenance.py",
+      "sha256": "ab31713c955102a37645a6f0ef2fbbcee041793510915aa729d1a9f3f37c58de",
+      "r2_sha256": "ab31713c955102a37645a6f0ef2fbbcee041793510915aa729d1a9f3f37c58de",
+      "different": false
+    },
+    {
+      "path": "backend/models.py",
+      "sha256": "e488bc0c437418dd24ebb7fd5ce4d85edd73cda336c910c5a3796ebe4131d607",
+      "r2_sha256": "e488bc0c437418dd24ebb7fd5ce4d85edd73cda336c910c5a3796ebe4131d607",
+      "different": false
+    },
+    {
+      "path": "backend/public_registration.py",
+      "sha256": "9031ce147084dfcefd65958a5538ff078c7e83844686c78334e1264db78f052b",
+      "r2_sha256": "fdfb09b52ff69018fccf8fa2f5be5e41d47a2b8c9b08662dfe5a025bc61e7ea6",
+      "different": true
+    },
+    {
+      "path": "backend/rag/__init__.py",
+      "sha256": "db353c4e161ff1401877c0f64254d3cf5448f4a19df4450d32e36af5b0ef8374",
+      "r2_sha256": "db353c4e161ff1401877c0f64254d3cf5448f4a19df4450d32e36af5b0ef8374",
+      "different": false
+    },
+    {
+      "path": "backend/rag/api.py",
+      "sha256": "8750aac3640b962049cb0bebccf96bbaa499a49f45d86524a37334ceb1972ef1",
+      "r2_sha256": "8750aac3640b962049cb0bebccf96bbaa499a49f45d86524a37334ceb1972ef1",
+      "different": false
+    },
+    {
+      "path": "backend/rag/billing.py",
+      "sha256": "006efbb436800b7e746a719b972ee9da38fcf0b0dbbbb5d1530a918c231972aa",
+      "r2_sha256": "006efbb436800b7e746a719b972ee9da38fcf0b0dbbbb5d1530a918c231972aa",
+      "different": false
+    },
+    {
+      "path": "backend/rag/comparison.py",
+      "sha256": "4876c12f8747e5c660b8a0337908cf8a9caa83781c9e73c8f55590cb99c1ac00",
+      "r2_sha256": "4876c12f8747e5c660b8a0337908cf8a9caa83781c9e73c8f55590cb99c1ac00",
+      "different": false
+    },
+    {
+      "path": "backend/rag/indexing.py",
+      "sha256": "4399ccc2d3488561bad83c581be237680d62d6018a1a327e595466c91ed500c6",
+      "r2_sha256": "4399ccc2d3488561bad83c581be237680d62d6018a1a327e595466c91ed500c6",
+      "different": false
+    },
+    {
+      "path": "backend/rag/models.py",
+      "sha256": "1190bc767ed7882f165738a5d1b2a7513a808b94c927fe4734d03c7addf79ff0",
+      "r2_sha256": "1190bc767ed7882f165738a5d1b2a7513a808b94c927fe4734d03c7addf79ff0",
+      "different": false
+    },
+    {
+      "path": "backend/rag/providers.py",
+      "sha256": "f55e5ff512e5aac3d81ef71c2b511ff71a2c4e1c3225666b174ce46341053485",
+      "r2_sha256": "f55e5ff512e5aac3d81ef71c2b511ff71a2c4e1c3225666b174ce46341053485",
+      "different": false
+    },
+    {
+      "path": "backend/rag/retrieval.py",
+      "sha256": "c1ba8ae974edff2eb9333e4e0ac16f2180d18a23cc1ce57384ab7e9707c85202",
+      "r2_sha256": "c1ba8ae974edff2eb9333e4e0ac16f2180d18a23cc1ce57384ab7e9707c85202",
+      "different": false
+    },
+    {
+      "path": "backend/rag/schemas.py",
+      "sha256": "0611998dab52db10883f9b9f18d009023e19ca7f334efe996252407f0f854f20",
+      "r2_sha256": "0611998dab52db10883f9b9f18d009023e19ca7f334efe996252407f0f854f20",
+      "different": false
+    },
+    {
+      "path": "backend/rag/service.py",
+      "sha256": "446ae382f5d7788e2accb45fafcfba8ef8b8cd3eb6fffef4e70ac680fc79c3c4",
+      "r2_sha256": "446ae382f5d7788e2accb45fafcfba8ef8b8cd3eb6fffef4e70ac680fc79c3c4",
+      "different": false
+    },
+    {
+      "path": "backend/recovery_quarantine.py",
+      "sha256": "cbc67c4f7ec30a94938b897de3ec8d6384bcb1f2df7637b72a67a408957a1480",
+      "r2_sha256": "c0838bebfa6c715cdf7a7f63ec10c7d8a13a8f114fc4a984fcbde3c1487ad975",
+      "different": true
+    },
+    {
+      "path": "backend/resource_limits.py",
+      "sha256": "6b68d4e08cc32e1767c31507bb91bd629465be8fa20692e6a4e8644d5bcda8a7",
+      "r2_sha256": "6b68d4e08cc32e1767c31507bb91bd629465be8fa20692e6a4e8644d5bcda8a7",
+      "different": false
+    },
+    {
+      "path": "backend/schemas.py",
+      "sha256": "4d7dcc45f0c6dca7e9a7f8d094d0b2c8ed04a6101e5b17fef3c4ed51180e7118",
+      "r2_sha256": "4d7dcc45f0c6dca7e9a7f8d094d0b2c8ed04a6101e5b17fef3c4ed51180e7118",
+      "different": false
+    },
+    {
+      "path": "backend/security_audit.py",
+      "sha256": "a8345b0b2d6d2d4a674b2799fa3053e40a001317f0b94779ee4d549a579bcadf",
+      "r2_sha256": "a8345b0b2d6d2d4a674b2799fa3053e40a001317f0b94779ee4d549a579bcadf",
+      "different": false
+    },
+    {
+      "path": "backend/services/__init__.py",
+      "sha256": "e775b22c2cc39faad25f207c5a8cb58c8a5b954ff4cddf0a4fa0a4d824805bf6",
+      "r2_sha256": "e775b22c2cc39faad25f207c5a8cb58c8a5b954ff4cddf0a4fa0a4d824805bf6",
+      "different": false
+    },
+    {
+      "path": "backend/services/document_integrity.py",
+      "sha256": "7b9d1ef6c8d72a9c96f484b1b08566b0ca1f0a31801ec8b9d2fe2761add44050",
+      "r2_sha256": "7b9d1ef6c8d72a9c96f484b1b08566b0ca1f0a31801ec8b9d2fe2761add44050",
+      "different": false
+    },
+    {
+      "path": "backend/services/documents.py",
+      "sha256": "89f13bf45a9b025f056ea12e5d0bf229253c87271cfddc9007fba5368a717948",
+      "r2_sha256": "e2022e48a732c9334cfae13c4aaeb7daaa43a28e7ba930d9c7d494ea82e18a6a",
+      "different": true
+    },
+    {
+      "path": "backend/services/extraction.py",
+      "sha256": "3de218a2e8ad885204ef0a028323ac9e38f1f0d829fcb1725c58b0efa045ef17",
+      "r2_sha256": "3de218a2e8ad885204ef0a028323ac9e38f1f0d829fcb1725c58b0efa045ef17",
+      "different": false
+    },
+    {
+      "path": "backend/services/worker.py",
+      "sha256": "9f92a38f41d0fde91105a4dcaf385356a4bd8281b1e53b56064108b1b9816e74",
+      "r2_sha256": "9f92a38f41d0fde91105a4dcaf385356a4bd8281b1e53b56064108b1b9816e74",
+      "different": false
+    },
+    {
+      "path": "backend/upload_admission.py",
+      "sha256": "e40f75425930dd60d5156869fbff5069a17b88f22765f89cd860b520f1003cfe",
+      "r2_sha256": "e40f75425930dd60d5156869fbff5069a17b88f22765f89cd860b520f1003cfe",
+      "different": false
+    },
+    {
+      "path": "backend/uploads.py",
+      "sha256": "e69f2d4afdd82ef6da92a207a01e412adb8465b020c825c24e6d1661cc008945",
+      "r2_sha256": "e69f2d4afdd82ef6da92a207a01e412adb8465b020c825c24e6d1661cc008945",
+      "different": false
+    }
+  ]
+}

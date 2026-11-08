@@ -1,4 +1,4 @@
-// Published versions must be retained unchanged; add a new entry for each revision.
+﻿// Published versions must be retained unchanged; add a new entry for each revision.
 export const TERMS_VERSION = 'beta-2026-10-v1'
 export type LegalBlock = {kind:'paragraph'; text:string}|{kind:'list'; items:readonly string[]}|{kind:'table'; headers:readonly string[]; rows:readonly (readonly string[])[]}
 export type LegalDocument = {title:string; version:string; sections:readonly {title:string; text:string; items?:readonly string[]; blocks?:readonly LegalBlock[]}[]}
@@ -23,7 +23,7 @@ export const termsArchive:Readonly<Record<string,LegalDocument>> = {
       "blocks": [
         {
           "kind": "paragraph",
-          "text": "Les présentes Conditions générales d'utilisation (CGU) définissent les modalités d'accès et d'utilisation de DocuMind AI, un service web de gestion et d'analyse documentaire proposé en version bêta."
+          "text": "Les présentes Conditions générales d'utilisation (CGU) définissent les modalités d'accès et d'utilisation de Docnelo, un service web de gestion et d'analyse documentaire proposé en version bêta."
         },
         {
           "kind": "paragraph",
@@ -45,7 +45,7 @@ export const termsArchive:Readonly<Record<string,LegalDocument>> = {
         },
         {
           "kind": "paragraph",
-          "text": "L'accès à la bêta est limité à cinq inscriptions publiques cumulatives."
+          "text": "L'accès à la bêta est limité à dix inscriptions publiques cumulatives. Les comptes historiques et sur invitation sont exclus de ce quota. La connexion exige la vérification de l'e-mail et une approbation administrative."
         },
         {
           "kind": "paragraph",
@@ -95,7 +95,7 @@ export const termsArchive:Readonly<Record<string,LegalDocument>> = {
       "blocks": [
         {
           "kind": "paragraph",
-          "text": "DocuMind AI propose des fonctionnalités de dépôt, consultation, gestion et analyse documentaire selon les capacités effectivement disponibles dans l'application."
+          "text": "Docnelo propose des fonctionnalités de dépôt, consultation, gestion et analyse documentaire selon les capacités effectivement disponibles dans l'application."
         },
         {
           "kind": "paragraph",
@@ -135,7 +135,7 @@ export const termsArchive:Readonly<Record<string,LegalDocument>> = {
         },
         {
           "kind": "paragraph",
-          "text": "DocuMind AI ne garantit pas la détection automatique des contenus interdits."
+          "text": "Docnelo ne garantit pas la détection automatique des contenus interdits."
         }
       ]
     },
@@ -314,7 +314,7 @@ export const termsArchive:Readonly<Record<string,LegalDocument>> = {
   'beta-2026-10-26-draft-1': {
     title:'Conditions générales d’utilisation', version:'beta-2026-10-26-draft-1',
     sections:[
-      {title:'Objet de la bêta',text:'DocuMind permet d’importer des PDF et TXT dans un espace personnel et d’effectuer des analyses documentaires classiques. La future bêta est limitée à cinq admissions cumulatives, comptes en attente de vérification compris. Une suppression ne restitue pas une place. Les inscriptions peuvent rester fermées.'},
+      {title:'Objet de la bêta',text:'Docnelo permet d’importer des PDF et TXT dans un espace personnel et d’effectuer des analyses documentaires classiques. La bêta publique est limitée à dix admissions cumulatives, comptes en attente ou refusés compris. Les comptes historiques et sur invitation sont exclus. La connexion exige la vérification de l’e-mail et une approbation administrative. Une suppression ne restitue pas une place. Les inscriptions peuvent rester fermées.'},
       {title:'Compte et vérification',text:'Une adresse e-mail et un mot de passe sont nécessaires. La vérification de l’adresse est requise pour utiliser le compte public. Les liens expirent et sont à usage unique. Une réponse à une demande ne garantit ni admission ni livraison d’un e-mail ; un renvoi protégé est prévu.'},
       {title:'Documents et fonctionnalités',text:'Les documents et le texte extrait sont stockés sur le serveur du service, avec contrôle d’accès par propriétaire. Les fonctionnalités IA ne sont pas disponibles dans cette bêta. Une éventuelle activation future nécessitera une décision et une information distinctes.'},
       {title:'Suppression et fin du compte',text:'La demande de suppression désactive le compte et révoque ses sessions. L’effacement final relève d’un traitement administratif. Des copies de sauvegarde et certaines traces peuvent subsister. Les délais et procédures doivent encore être définis et approuvés.'},
@@ -325,10 +325,10 @@ export const termsArchive:Readonly<Record<string,LegalDocument>> = {
 export const legalNotice:LegalDocument = {
   title:'Mentions légales',version:'2026-10-26-draft-2',sections:[
     {
-      title: 'Mentions légales — DocuMind AI',
+      title: 'Mentions légales — Docnelo',
       text: ""
     },
-    {title:'1. Éditeur du service',text:'Le service DocuMind AI, accessible à l’adresse https://documind.adelinemeistertzheim.fr, est édité par :',items:[
+    {title:'1. Éditeur du service',text:'Le service Docnelo, accessible à l’adresse https://documind.adelinemeistertzheim.fr, est édité par :',items:[
       'Nom : Meistertzheim Adeline',
       'Statut : Entrepreneur individuel (EI), régime de la micro-entreprise',
       'SIREN : 523651404',
@@ -337,15 +337,15 @@ export const legalNotice:LegalDocument = {
       'Téléphone professionnel : 0617293623',
       'Directrice de la publication : Meistertzheim Adeline',
     ]},
-    {title:'2. Hébergement',text:'L’application DocuMind AI est hébergée par :',items:[
+    {title:'2. Hébergement',text:'L’application Docnelo est hébergée par :',items:[
       'Hébergeur contractuel : OVH',
       'Adresse : 2 rue Kellermann, 59100 Roubaix, France',
       'Téléphone : 1007',
       'Localisation de l’infrastructure utilisée : France',
     ]},
     {title:'Services distincts',text:'Des services distincts peuvent être utilisés pour les sauvegardes et les emails transactionnels. Ces prestataires sont précisés dans la politique de confidentialité lorsque leur intervention concerne des données personnelles.'},
-    {title:'3. Présentation du service',text:'DocuMind AI est une application web de gestion et d’analyse de documents. Une version bêta gratuite est prévue pour un nombre limité d’utilisateurs particuliers et professionnels. L’accès à la bêta est soumis aux Conditions générales d’utilisation. Les fonctionnalités d’intelligence artificielle sont désactivées pendant cette première phase de test.'},
-    {title:'4. Propriété intellectuelle',text:'Sauf indication contraire, les éléments propres à DocuMind AI, notamment son interface, ses textes originaux, ses signes distinctifs et son code, sont soumis aux droits de leurs titulaires respectifs et aux licences applicables. Les utilisateurs conservent leurs droits sur les documents qu’ils importent. L’utilisation de DocuMind AI n’entraîne aucun transfert de propriété de ces documents à l’éditeur.'},
+    {title:'3. Présentation du service',text:'Docnelo est une application web de gestion et d’analyse de documents. Une version bêta gratuite est prévue pour un nombre limité d’utilisateurs particuliers et professionnels. L’accès à la bêta est soumis aux Conditions générales d’utilisation. Les fonctionnalités d’intelligence artificielle sont désactivées pendant cette première phase de test.'},
+    {title:'4. Propriété intellectuelle',text:'Sauf indication contraire, les éléments propres à Docnelo, notamment son interface, ses textes originaux, ses signes distinctifs et son code, sont soumis aux droits de leurs titulaires respectifs et aux licences applicables. Les utilisateurs conservent leurs droits sur les documents qu’ils importent. L’utilisation de Docnelo n’entraîne aucun transfert de propriété de ces documents à l’éditeur.'},
     {title:'5. Données personnelles',text:'Les modalités de traitement des données personnelles sont décrites dans la Politique de confidentialité, disponible à l’adresse : https://documind.adelinemeistertzheim.fr/confidentialite'},
     {title:'6. Contact',text:'Pour toute question relative au service : adelinemeistertzheim40@gmail.com. Pour toute demande relative aux données personnelles : adelinemeistertzheim40@gmail.com.'},
   ],
@@ -360,7 +360,7 @@ export const privacy:LegalDocument = {
       "blocks": [
         {
           "kind": "paragraph",
-          "text": "DocuMind AI est exploité par :"
+          "text": "Docnelo est exploité par :"
         },
         {
           "kind": "paragraph",
@@ -390,7 +390,7 @@ export const privacy:LegalDocument = {
       "blocks": [
         {
           "kind": "paragraph",
-          "text": "Pour fournir le service, DocuMind AI peut traiter les catégories suivantes :"
+          "text": "Pour fournir le service, Docnelo peut traiter les catégories suivantes :"
         },
         {
           "kind": "list",
@@ -498,7 +498,7 @@ export const privacy:LegalDocument = {
       "blocks": [
         {
           "kind": "paragraph",
-          "text": "Les documents sont conservés dans un environnement serveur exploité pour DocuMind AI, et non exclusivement sur l'appareil de l'utilisateur."
+          "text": "Les documents sont conservés dans un environnement serveur exploité pour Docnelo, et non exclusivement sur l'appareil de l'utilisateur."
         },
         {
           "kind": "paragraph",
@@ -611,7 +611,7 @@ export const privacy:LegalDocument = {
       "blocks": [
         {
           "kind": "paragraph",
-          "text": "DocuMind AI utilise des mécanismes de session nécessaires à l'authentification et à la sécurisation des accès."
+          "text": "Docnelo utilise des mécanismes de session nécessaires à l'authentification et à la sécurisation des accès."
         },
         {
           "kind": "paragraph",

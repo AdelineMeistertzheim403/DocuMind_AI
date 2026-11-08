@@ -1,0 +1,1340 @@
+{
+  "binary_closure_approved": false,
+  "blockers": [
+    "No approved Debian13/CPython3.11.18 base archive and image ID",
+    "No native system libraries/loader/CPython binary provenance inventory",
+    "PyYAML hash observed locally, independent provenance/approval absent",
+    "P4 minimal selection and pip25.2 bootstrap not independently approved",
+    "No Debian P4 image import, ABI, pip check or mounted campaign evidence"
+  ],
+  "build_go": false,
+  "distributions": [
+    {
+      "binaries": [],
+      "bytes": 268719,
+      "distribution": "alembic",
+      "file": "alembic-1.20.0-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "SQLAlchemy>=2.0",
+        "Mako",
+        "typing-extensions>=4.12",
+        "tomli; python_version < \"3.11\"",
+        "tzdata; extra == \"tz\""
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "77eb101048d95f982c0353e9233404889dcd7a6fc244c107836c0e2fc9cf7d9d",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "1.20.0"
+    },
+    {
+      "binaries": [],
+      "bytes": 5302,
+      "distribution": "annotated-doc",
+      "file": "annotated_doc-0.0.5-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [],
+      "requires_python": ">=3.9",
+      "sha256": "117bac03a25ede5df5440e855b32d556049ca169ead221505badf432fed4b101",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "0.0.5"
+    },
+    {
+      "binaries": [],
+      "bytes": 13427,
+      "distribution": "annotated-types",
+      "file": "annotated_types-0.8.0-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [],
+      "requires_python": ">=3.10",
+      "sha256": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "0.8.0"
+    },
+    {
+      "binaries": [],
+      "bytes": 132079,
+      "distribution": "anyio",
+      "file": "anyio-4.15.1-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "exceptiongroup>=1.0.2; python_version < \"3.11\"",
+        "idna>=2.8",
+        "typing_extensions>=4.16.0; python_version < \"3.15\"",
+        "trio>=0.32.0; extra == \"trio\""
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "4.15.1"
+    },
+    {
+      "binaries": [],
+      "bytes": 14657,
+      "distribution": "argon2-cffi",
+      "file": "argon2_cffi-25.1.0-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "argon2-cffi-bindings"
+      ],
+      "requires_python": ">=3.8",
+      "sha256": "fdc8b074db390fccb6eb4a3604ae7231f219aa669a2652e0f20e16ba513d5741",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "25.1.0"
+    },
+    {
+      "binaries": [
+        {
+          "bytes": 56216,
+          "class": "ELF64",
+          "file": "_argon2_cffi_bindings/_ffi.abi3.so",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libpthread.so.0"
+          ],
+          "sha256": "c16944f0fe69f501255092d4f6e8f92f89b62ede92e60904ab30b5486601e784"
+        }
+      ],
+      "bytes": 26597,
+      "distribution": "argon2-cffi-bindings",
+      "file": "argon2_cffi_bindings-26.1.0-cp310-abi3-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "cffi>=1.0.1; python_version < \"3.14\"",
+        "cffi>=2; python_version >= \"3.14\""
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "27f1821903e2ceadcb88ec2b45ef190897b7682449c772f4d9b53e42c520cf29",
+      "tags": [
+        "cp310-abi3-manylinux_2_26_x86_64",
+        "cp310-abi3-manylinux_2_28_x86_64"
+      ],
+      "version": "26.1.0"
+    },
+    {
+      "binaries": [],
+      "bytes": 134093,
+      "distribution": "certifi",
+      "file": "certifi-2026.10.18-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [],
+      "requires_python": ">=3.7",
+      "sha256": "73191c47aaa79da394e8fee2dbc2ec827432cab56311122c9e47abf79e390f62",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "2026.10.18"
+    },
+    {
+      "binaries": [
+        {
+          "bytes": 332496,
+          "class": "ELF64",
+          "file": "_cffi_backend.cpython-311-x86_64-linux-gnu.so",
+          "machine": "x86_64",
+          "needed": [
+            "ld-linux-x86-64.so.2",
+            "libc.so.6",
+            "libpthread.so.0"
+          ],
+          "sha256": "192828af4429c83d5cd92c40275ffd3c71459c3dc7a58e43cf4b5c346d78dc8e"
+        }
+      ],
+      "bytes": 217807,
+      "distribution": "cffi",
+      "file": "cffi-2.1.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "pycparser; implementation_name != \"PyPy\""
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "34e261f78cb6ceaaa36f42f2613f4380d94d9c759a9c73c769ee6e0247364632",
+      "tags": [
+        "cp311-cp311-manylinux_2_17_x86_64",
+        "cp311-cp311-manylinux2014_x86_64"
+      ],
+      "version": "2.1.1"
+    },
+    {
+      "binaries": [],
+      "bytes": 20277,
+      "distribution": "distro",
+      "file": "distro-1.9.0-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [],
+      "requires_python": ">=3.6",
+      "sha256": "7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "1.9.0"
+    },
+    {
+      "binaries": [],
+      "bytes": 144702,
+      "distribution": "fastapi",
+      "file": "fastapi-0.146.0-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "starlette>=0.46.0",
+        "pydantic>=2.9.0",
+        "typing-extensions>=4.8.0",
+        "typing-inspection>=0.4.2",
+        "annotated-doc>=0.0.2",
+        "opentelemetry-api>=1.44.0",
+        "opentelemetry-sdk>=1.44.0; extra == \"opentelemetry\"",
+        "opentelemetry-exporter-otlp-proto-http>=1.44.0; extra == \"opentelemetry\"",
+        "opentelemetry-sdk>=1.44.0; extra == \"standard\"",
+        "opentelemetry-exporter-otlp-proto-http>=1.44.0; extra == \"standard\"",
+        "fastapi-cli[standard]>=0.0.32; extra == \"standard\"",
+        "fastar>=0.9.0; extra == \"standard\"",
+        "httpx<1.0.0,>=0.23.0; extra == \"standard\"",
+        "httpx2>=2.0.0; extra == \"standard\"",
+        "jinja2>=3.1.5; extra == \"standard\"",
+        "python-multipart>=0.0.18; extra == \"standard\"",
+        "email-validator>=2.0.0; extra == \"standard\"",
+        "uvicorn[standard]>=0.12.0; extra == \"standard\"",
+        "pydantic-settings>=2.0.0; extra == \"standard\"",
+        "pydantic-extra-types>=2.0.0; extra == \"standard\"",
+        "opentelemetry-sdk>=1.44.0; extra == \"standard-no-fastapi-cloud-cli\"",
+        "opentelemetry-exporter-otlp-proto-http>=1.44.0; extra == \"standard-no-fastapi-cloud-cli\"",
+        "fastapi-cli[standard-no-fastapi-cloud-cli]>=0.0.32; extra == \"standard-no-fastapi-cloud-cli\"",
+        "httpx<1.0.0,>=0.23.0; extra == \"standard-no-fastapi-cloud-cli\"",
+        "httpx2>=2.0.0; extra == \"standard-no-fastapi-cloud-cli\"",
+        "jinja2>=3.1.5; extra == \"standard-no-fastapi-cloud-cli\"",
+        "python-multipart>=0.0.18; extra == \"standard-no-fastapi-cloud-cli\"",
+        "email-validator>=2.0.0; extra == \"standard-no-fastapi-cloud-cli\"",
+        "uvicorn[standard]>=0.12.0; extra == \"standard-no-fastapi-cloud-cli\"",
+        "pydantic-settings>=2.0.0; extra == \"standard-no-fastapi-cloud-cli\"",
+        "pydantic-extra-types>=2.0.0; extra == \"standard-no-fastapi-cloud-cli\"",
+        "opentelemetry-sdk>=1.44.0; extra == \"all\"",
+        "opentelemetry-exporter-otlp-proto-http>=1.44.0; extra == \"all\"",
+        "fastapi-cli[standard]>=0.0.32; extra == \"all\"",
+        "httpx<1.0.0,>=0.23.0; extra == \"all\"",
+        "httpx2>=2.0.0; extra == \"all\"",
+        "jinja2>=3.1.5; extra == \"all\"",
+        "python-multipart>=0.0.18; extra == \"all\"",
+        "itsdangerous>=1.1.0; extra == \"all\"",
+        "pyyaml>=5.3.1; extra == \"all\"",
+        "email-validator>=2.0.0; extra == \"all\"",
+        "uvicorn[standard]>=0.12.0; extra == \"all\"",
+        "pydantic-settings>=2.0.0; extra == \"all\"",
+        "pydantic-extra-types>=2.0.0; extra == \"all\""
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "0eb9985a7d5bb11ce9a962d4b65e0cf1a2e13d6aca2e14da57bc526370e26748",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "0.146.0"
+    },
+    {
+      "binaries": [
+        {
+          "bytes": 1414072,
+          "class": "ELF64",
+          "file": "greenlet/_greenlet.cpython-311-x86_64-linux-gnu.so",
+          "machine": "x86_64",
+          "needed": [
+            "ld-linux-x86-64.so.2",
+            "libc.so.6",
+            "libgcc_s.so.1",
+            "libm.so.6",
+            "libpthread.so.0",
+            "libstdc++.so.6"
+          ],
+          "sha256": "fd4e8eb7a90aa422dda27aaa7d54e45d67e7e25050cd513e8492a6053462d2f3"
+        },
+        {
+          "bytes": 17328,
+          "class": "ELF64",
+          "file": "greenlet/tests/_test_extension.cpython-311-x86_64-linux-gnu.so",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libpthread.so.0"
+          ],
+          "sha256": "80211559bc8754cc6f6530b6ec5db10ae81c39937859a5e7b597cf2da5bfa229"
+        },
+        {
+          "bytes": 58200,
+          "class": "ELF64",
+          "file": "greenlet/tests/_test_extension_cpp.cpython-311-x86_64-linux-gnu.so",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libgcc_s.so.1",
+            "libm.so.6",
+            "libpthread.so.0",
+            "libstdc++.so.6"
+          ],
+          "sha256": "8f4be12774352ab6856abc1926c19171c34bd55aff5f3345bb679c5133811ed8"
+        }
+      ],
+      "bytes": 624428,
+      "distribution": "greenlet",
+      "file": "greenlet-3.5.6-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "Sphinx; extra == \"docs\"",
+        "furo; extra == \"docs\"",
+        "objgraph; extra == \"test\"",
+        "psutil; extra == \"test\"",
+        "setuptools; extra == \"test\""
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "1c20ea32a73d17b9b60e3371240e17b0068120c98a5ec01a224a7dd8c89733ba",
+      "tags": [
+        "cp311-cp311-manylinux_2_24_x86_64",
+        "cp311-cp311-manylinux_2_28_x86_64"
+      ],
+      "version": "3.5.6"
+    },
+    {
+      "binaries": [],
+      "bytes": 37515,
+      "distribution": "h11",
+      "file": "h11-0.16.0-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [],
+      "requires_python": ">=3.8",
+      "sha256": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "0.16.0"
+    },
+    {
+      "binaries": [],
+      "bytes": 78784,
+      "distribution": "httpcore",
+      "file": "httpcore-1.0.9-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "certifi",
+        "h11>=0.16",
+        "anyio<5.0,>=4.0; extra == 'asyncio'",
+        "h2<5,>=3; extra == 'http2'",
+        "socksio==1.*; extra == 'socks'",
+        "trio<1.0,>=0.22.0; extra == 'trio'"
+      ],
+      "requires_python": ">=3.8",
+      "sha256": "2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "1.0.9"
+    },
+    {
+      "binaries": [],
+      "bytes": 73517,
+      "distribution": "httpx",
+      "file": "httpx-0.28.1-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "anyio",
+        "certifi",
+        "httpcore==1.*",
+        "idna",
+        "brotli; (platform_python_implementation == 'CPython') and extra == 'brotli'",
+        "brotlicffi; (platform_python_implementation != 'CPython') and extra == 'brotli'",
+        "click==8.*; extra == 'cli'",
+        "pygments==2.*; extra == 'cli'",
+        "rich<14,>=10; extra == 'cli'",
+        "h2<5,>=3; extra == 'http2'",
+        "socksio==1.*; extra == 'socks'",
+        "zstandard>=0.18.0; extra == 'zstd'"
+      ],
+      "requires_python": ">=3.8",
+      "sha256": "d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "0.28.1"
+    },
+    {
+      "binaries": [],
+      "bytes": 69583,
+      "distribution": "idna",
+      "file": "idna-3.20-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "ruff >= 0.16.0 ; extra == \"all\"",
+        "mypy >= 1.11.2 ; extra == \"all\"",
+        "ty >= 0.0.37 ; extra == \"all\"",
+        "pytest >= 8.3.2 ; extra == \"all\"",
+        "hypothesis >= 6.141.1 ; extra == \"all\"",
+        "coverage >= 7.10.0 ; extra == \"all\""
+      ],
+      "requires_python": ">=3.9",
+      "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "3.20"
+    },
+    {
+      "binaries": [],
+      "bytes": 7552,
+      "distribution": "iniconfig",
+      "file": "iniconfig-2.3.1-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [],
+      "requires_python": ">=3.10",
+      "sha256": "9121e2c1fdb355232495be3194c8dfe87ccc2d5dee45947b78e68f499790d7a7",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "2.3.1"
+    },
+    {
+      "binaries": [
+        {
+          "bytes": 751200,
+          "class": "ELF64",
+          "file": "jiter/jiter.cpython-311-x86_64-linux-gnu.so",
+          "machine": "x86_64",
+          "needed": [
+            "ld-linux-x86-64.so.2",
+            "libc.so.6",
+            "libdl.so.2",
+            "libgcc_s.so.1",
+            "libpthread.so.0"
+          ],
+          "sha256": "7cae413cb5744aec49de7c772cabb3edb44e4ab1d46b8330a8e7e7efec84f591"
+        }
+      ],
+      "bytes": 346052,
+      "distribution": "jiter",
+      "file": "jiter-0.17.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [],
+      "requires_python": ">=3.10",
+      "sha256": "5888fe5abc1ca2fa834a3e1b4c7ef0dcece286a7d7e95a609ef0934b777b9fc9",
+      "tags": [
+        "cp311-cp311-manylinux_2_17_x86_64",
+        "cp311-cp311-manylinux2014_x86_64"
+      ],
+      "version": "0.17.0"
+    },
+    {
+      "binaries": [],
+      "bytes": 80164,
+      "distribution": "Mako",
+      "file": "mako-1.4.3-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "MarkupSafe>=2.0",
+        "pytest; extra == \"testing\"",
+        "Babel; extra == \"babel\"",
+        "lingua>=4.16; extra == \"lingua\""
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "723296007c870bfd6b3f0c3230dba7198096e5269297ebf5e4eff9e7ffa39d4f",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "1.4.3"
+    },
+    {
+      "binaries": [
+        {
+          "bytes": 43936,
+          "class": "ELF64",
+          "file": "markupsafe/_speedups.cpython-311-x86_64-linux-gnu.so",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libpthread.so.0"
+          ],
+          "sha256": "ea585a4a49ddd4e967c1bb3b9809ea09e3833bee20bb790edc5b361b39198855"
+        }
+      ],
+      "bytes": 22961,
+      "distribution": "MarkupSafe",
+      "file": "markupsafe-3.0.4-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [],
+      "requires_python": ">=3.9",
+      "sha256": "6da83a088f8ef93b2d483a8232a4dbf4d69d3d8496b568a03c56becac43e1808",
+      "tags": [
+        "cp311-cp311-manylinux_2_17_x86_64",
+        "cp311-cp311-manylinux2014_x86_64",
+        "cp311-cp311-manylinux_2_28_x86_64"
+      ],
+      "version": "3.0.4"
+    },
+    {
+      "binaries": [],
+      "bytes": 1660351,
+      "distribution": "openai",
+      "file": "openai-2.54.0-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "anyio<5,>=3.5.0",
+        "distro<2,>=1.7.0",
+        "httpx<1,>=0.23.0",
+        "jiter<1,>=0.10.0",
+        "pydantic<3,>=1.9.0",
+        "sniffio",
+        "tqdm>4",
+        "typing-extensions<5,>=4.14",
+        "aiohttp>=3.14.1; extra == 'aiohttp'",
+        "httpx-aiohttp>=0.1.9; extra == 'aiohttp'",
+        "botocore<2,>=1.40.0; extra == 'bedrock'",
+        "numpy>=1; extra == 'datalib'",
+        "pandas-stubs>=1.1.0.11; extra == 'datalib'",
+        "pandas>=1.2.3; extra == 'datalib'",
+        "anyio<5,>=4.10.0; extra == 'httpx2'",
+        "httpx2<3,>=2.7.0; extra == 'httpx2'",
+        "httpx<1,>=0.25.1; extra == 'httpx2'",
+        "websockets<16,>=13; extra == 'realtime'",
+        "numpy>=2.0.2; extra == 'voice-helpers'",
+        "sounddevice>=0.5.1; extra == 'voice-helpers'"
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "89089789197ccdb87f173a03145ed1598d00795220c93e96cf712b1cbf5e5f2b",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "2.54.0"
+    },
+    {
+      "binaries": [],
+      "bytes": 60256,
+      "distribution": "opentelemetry-api",
+      "file": "opentelemetry_api-1.45.1-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "typing-extensions>=4.5.0"
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "b31553efa588ae44bc306f863c785c5333a9ecc091248c6ee68b4b6c87fdedfb",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "1.45.1"
+    },
+    {
+      "binaries": [],
+      "bytes": 129956,
+      "distribution": "packaging",
+      "file": "packaging-26.3-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [],
+      "requires_python": ">=3.9",
+      "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "26.3"
+    },
+    {
+      "binaries": [],
+      "bytes": 31056,
+      "distribution": "pgvector",
+      "file": "pgvector-0.5.1-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [],
+      "requires_python": ">=3.10",
+      "sha256": "ec5bcd5ffaefe6ecb2dcc9564ca921d284564b969183bc837a144604773af8ea",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "0.5.1"
+    },
+    {
+      "binaries": [],
+      "bytes": 1752557,
+      "distribution": "pip",
+      "file": "pip-25.2-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [],
+      "requires_python": ">=3.9",
+      "sha256": "6d67a2b4e7f14d8b31b8b52648866fa717f45a1eb70e83002f4331d07e953717",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "25.2"
+    },
+    {
+      "binaries": [],
+      "bytes": 27082,
+      "distribution": "pluggy",
+      "file": "pluggy-1.7.0-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [],
+      "requires_python": ">=3.10",
+      "sha256": "7dd7b0d8832ba3cb632c306926ded123429211b83641b35dc5c41ad2d34f9bec",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "1.7.0"
+    },
+    {
+      "binaries": [
+        {
+          "bytes": 150904,
+          "class": "ELF64",
+          "file": "psutil/_psutil_linux.abi3.so",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libpthread.so.0"
+          ],
+          "sha256": "8085c743a77f6059be6d18d54317ccce2e715425bb5f15aa8835770463d6b9fd"
+        }
+      ],
+      "bytes": 155560,
+      "distribution": "psutil",
+      "file": "psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "psleak ; extra == 'dev'",
+        "pytest ; extra == 'dev'",
+        "pytest-instafail ; extra == 'dev'",
+        "pytest-xdist ; extra == 'dev'",
+        "setuptools ; extra == 'dev'",
+        "abi3audit ; extra == 'dev'",
+        "black ; extra == 'dev'",
+        "check-manifest ; extra == 'dev'",
+        "coverage ; extra == 'dev'",
+        "packaging ; extra == 'dev'",
+        "pylint ; extra == 'dev'",
+        "pyperf ; extra == 'dev'",
+        "pypinfo ; extra == 'dev'",
+        "pytest-cov ; extra == 'dev'",
+        "requests ; extra == 'dev'",
+        "rstcheck ; extra == 'dev'",
+        "ruff ; extra == 'dev'",
+        "sphinx ; extra == 'dev'",
+        "sphinx-rtd-theme ; extra == 'dev'",
+        "toml-sort ; extra == 'dev'",
+        "twine ; extra == 'dev'",
+        "validate-pyproject[all] ; extra == 'dev'",
+        "virtualenv ; extra == 'dev'",
+        "vulture ; extra == 'dev'",
+        "wheel ; extra == 'dev'",
+        "colorama ; (os_name == \"nt\") and extra == 'dev'",
+        "pyreadline3 ; (os_name == \"nt\") and extra == 'dev'",
+        "pywin32 ; (os_name == \"nt\" and implementation_name != \"pypy\") and extra == 'dev'",
+        "wheel ; (os_name == \"nt\" and implementation_name != \"pypy\") and extra == 'dev'",
+        "wmi ; (os_name == \"nt\" and implementation_name != \"pypy\") and extra == 'dev'",
+        "psleak ; extra == 'test'",
+        "pytest ; extra == 'test'",
+        "pytest-instafail ; extra == 'test'",
+        "pytest-xdist ; extra == 'test'",
+        "setuptools ; extra == 'test'",
+        "pywin32 ; (os_name == \"nt\" and implementation_name != \"pypy\") and extra == 'test'",
+        "wheel ; (os_name == \"nt\" and implementation_name != \"pypy\") and extra == 'test'",
+        "wmi ; (os_name == \"nt\" and implementation_name != \"pypy\") and extra == 'test'"
+      ],
+      "requires_python": ">=3.6",
+      "sha256": "076a2d2f923fd4821644f5ba89f059523da90dc9014e85f8e45a5774ca5bc6f9",
+      "tags": [
+        "cp36-abi3-manylinux_2_12_x86_64",
+        "cp36-abi3-manylinux2010_x86_64",
+        "cp36-abi3-manylinux_2_28_x86_64"
+      ],
+      "version": "7.2.2"
+    },
+    {
+      "binaries": [],
+      "bytes": 215490,
+      "distribution": "psycopg",
+      "file": "psycopg-3.3.6-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "typing-extensions>=4.6; python_version < \"3.13\"",
+        "tzdata; sys_platform == \"win32\"",
+        "psycopg-c==3.3.6; implementation_name != \"pypy\" and extra == \"c\"",
+        "psycopg-binary==3.3.6; implementation_name != \"pypy\" and extra == \"binary\"",
+        "psycopg-pool; extra == \"pool\"",
+        "anyio>=4.0; extra == \"test\"",
+        "mypy>=2.1.0; implementation_name != \"pypy\" and extra == \"test\"",
+        "pproxy>=2.7; extra == \"test\"",
+        "pytest>=6.2.5; extra == \"test\"",
+        "pytest-cov>=3.0; extra == \"test\"",
+        "pytest-randomly>=3.5; extra == \"test\"",
+        "ast-comments>=1.1.2; extra == \"dev\"",
+        "black>=26.1.0; extra == \"dev\"",
+        "codespell>=2.2; extra == \"dev\"",
+        "cython-lint>=0.21; extra == \"dev\"",
+        "dnspython>=2.1; extra == \"dev\"",
+        "flake8>=4.0; extra == \"dev\"",
+        "isort[colors]>=6.0; extra == \"dev\"",
+        "isort-psycopg>=0.0.3; extra == \"dev\"",
+        "mypy>=2.1.0; extra == \"dev\"",
+        "pre-commit>=4.0.1; extra == \"dev\"",
+        "types-setuptools>=57.4; extra == \"dev\"",
+        "types-shapely>=2.0; extra == \"dev\"",
+        "wheel>=0.37; extra == \"dev\"",
+        "Sphinx>=9.1; extra == \"docs\"",
+        "furo==2025.12.19; extra == \"docs\"",
+        "sphinx-autobuild>=2025.8.25; extra == \"docs\"",
+        "sphinx-autodoc-typehints>=3.10.2; extra == \"docs\""
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "a1db9f7148b06a28606767efaca51fa6f9398c5c0a3810519be69d7000bdb631",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "3.3.6"
+    },
+    {
+      "binaries": [
+        {
+          "bytes": 820793,
+          "class": "ELF64",
+          "file": "psycopg_binary/_psycopg.cpython-311-x86_64-linux-gnu.so",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libpq-e9b5c9ac.so.5.18",
+            "libpthread.so.0"
+          ],
+          "sha256": "c09fb1a9bb5c1546ad809fa70eac6d64ed1672e7e2b7f2333f63eccde062a213"
+        },
+        {
+          "bytes": 366225,
+          "class": "ELF64",
+          "file": "psycopg_binary/pq.cpython-311-x86_64-linux-gnu.so",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libpq-e9b5c9ac.so.5.18",
+            "libpthread.so.0"
+          ],
+          "sha256": "d84a2bce61de1e88a71f6fd1b2f35fe386b22337d5b4c9edb5f36f59aab2a247"
+        },
+        {
+          "bytes": 17497,
+          "class": "ELF64",
+          "file": "psycopg_binary.libs/libcom_err-2abe824b.so.2.1",
+          "machine": "x86_64",
+          "needed": [
+            "ld-linux-x86-64.so.2",
+            "libc.so.6",
+            "libpthread.so.0"
+          ],
+          "sha256": "5426dcb54dd01c9eedda05e2179f0e47114e8b48a534ffe9e94916e79471b257"
+        },
+        {
+          "bytes": 221657,
+          "class": "ELF64",
+          "file": "psycopg_binary.libs/libcrypt-bc2db45e.so.1",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6"
+          ],
+          "sha256": "e2a6f6ff300e287a60dfc0c6fdb76ee01e333068df7c60b4e87453d942ccda65"
+        },
+        {
+          "bytes": 6502249,
+          "class": "ELF64",
+          "file": "psycopg_binary.libs/libcrypto-2d1629ee.so.3",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libdl.so.2",
+            "libpthread.so.0",
+            "libz.so.1"
+          ],
+          "sha256": "ac767da23afff24a34a1a86e6464f65ff45c8e3374850c117c1cffbfcd879da0"
+        },
+        {
+          "bytes": 357505,
+          "class": "ELF64",
+          "file": "psycopg_binary.libs/libgssapi_krb5-497db0c6.so.2.2",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libcom_err-2abe824b.so.2.1",
+            "libdl.so.2",
+            "libk5crypto-b1f99d5c.so.3.1",
+            "libkeyutils-dfe70bd6.so.1.5",
+            "libkrb5-fcafa220.so.3.3",
+            "libkrb5support-d0bcff84.so.0.1",
+            "libresolv.so.2"
+          ],
+          "sha256": "ef73998b86c24e54667a843be6d589442dd082e1b9fc605aa15bcc2293858806"
+        },
+        {
+          "bytes": 224057,
+          "class": "ELF64",
+          "file": "psycopg_binary.libs/libk5crypto-b1f99d5c.so.3.1",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libkeyutils-dfe70bd6.so.1.5",
+            "libkrb5support-d0bcff84.so.0.1",
+            "libresolv.so.2"
+          ],
+          "sha256": "bf04d7ebe3937aba3855c15acbd991482286a484aeea38bb9ced85e772ea2fb0"
+        },
+        {
+          "bytes": 17913,
+          "class": "ELF64",
+          "file": "psycopg_binary.libs/libkeyutils-dfe70bd6.so.1.5",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libdl.so.2"
+          ],
+          "sha256": "c29e41b03cf4b2dffbfb4960946e2b42f82c0ca5d53d231d3f0fc597ba274488"
+        },
+        {
+          "bytes": 1039441,
+          "class": "ELF64",
+          "file": "psycopg_binary.libs/libkrb5-fcafa220.so.3.3",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libcom_err-2abe824b.so.2.1",
+            "libk5crypto-b1f99d5c.so.3.1",
+            "libkeyutils-dfe70bd6.so.1.5",
+            "libkrb5support-d0bcff84.so.0.1",
+            "libresolv.so.2"
+          ],
+          "sha256": "94dc6413050486a6c8de4b6f3bfdd288390892b72bc68580c6c53929721fa07b"
+        },
+        {
+          "bytes": 80977,
+          "class": "ELF64",
+          "file": "psycopg_binary.libs/libkrb5support-d0bcff84.so.0.1",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libdl.so.2",
+            "libkeyutils-dfe70bd6.so.1.5",
+            "libresolv.so.2",
+            "libselinux-0922c95c.so.1"
+          ],
+          "sha256": "0eb5322b05ac46e4db7ddb779ee0269006dd01801aaa67b84f8e7f753bfdddf2"
+        },
+        {
+          "bytes": 60977,
+          "class": "ELF64",
+          "file": "psycopg_binary.libs/liblber-a44a5afb.so.2.0.200",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libresolv.so.2"
+          ],
+          "sha256": "862a4715f500831283bebf04347491b17a3adb93e56a335d00a6e1b278258929"
+        },
+        {
+          "bytes": 447321,
+          "class": "ELF64",
+          "file": "psycopg_binary.libs/libldap-7c3a4b12.so.2.0.200",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libcrypto-2d1629ee.so.3",
+            "liblber-a44a5afb.so.2.0.200",
+            "libpthread.so.0",
+            "libresolv.so.2",
+            "libsasl2-84219a89.so.3.0.0",
+            "libssl-8bd944e8.so.3"
+          ],
+          "sha256": "1408b751ee5e666470af890e13a508b38a57870b6a261697e27f9c6493b645fc"
+        },
+        {
+          "bytes": 406817,
+          "class": "ELF64",
+          "file": "psycopg_binary.libs/libpcre-9513aab5.so.1.2.0",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libpthread.so.0"
+          ],
+          "sha256": "02eda850e04931656d8af81f5171bff74d8bec1553d3d85c3d32d7fc5efe8864"
+        },
+        {
+          "bytes": 420153,
+          "class": "ELF64",
+          "file": "psycopg_binary.libs/libpq-e9b5c9ac.so.5.18",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libcrypto-2d1629ee.so.3",
+            "libgssapi_krb5-497db0c6.so.2.2",
+            "libldap-7c3a4b12.so.2.0.200",
+            "libm.so.6",
+            "libpthread.so.0",
+            "libssl-8bd944e8.so.3"
+          ],
+          "sha256": "adee4abe45a36e8f147b15e08aceca893c255dfd4133a047884807931ca8046d"
+        },
+        {
+          "bytes": 142953,
+          "class": "ELF64",
+          "file": "psycopg_binary.libs/libsasl2-84219a89.so.3.0.0",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libcom_err-2abe824b.so.2.1",
+            "libcrypt-bc2db45e.so.1",
+            "libdl.so.2",
+            "libgssapi_krb5-497db0c6.so.2.2",
+            "libk5crypto-b1f99d5c.so.3.1",
+            "libkrb5-fcafa220.so.3.3",
+            "libkrb5support-d0bcff84.so.0.1",
+            "libresolv.so.2"
+          ],
+          "sha256": "e84be55110f16f7ca930af373e9f41fa7f4ec60733c013d933d1443ae5056a98"
+        },
+        {
+          "bytes": 186537,
+          "class": "ELF64",
+          "file": "psycopg_binary.libs/libselinux-0922c95c.so.1",
+          "machine": "x86_64",
+          "needed": [
+            "ld-linux-x86-64.so.2",
+            "libc.so.6",
+            "libdl.so.2",
+            "libpcre-9513aab5.so.1.2.0"
+          ],
+          "sha256": "99e60178aed625f6d2e2af58bccf605b13619b1544058e9f985a2772affb4a88"
+        },
+        {
+          "bytes": 1180057,
+          "class": "ELF64",
+          "file": "psycopg_binary.libs/libssl-8bd944e8.so.3",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libcrypto-2d1629ee.so.3",
+            "libdl.so.2",
+            "libpthread.so.0",
+            "libz.so.1"
+          ],
+          "sha256": "ef566b112dc7532a689c07de999c16efda3b4872df0c9d011bdcf00b94dd8a2e"
+        }
+      ],
+      "bytes": 5267985,
+      "distribution": "psycopg-binary",
+      "file": "psycopg_binary-3.3.6-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [],
+      "requires_python": ">=3.10",
+      "sha256": "a2e44a342d2aee40508e28a563d8961c39d9bbd8cae36d8578f0a3c6658aab0f",
+      "tags": [
+        "cp311-cp311-manylinux_2_17_x86_64",
+        "cp311-cp311-manylinux2014_x86_64"
+      ],
+      "version": "3.3.6"
+    },
+    {
+      "binaries": [],
+      "bytes": 62600,
+      "distribution": "pycparser",
+      "file": "pycparser-3.12-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [],
+      "requires_python": ">=3.11",
+      "sha256": "a076f3f489b39b43ed13563a1dafe42447445bec2e294154ec5c57fcdda4c85e",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "3.12"
+    },
+    {
+      "binaries": [],
+      "bytes": 488106,
+      "distribution": "pydantic",
+      "file": "pydantic-2.14.1-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "annotated-types>=0.6.0",
+        "pydantic-core==2.50.1",
+        "typing-extensions>=4.16.0",
+        "typing-inspection>=0.4.4",
+        "email-validator>=2.0.0; extra == 'email'",
+        "tzdata; (platform_system == 'Windows') and extra == 'timezone'"
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "9195d967ec791692a04438115466764fb8b9a27b31f14a760437694f40d6b454",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "2.14.1"
+    },
+    {
+      "binaries": [
+        {
+          "bytes": 4833672,
+          "class": "ELF64",
+          "file": "pydantic_core/_pydantic_core.cpython-311-x86_64-linux-gnu.so",
+          "machine": "x86_64",
+          "needed": [
+            "ld-linux-x86-64.so.2",
+            "libc.so.6",
+            "libdl.so.2",
+            "libgcc_s.so.1",
+            "libpthread.so.0",
+            "librt.so.1"
+          ],
+          "sha256": "eb71377a4504637486eb28dc506e84376cda3ec7c95a9244886825c6d51d8b5e"
+        }
+      ],
+      "bytes": 2157623,
+      "distribution": "pydantic_core",
+      "file": "pydantic_core-2.50.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "typing-extensions>=4.16.0"
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "8812592c85d0edf423f10eadcef42716d71e8219085ad9e85b775057b7306133",
+      "tags": [
+        "cp311-cp311-manylinux_2_17_x86_64",
+        "cp311-cp311-manylinux2014_x86_64"
+      ],
+      "version": "2.50.1"
+    },
+    {
+      "binaries": [],
+      "bytes": 80364,
+      "distribution": "pydantic-settings",
+      "file": "pydantic_settings-2.16.0-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "pydantic>=2.7.0",
+        "python-dotenv>=1.2.2",
+        "typing-extensions>=4.0.0",
+        "typing-inspection>=0.4.0",
+        "boto3>=1.35.0; extra == 'aws-secrets-manager'",
+        "boto3>=1.35.0; extra == 'aws-systems-manager'",
+        "azure-identity>=1.16.0; extra == 'azure-key-vault'",
+        "azure-keyvault-secrets>=4.8.0; extra == 'azure-key-vault'",
+        "google-cloud-secret-manager>=2.23.1; extra == 'gcp-secret-manager'",
+        "pyyaml>=6.0.1; extra == 'yaml'"
+      ],
+      "requires_python": ">=3.11",
+      "sha256": "7e73acf7f61936a15e5a3b6eedaea29f133357faf7272f2607ba479b049dd7f2",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "2.16.0"
+    },
+    {
+      "binaries": [],
+      "bytes": 1250147,
+      "distribution": "Pygments",
+      "file": "pygments-2.21.0-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "colorama>=0.4.6; extra == 'windows-terminal'"
+      ],
+      "requires_python": ">=3.9",
+      "sha256": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "2.21.0"
+    },
+    {
+      "binaries": [],
+      "bytes": 386536,
+      "distribution": "pytest",
+      "file": "pytest-9.1.1-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "colorama>=0.4; sys_platform == \"win32\"",
+        "exceptiongroup>=1; python_version < \"3.11\"",
+        "iniconfig>=1.0.1",
+        "packaging>=22",
+        "pluggy<2,>=1.5",
+        "pygments>=2.7.2",
+        "tomli>=1; python_version < \"3.11\"",
+        "argcomplete; extra == \"dev\"",
+        "attrs>=19.2; extra == \"dev\"",
+        "hypothesis>=3.56; extra == \"dev\"",
+        "mock; extra == \"dev\"",
+        "requests; extra == \"dev\"",
+        "setuptools; extra == \"dev\"",
+        "xmlschema; extra == \"dev\""
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "9.1.1"
+    },
+    {
+      "binaries": [],
+      "bytes": 23266,
+      "distribution": "python-dotenv",
+      "file": "python_dotenv-1.2.4-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "click>=5.0; extra == \"cli\""
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "42269a8a5b3fd54ffa6f3d84b18abed50064717576b4ecf03dc4a55d8aa04fdc",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "1.2.4"
+    },
+    {
+      "binaries": [],
+      "bytes": 30042,
+      "distribution": "python-multipart",
+      "file": "python_multipart-0.0.32-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [],
+      "requires_python": ">=3.10",
+      "sha256": "ff6d3f776f16878c894e52e107296ffc890e913c611b1a4ec6c44e2821fe2e23",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "0.0.32"
+    },
+    {
+      "binaries": [
+        {
+          "bytes": 2650176,
+          "class": "ELF64",
+          "file": "yaml/_yaml.cpython-311-x86_64-linux-gnu.so",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libpthread.so.0"
+          ],
+          "sha256": "aa9bb0d7b261b8266ababd9e19f5bf2f505d9a84ba360ce16502297e8a033765"
+        }
+      ],
+      "bytes": 806638,
+      "distribution": "PyYAML",
+      "file": "pyyaml-6.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "provenance": "Local file observed in deliveries/docnelo-v51-pyyaml-wheel-cp311; no independent approval or signed origin supplied",
+      "requires_dist": [],
+      "requires_python": ">=3.8",
+      "sha256": "b8bb0864c5a28024fac8a632c443c87c5aa6f215c0b126c449ae1a150412f31d",
+      "tags": [
+        "cp311-cp311-manylinux_2_17_x86_64",
+        "cp311-cp311-manylinux2014_x86_64",
+        "cp311-cp311-manylinux_2_28_x86_64"
+      ],
+      "version": "6.0.3"
+    },
+    {
+      "binaries": [],
+      "bytes": 10235,
+      "distribution": "sniffio",
+      "file": "sniffio-1.3.1-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [],
+      "requires_python": ">=3.7",
+      "sha256": "2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "1.3.1"
+    },
+    {
+      "binaries": [
+        {
+          "bytes": 2290152,
+          "class": "ELF64",
+          "file": "sqlalchemy/cyextension/collections.cpython-311-x86_64-linux-gnu.so",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libpthread.so.0"
+          ],
+          "sha256": "5284af3283c24ece0b1308971aa182ea6ada6c6d1f011195e6080e89b2dd2d95"
+        },
+        {
+          "bytes": 806312,
+          "class": "ELF64",
+          "file": "sqlalchemy/cyextension/immutabledict.cpython-311-x86_64-linux-gnu.so",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libpthread.so.0"
+          ],
+          "sha256": "c044d7a714c6321aec09877402f2705dc778b6b924a9bff90845a2348289f4da"
+        },
+        {
+          "bytes": 668024,
+          "class": "ELF64",
+          "file": "sqlalchemy/cyextension/processors.cpython-311-x86_64-linux-gnu.so",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libpthread.so.0"
+          ],
+          "sha256": "66810c9f1884d3af1d7e45793376ec7a9fcf4bb1d708d4b145355110c570f6e4"
+        },
+        {
+          "bytes": 658392,
+          "class": "ELF64",
+          "file": "sqlalchemy/cyextension/resultproxy.cpython-311-x86_64-linux-gnu.so",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libpthread.so.0"
+          ],
+          "sha256": "637650cac1b3cd5b17581f7effd26aa2a066e65f22b49a7ac50e9b17630db168"
+        },
+        {
+          "bytes": 878512,
+          "class": "ELF64",
+          "file": "sqlalchemy/cyextension/util.cpython-311-x86_64-linux-gnu.so",
+          "machine": "x86_64",
+          "needed": [
+            "libc.so.6",
+            "libpthread.so.0"
+          ],
+          "sha256": "9f31aa95b9d756872862d68e01bedcd25338afe36fcfaaa7e8d17d6884a75396"
+        }
+      ],
+      "bytes": 3435913,
+      "distribution": "SQLAlchemy",
+      "file": "sqlalchemy-2.0.55-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "importlib-metadata; python_version < \"3.8\"",
+        "greenlet>=1; platform_machine == \"aarch64\" or (platform_machine == \"ppc64le\" or (platform_machine == \"x86_64\" or (platform_machine == \"amd64\" or (platform_machine == \"AMD64\" or (platform_machine == \"win32\" or platform_machine == \"WIN32\")))))",
+        "typing-extensions>=4.6.0",
+        "greenlet>=1; extra == \"asyncio\"",
+        "mypy>=0.910; extra == \"mypy\"",
+        "pyodbc; extra == \"mssql\"",
+        "pymssql; extra == \"mssql-pymssql\"",
+        "pyodbc; extra == \"mssql-pyodbc\"",
+        "mysqlclient>=1.4.0; extra == \"mysql\"",
+        "mysql-connector-python; extra == \"mysql-connector\"",
+        "mariadb!=1.1.10,!=1.1.2,!=1.1.5,>=1.0.1; extra == \"mariadb-connector\"",
+        "cx_oracle>=8; extra == \"oracle\"",
+        "oracledb>=1.0.1; extra == \"oracle-oracledb\"",
+        "psycopg2>=2.7; extra == \"postgresql\"",
+        "pg8000>=1.29.1; extra == \"postgresql-pg8000\"",
+        "greenlet>=1; extra == \"postgresql-asyncpg\"",
+        "asyncpg; extra == \"postgresql-asyncpg\"",
+        "psycopg2-binary; extra == \"postgresql-psycopg2binary\"",
+        "psycopg2cffi; extra == \"postgresql-psycopg2cffi\"",
+        "psycopg>=3.0.7; extra == \"postgresql-psycopg\"",
+        "psycopg[binary]>=3.0.7; extra == \"postgresql-psycopgbinary\"",
+        "pymysql; extra == \"pymysql\"",
+        "greenlet>=1; extra == \"aiomysql\"",
+        "aiomysql>=0.2.0; extra == \"aiomysql\"",
+        "greenlet>=1; extra == \"aioodbc\"",
+        "aioodbc; extra == \"aioodbc\"",
+        "greenlet>=1; extra == \"asyncmy\"",
+        "asyncmy>=0.2.12; extra == \"asyncmy\"",
+        "greenlet>=1; extra == \"aiosqlite\"",
+        "aiosqlite; extra == \"aiosqlite\"",
+        "typing_extensions!=3.10.0.1; extra == \"aiosqlite\"",
+        "sqlcipher3_binary; extra == \"sqlcipher\""
+      ],
+      "requires_python": ">=3.7",
+      "sha256": "7251866982c2bb5a62d900bed7b4b88c1b09f9ff494b9dd152610cb5a99bb4d6",
+      "tags": [
+        "cp311-cp311-manylinux_2_17_x86_64",
+        "cp311-cp311-manylinux2014_x86_64",
+        "cp311-cp311-manylinux_2_28_x86_64"
+      ],
+      "version": "2.0.55"
+    },
+    {
+      "binaries": [],
+      "bytes": 80335,
+      "distribution": "starlette",
+      "file": "starlette-1.9.0-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "anyio<5,>=4.0.0",
+        "typing-extensions>=4.10.0; python_version < '3.13'",
+        "httpx2>=2.0.0; extra == 'full'",
+        "httpx<0.29.0,>=0.27.0; extra == 'full'",
+        "itsdangerous; extra == 'full'",
+        "jinja2; extra == 'full'",
+        "opentelemetry-api; extra == 'full'",
+        "python-multipart>=0.0.18; extra == 'full'",
+        "pyyaml; extra == 'full'"
+      ],
+      "requires_python": ">=3.11",
+      "sha256": "fd3f159936e882d06c1108f84688f7cda2cf85fc6a592a50edbd175e882c2ddc",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "1.9.0"
+    },
+    {
+      "binaries": [],
+      "bytes": 80199,
+      "distribution": "tqdm",
+      "file": "tqdm-4.70.1-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "colorama; platform_system == \"Windows\"",
+        "requests; extra == \"discord\"",
+        "envwrap; extra == \"discord\"",
+        "slack-sdk; extra == \"slack\"",
+        "envwrap; extra == \"slack\"",
+        "requests; extra == \"telegram\"",
+        "envwrap; extra == \"telegram\"",
+        "ipywidgets>=6; extra == \"notebook\""
+      ],
+      "requires_python": ">=3.8",
+      "sha256": "c293e525e6fef9c20e8728fd4612df02a0aa31bb5fe91ecd93e123b1b7bffa73",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "4.70.1"
+    },
+    {
+      "binaries": [],
+      "bytes": 45571,
+      "distribution": "typing_extensions",
+      "file": "typing_extensions-4.16.0-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [],
+      "requires_python": ">=3.9",
+      "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "4.16.0"
+    },
+    {
+      "binaries": [],
+      "bytes": 14750,
+      "distribution": "typing-inspection",
+      "file": "typing_inspection-0.4.4-py3-none-any.whl",
+      "provenance": "historical transfer / quarantine-wheels-cp311-linux-x86_64.zip",
+      "requires_dist": [
+        "typing-extensions>=4.15.0"
+      ],
+      "requires_python": ">=3.10",
+      "sha256": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147",
+      "tags": [
+        "py3-none-any"
+      ],
+      "version": "0.4.4"
+    }
+  ],
+  "extras": {
+    "psycopg": [
+      "binary"
+    ]
+  },
+  "metadata_closure_errors": [],
+  "status": "OBSERVED_NOT_APPROVED",
+  "target": "Debian13/x86_64/CPython3.11.18/glibc2.41"
+}

@@ -1,0 +1,10 @@
+{
+  "project": "docnelo-signup-lab-7c98f505cd",
+  "web": "sha256:ebdbc7fba1c61c03349088ca093470c78eec9dd91c5e2aa92ab1d8c0db5be362",
+  "api": "sha256:4aa850b6fb8d16b32fd731d94b232b2f817f461892b3f39a28e7557a25a5eb3d",
+  "postgres": "sha256:d2e0a72a9da278610fc926cc8d125827c0069f33feaafa011aae890572ec95c3",
+  "proofs": "sha256:526917bd27ecc837a7b683c0ca396fcdf315dde81c879100bffda874a3abeb1d",
+  "proxy": "sha256:ff8877338069e690053302ba9a8d8eeb47259467774ea90826f77a32e787a488",
+  "origin": "https://localhost:19446",
+  "verdict": "NOT_RUN"
+}

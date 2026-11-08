@@ -25,6 +25,7 @@ def owner(request: Request, key: Annotated[str | None, Security(key_header)]):
 
 def db(request: Request):
     with request.app.state.sessions() as session:
+        session.info['application'] = request.app
         yield session
 
 
@@ -65,8 +66,15 @@ async def upload_document(request: Request, owner_id: Owner, session: Session):
 
 
 @protected.get("", response_model=DocumentList, summary="Lister les documents du propriétaire")
-def list_documents(owner_id: Owner, session: Session, offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100)):
+def list_documents(request: Request, owner_id: Owner, session: Session, offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100)):
     condition = Document.owner_id == owner_id
+    if request.app.state.settings.application_profile == 'beta_lite':
+        from .lite_deletions import restricted_documents
+        try:
+            excluded = restricted_documents(request.app.state.lite_confirmation, owner_id)
+        except (OSError, ValueError):
+            raise HTTPException(503, 'Vérification administrative indisponible.') from None
+        condition = condition & Document.id.not_in(excluded)
     total = session.scalar(select(func.count()).select_from(Document).where(condition))
     items = session.scalars(select(Document).where(condition).order_by(Document.created_at.desc(), Document.id).offset(offset).limit(limit)).all()
     return {"items": items, "total": total, "offset": offset, "limit": limit}
@@ -101,10 +109,45 @@ def download_document(document_id: UUID, request: Request, owner_id: Owner, sess
 
 @protected.delete("/{document_id}", status_code=204, summary="Supprimer le fichier et toutes ses données")
 def remove_document(document_id: UUID, request: Request, owner_id: Owner, session: Session):
+    if request.app.state.settings.application_profile == 'beta_lite':
+        from .auth import User
+        from .lite_deletions import prepare_request
+        from .lifecycle_holds import ActiveHoldError
+        from .security_audit import emit
+        from fastapi.responses import JSONResponse
+        document = session.scalar(select(Document).where(Document.id == document_id, Document.owner_id == owner_id))
+        if document is None:
+            raise HTTPException(404, 'Document introuvable')
+        user = session.scalar(select(User).where(User.owner_id == owner_id))
+        try:
+            result = prepare_request(session, request.app.state.settings, request.app.state.lite_confirmation, user, document)
+        except ActiveHoldError:
+            raise HTTPException(409, 'Suppression suspendue par un gel de conservation.') from None
+        except (OSError, ValueError):
+            emit('system.security_config.invalid', reason_code='security_unavailable')
+            raise HTTPException(503, 'Demande non confirmée ; vérification administrative nécessaire.') from None
+        return JSONResponse(result, status_code=202)
     from .resource_limits import lock_workspace
     lock_workspace(session,owner_id)
     delete_document(session, request.app.state.settings, owned_document(session, document_id, owner_id, lock=True))
     return Response(status_code=204)
+
+
+@protected.get("/{document_id}/deletion-status")
+def deletion_status(document_id: UUID, request: Request, owner_id: Owner, session: Session):
+    from .lite_deletions import status
+    if request.app.state.settings.application_profile != 'beta_lite':
+        raise HTTPException(404, 'Opération introuvable')
+    try:
+        adapter = request.app.state.lite_confirmation
+        op = next((o for o in adapter.store.deletions() if o.kind == 'document_deletion_request'
+                   and o.target_id == str(document_id) and o.owner_id == str(owner_id)), None)
+        if op is None:
+            raise HTTPException(404, 'Opération introuvable')
+        execution = next((o for o in adapter.store.deletions() if o.parent_id == op.operation_id), None)
+        return status(adapter, execution or op)
+    except (OSError, ValueError):
+        raise HTTPException(503, 'Vérification administrative indisponible.') from None
 
 
 @protected.post("/{document_id}/analyze", response_model=AnalysisOut, status_code=201, summary="Exécuter une analyse sans IA")

@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily DocuMind retention simulation at 09:00 Europe/Paris
+
+[Timer]
+OnCalendar=*-*-* 09:00:00 Europe/Paris
+AccuracySec=1s
+RandomizedDelaySec=0
+Persistent=true
+Unit=documind-retention.service
+
+[Install]
+WantedBy=timers.target

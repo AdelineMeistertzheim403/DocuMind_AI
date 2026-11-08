@@ -1,0 +1,15 @@
+{
+  "build_go": false,
+  "forbidden_events": [],
+  "packages_installed": 0,
+  "pip_exit_kind": "SystemExit(None)",
+  "pip_import_file": "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\qualification\\p4_build_materials_v2\\materials\\wheels\\pip-25.2-py3-none-any.whl\\pip\\__init__.py",
+  "pip_version": "25.2",
+  "platform": "win32",
+  "python": "3.13.7 (tags/v3.13.7:bcee1c3, Aug 14 2025, 14:15:11) [MSC v.1944 64 bit (AMD64)]",
+  "returncode": 0,
+  "status": "PASS_ZIP_BOOTSTRAP_PROBE_PREPARATION_ONLY",
+  "stdout": "pip 25.2 from C:\\Users\\Adeline\\Documents\\DocuMind_AI\\qualification\\p4_build_materials_v2\\materials\\wheels\\pip-25.2-py3-none-any.whl\\pip (python 3.13)\r\n",
+  "target_cp311_bootstrap_qualified": false,
+  "wheel_sha256": "6d67a2b4e7f14d8b31b8b52648866fa717f45a1eb70e83002f4331d07e953717"
+}

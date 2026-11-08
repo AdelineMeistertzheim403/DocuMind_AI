@@ -1,0 +1,1053 @@
+--- a/.env.example
++++ b/.env.example
+@@ -4,9 +4,12 @@
+ # Aucune clé utilisable n'est fournie ; le serveur refuse de démarrer sans clé.
+ API_KEYS={}
+ STORAGE_DIR=var/documents
+-# Local-only operator latch; create the file before starting the API.
+-RECOVERY_STATE_PATH=var/recovery-state.json
+-RECOVERY_CONTROL_FILE=./var/recovery-state.json
++# Candidate directory v1; operator provisioning and reviewed numeric GID required.
++RECOVERY_CONTROL_VERSION=1
++RECOVERY_CONTROL_DIR=
++RECOVERY_READER_GID=
++# Native API requires its own absolute child path; Compose sets its container path.
++RECOVERY_STATE_PATH=
+ # Hors Docker uniquement : adaptateur portable NON confiné (Windows/bureau).
+ # Docker impose sandbox ; sur Linux natif, préférer sandbox avec Landlock ABI >= 3/libseccomp2.
+ EXTRACTION_MODE=development
+--- a/.env.production.example
++++ b/.env.production.example
+@@ -8,9 +8,11 @@
+ TRAEFIK_CONTAINER=
+ POSTGRES_PASSWORD=
+ BFF_SERVICE_KEY=
+-# Absolute path to a root-controlled recovery-state.json outside application data/backups.
+-# Format: {"format":1,"state":"quarantined"} until an operator authorizes readiness.
+-RECOVERY_CONTROL_FILE=
++# Candidate v1: stable root:reader 0750 directory outside data/backups/releases.
++# Child recovery-state.json is root:reader 0440, initially quarantined; no auto-ready.
++RECOVERY_CONTROL_VERSION=1
++RECOVERY_CONTROL_DIR=
++RECOVERY_READER_GID=
+ # BFF_TRUSTED_PROXY_IPS is resolved on the VPS from the container above; no secret label.
+ LEGACY_API_ENABLED=false
+ REGISTRATION_MODE=disabled
+--- a/.env.public-beta.example
++++ b/.env.public-beta.example
+@@ -51,8 +51,10 @@
+ # Reverse proxy trust (Traefik container IP on the docker network)
+ BFF_TRUSTED_PROXY_IPS=***
+ 
+-# Recovery latch file (operator-managed; bind-mounted read-only)
+-RECOVERY_CONTROL_FILE=/opt/documind-public-beta/recovery-state.json
++# Candidate directory v1; provision separately, never reuse the restored proof.
++RECOVERY_CONTROL_VERSION=1
++RECOVERY_CONTROL_DIR=/opt/documind-public-beta/recovery-control
++RECOVERY_READER_GID=
+ 
+ # Lifecycle (explicit store/key paths; no secrets)
+ LIFECYCLE_DATA_ROOT=/app/lifecycle
+--- a/compose.production.yaml
++++ b/compose.production.yaml
+@@ -48,18 +48,23 @@
+       LEGACY_API_ENABLED: 'false'
+       BFF_SERVICE_KEY: ${BFF_SERVICE_KEY:?Configure an independent service credential}
+       REGISTRATION_MODE: ${REGISTRATION_MODE:-disabled}
+-      RECOVERY_STATE_PATH: /run/documind/recovery-state.json
++      RECOVERY_CONTROL_VERSION: '1'
++      RECOVERY_CONTROL_DIR: /run/documind-control
++      RECOVERY_CONTROL_SOURCE_DIR: ${RECOVERY_CONTROL_DIR:?Set the absolute preprovisioned control directory}
++      RECOVERY_READER_GID: ${RECOVERY_READER_GID:?Set a verified numeric reader GID}
++      RECOVERY_STATE_PATH: /run/documind-control/recovery-state.json
+       LIFECYCLE_DATA_ROOT: /app/lifecycle
+       LIFECYCLE_BACKUP_LOCK_PATH: /app/lifecycle/.backup.lock
+     volumes:
+       - production_documents:/app/var
+       - production_lifecycle:/app/lifecycle
+       - type: bind
+-        source: ${RECOVERY_CONTROL_FILE:?Set the operator-managed recovery latch file}
+-        target: /run/documind/recovery-state.json
++        source: ${RECOVERY_CONTROL_DIR:?Set the absolute preprovisioned control directory}
++        target: /run/documind-control
+         read_only: true
+         bind:
+           create_host_path: false
++    group_add: ['${RECOVERY_READER_GID:?Set a verified numeric reader GID}']
+     networks: [data,application,outbound]
+     depends_on: {db: {condition: service_healthy}}
+     mem_limit: 1536m
+--- a/compose.public-beta-test.yaml
++++ b/compose.public-beta-test.yaml
+@@ -36,8 +36,22 @@
+       AI_ENABLED: 'false'
+       OWNER_DEMO_ENABLED: 'false'
+       SSL_CERT_FILE: /certs/recipe.crt
+-      RECOVERY_STATE_PATH: /app/recovery-state.json
+-    volumes: ['recipe_documents:/app/var', 'recipe_lifecycle:/app/lifecycle', '${BETA_RECIPE_DIR:?}/tls:/certs:ro', '${BETA_RECIPE_DIR:?}/recovery-state.json:/app/recovery-state.json:ro']
++      RECOVERY_CONTROL_VERSION: '1'
++      RECOVERY_CONTROL_DIR: /run/documind-control
++      RECOVERY_CONTROL_SOURCE_DIR: ${RECOVERY_CONTROL_DIR:?Set the absolute preprovisioned control directory}
++      RECOVERY_READER_GID: ${RECOVERY_READER_GID:?Set a verified numeric reader GID}
++      RECOVERY_STATE_PATH: /run/documind-control/recovery-state.json
++    volumes:
++      - recipe_documents:/app/var
++      - recipe_lifecycle:/app/lifecycle
++      - '${BETA_RECIPE_DIR:?}/tls:/certs:ro'
++      - type: bind
++        source: ${RECOVERY_CONTROL_DIR:?Set the absolute preprovisioned control directory}
++        target: /run/documind-control
++        read_only: true
++        bind:
++          create_host_path: false
++    group_add: ['${RECOVERY_READER_GID:?Set a verified numeric reader GID}']
+     networks: [data,application]
+     depends_on: {db: {condition: service_healthy}}
+     command: [uvicorn, 'backend.main:app', --host, '0.0.0.0', --port, '8000', --workers, '1', --no-access-log, --limit-concurrency, '32']
+@@ -75,7 +89,6 @@
+       AI_ENABLED: 'false'
+       OWNER_DEMO_ENABLED: 'false'
+       SSL_CERT_FILE: /certs/recipe.crt
+-      RECOVERY_STATE_PATH: /app/recovery-state.json
+     volumes: ['recipe_lifecycle:/app/lifecycle', '${BETA_RECIPE_DIR:?}/tls:/certs:ro']
+     networks: [data]
+     read_only: true
+@@ -276,15 +289,37 @@
+     pids_limit: 64
+     logging: *logs
+   relay-beta:
+-    <<: *relay
++    image: documind-s14-6-proofs:local
++    pull_policy: never
++    labels: {documind.test: sprint-14-6}
++    init: true
+     environment: {DOCUMIND_TEST_ONLY: sprint-14-6, RELAY_TARGET_PORT: '8444'}
++    command: [python, -m, tests.fixtures.public_beta_tcp_relay]
+     ports: ['127.0.0.1:19444:8443']
+     networks: [proxy]
++    read_only: true
++    cap_drop: [ALL]
++    security_opt: ['no-new-privileges:true']
++    mem_limit: 128m
++    cpus: .5
++    pids_limit: 64
++    logging: *logs
+   relay-gamma:
+-    <<: *relay
++    image: documind-s14-6-proofs:local
++    pull_policy: never
++    labels: {documind.test: sprint-14-6}
++    init: true
+     environment: {DOCUMIND_TEST_ONLY: sprint-14-6, RELAY_TARGET_PORT: '8445'}
++    command: [python, -m, tests.fixtures.public_beta_tcp_relay]
+     ports: ['127.0.0.1:19445:8443']
+     networks: [proxy]
++    read_only: true
++    cap_drop: [ALL]
++    security_opt: ['no-new-privileges:true']
++    mem_limit: 128m
++    cpus: .5
++    pids_limit: 64
++    logging: *logs
+ networks:
+   data: {internal: true, labels: {documind.test: sprint-14-6}}
+   application: {internal: true, labels: {documind.test: sprint-14-6}}
+--- a/compose.public-beta.vps.yaml
++++ b/compose.public-beta.vps.yaml
+@@ -243,7 +243,11 @@
+       APPLICATION_PROFILE: ${APPLICATION_PROFILE:-standard}
+       PUBLIC_REGISTRATION_LIMIT: ${PUBLIC_REGISTRATION_LIMIT:-5}
+       PUBLIC_REGISTRATION_PER_HOUR: ${PUBLIC_REGISTRATION_PER_HOUR:-10}
+-      RECOVERY_STATE_PATH: /run/documind/recovery-state.json
++      RECOVERY_CONTROL_VERSION: '1'
++      RECOVERY_CONTROL_DIR: /run/documind-control
++      RECOVERY_CONTROL_SOURCE_DIR: ${RECOVERY_CONTROL_DIR:?Set the absolute preprovisioned control directory}
++      RECOVERY_READER_GID: ${RECOVERY_READER_GID:?Set a verified numeric reader GID}
++      RECOVERY_STATE_PATH: /run/documind-control/recovery-state.json
+       LIFECYCLE_DATA_ROOT: /app/lifecycle
+       LIFECYCLE_BACKUP_LOCK_PATH: /app/lifecycle/.backup.lock
+       # Five lifecycle stores (SQLite)
+@@ -259,11 +263,12 @@
+       - public_beta_documents:/app/var
+       - public_beta_lifecycle:/app/lifecycle
+       - type: bind
+-        source: ${RECOVERY_CONTROL_FILE:?Set operator-managed recovery latch file}
+-        target: /run/documind/recovery-state.json
++        source: ${RECOVERY_CONTROL_DIR:?Set the absolute preprovisioned control directory}
++        target: /run/documind-control
+         read_only: true
+         bind:
+           create_host_path: false
++    group_add: ['${RECOVERY_READER_GID:?Set a verified numeric reader GID}']
+     networks: [data,application,outbound]
+     depends_on: {db: {condition: service_healthy}}
+     mem_limit: 1536m
+--- a/compose.yaml
++++ b/compose.yaml
+@@ -23,7 +23,11 @@
+     environment:
+       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-documind}:${POSTGRES_PASSWORD:-documind}@db:5432/${POSTGRES_DB:-documind}
+       STORAGE_DIR: /app/var/documents
+-      RECOVERY_STATE_PATH: /run/documind/recovery-state.json
++      RECOVERY_CONTROL_VERSION: '1'
++      RECOVERY_CONTROL_DIR: /run/documind-control
++      RECOVERY_CONTROL_SOURCE_DIR: ${RECOVERY_CONTROL_DIR:?Set the absolute preprovisioned control directory}
++      RECOVERY_READER_GID: ${RECOVERY_READER_GID:?Set a verified numeric reader GID}
++      RECOVERY_STATE_PATH: /run/documind-control/recovery-state.json
+       LIFECYCLE_DATA_ROOT: /app/lifecycle
+       LIFECYCLE_BACKUP_LOCK_PATH: /app/lifecycle/.backup.lock
+       EXTRACTION_MODE: sandbox
+@@ -33,11 +37,12 @@
+       - documents:/app/var
+       - lifecycle:/app/lifecycle
+       - type: bind
+-        source: ${RECOVERY_CONTROL_FILE:?Create the local recovery latch file}
+-        target: /run/documind/recovery-state.json
++        source: ${RECOVERY_CONTROL_DIR:?Set the absolute preprovisioned control directory}
++        target: /run/documind-control
+         read_only: true
+         bind:
+           create_host_path: false
++    group_add: ['${RECOVERY_READER_GID:?Set a verified numeric reader GID}']
+     depends_on:
+       db:
+         condition: service_healthy
+--- a/tools/backup_local.py
++++ b/tools/backup_local.py
+@@ -218,6 +218,11 @@
+ def create_backup(compose, destination, env=None, *, include_lifecycle_keys=False):
+     """Reusable by the approved VPS deployment; compose contains no credential arguments."""
+     config = _compose_config(compose, env)
++    try:
++        from . import recovery_control_directory as recovery_control
++    except ImportError:
++        import recovery_control_directory as recovery_control
++    recovery_control.validate_compose(config)
+     _assert_quiescent(compose, env, config)
+     _assert_no_database_clients(compose, env)
+     capture_id = str(uuid4())
+@@ -382,6 +387,11 @@
+ 
+ 
+ def main():
++    try:
++        from . import recovery_control_directory as recovery_control
++    except ImportError:
++        import recovery_control_directory as recovery_control
++    recovery_control.deny_operational_execution()
+     parser = argparse.ArgumentParser(description=__doc__)
+     parser.add_argument('--project', required=True,
+                         help='Docker Compose project name to target (e.g. documind-public-beta).')
+--- a/tools/backup_production.py
++++ b/tools/backup_production.py
+@@ -18,6 +18,11 @@
+ import urllib.error
+ import urllib.request
+ from uuid import uuid4
++
++try:
++    from . import recovery_control_directory as recovery_control
++except ImportError:
++    import recovery_control_directory as recovery_control
+ 
+ PROJECT = 'documind-prod'
+ HEALTH_URL = 'https://documind.adelinemeistertzheim.fr/bff/health'
+@@ -190,6 +195,10 @@
+         check_security_maintenance(self.root)
+         config = json.loads(self.call('config', '--format', 'json'))
+         services = config['services']
++        try:
++            self.recovery_control_spec = recovery_control.validate_compose(config)
++        except recovery_control.ContractError as error:
++            raise BackupError(str(error)) from error
+         if set(services) != {'db', 'api', 'web'} or config['name'] != PROJECT:
+             raise BackupError('unexpected_compose_project')
+         for service, component in (('db', 'postgres'), ('api', 'backend'), ('web', 'frontend')):
+@@ -200,7 +209,7 @@
+             raise BackupError('unexpected_compose_mounts')
+         document_mounts = [mount for mount in mounts if mount.get('target') == '/app/var']
+         lifecycle_mounts = [mount for mount in mounts if mount.get('target') == '/app/lifecycle']
+-        control_mounts = [mount for mount in mounts if mount.get('target') == '/run/documind/recovery-state.json']
++        control_mounts = [mount for mount in mounts if mount.get('target') == recovery_control.TARGET]
+         if (len(document_mounts) != 1 or document_mounts[0].get('type') != 'volume'
+                 or document_mounts[0].get('source') != 'production_documents'
+                 or config['volumes']['production_documents']['name'] != PROJECT + '_production_documents'
+@@ -218,7 +227,7 @@
+         if not isinstance(control_source, str) or not Path(control_source).is_absolute():
+             raise BackupError('invalid_recovery_control_source')
+         control_path = Path(control_source)
+-        if (control_path.is_symlink() or not control_path.is_file()
++        if (control_path.is_symlink() or not control_path.is_dir()
+                 or any(parent.is_symlink() for parent in control_path.parents)):
+             raise BackupError('invalid_recovery_control_source')
+         try:
+@@ -227,6 +236,16 @@
+             pass
+         else:
+             raise BackupError('recovery_control_inside_deployment_root')
++        docker_root = command(['docker', 'info', '--format', '{{.DockerRootDir}}'], self.env).strip()
++        if not docker_root or not Path(docker_root).is_absolute():
++            raise BackupError('unknown_docker_data_root')
++        try:
++            self.recovery_control_identity = recovery_control.validate_host(
++                control_source, self.recovery_control_spec.gid,
++                forbidden_roots=(str(self.root), docker_root),
++                expected=getattr(self, 'recovery_control_identity', None))
++        except recovery_control.ContractError as error:
++            raise BackupError(str(error)) from error
+         for service, logical, target in (('db', 'production_database', '/var/lib/postgresql/data'),):
+             mounts = services[service].get('volumes', [])
+             if (len(mounts) != 1 or mounts[0].get('type') != 'volume' or mounts[0].get('source') != logical
+@@ -238,6 +257,10 @@
+         if len(ids) != 3:
+             raise BackupError('unexpected_service_count')
+         containers = json.loads(command(['docker', 'inspect', *ids], self.env))
++        try:
++            recovery_control.validate_containers(containers, self.recovery_control_spec)
++        except recovery_control.ContractError as error:
++            raise BackupError(str(error)) from error
+         report_directory = self.root / 'var' / 'deployment-reports'
+         report_path = report_directory / (self.bundle.name + '.json')
+         for directory in (self.root / 'var', report_directory):
+@@ -287,7 +310,7 @@
+             if service == 'api':
+                 documents = [mount for mount in mounts if mount.get('Destination') == '/app/var']
+                 lifecycle = [mount for mount in mounts if mount.get('Destination') == '/app/lifecycle']
+-                control = [mount for mount in mounts if mount.get('Destination') == '/run/documind/recovery-state.json']
++                control = [mount for mount in mounts if mount.get('Destination') == recovery_control.TARGET]
+                 if (len(mounts) != 3 or len(documents) != 1 or documents[0].get('Type') != 'volume'
+                         or documents[0].get('Name') != PROJECT + '_production_documents'
+                         or len(lifecycle) != 1 or lifecycle[0].get('Type') != 'volume'
+@@ -301,6 +324,12 @@
+                     raise BackupError('unexpected_container_mounts')
+             elif mounts:
+                 raise BackupError('unexpected_container_mounts')
++        try:
++            recovery_control.validate_host(control_source, self.recovery_control_spec.gid,
++                                           forbidden_roots=(str(self.root), docker_root),
++                                           expected=self.recovery_control_identity)
++        except recovery_control.ContractError as error:
++            raise BackupError(str(error)) from error
+         self.healthy(('db', 'api', 'web') if require_healthy else ('db',))
+         revision = self.call('exec', '-T', 'db', 'sh', '-c',
+             'exec psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -c "SELECT version_num FROM alembic_version"').strip()
+@@ -462,6 +491,7 @@
+ 
+ 
+ def execute(root, report):
++    recovery_control.deny_operational_execution()
+     with deployment_lock(root):
+         check_security_maintenance(root)
+         marker = marker_path(root)
+@@ -539,6 +569,7 @@
+ 
+ 
+ def main():
++    recovery_control.deny_operational_execution()
+     parser = argparse.ArgumentParser()
+     parser.add_argument('--root', type=Path, default=Path('/srv/documind-ai'))
+     mode = parser.add_mutually_exclusive_group()
+--- a/tools/deploy_production.py
++++ b/tools/deploy_production.py
+@@ -23,11 +23,13 @@
+     from .release_manifest import COMPONENTS,validate_release
+     from .public_beta_policy import validate_registration_config, PublicBetaPolicyError, SETTINGS_PROBE
+     from . import release_security as security
++    from . import recovery_control_directory as recovery_control
+ except ImportError:  # Flat, reviewed CI release bundle on the VPS.
+     from backup_local import create_backup
+     from release_manifest import COMPONENTS,validate_release
+     from public_beta_policy import validate_registration_config, PublicBetaPolicyError, SETTINGS_PROBE
+     import release_security as security
++    import recovery_control_directory as recovery_control
+ 
+ HOST='documind.adelinemeistertzheim.fr'
+ PROJECT='documind-prod'
+@@ -104,7 +106,7 @@
+ 
+ def check_backup_guard(root,bundle):
+     try:
+-        for name in ('backup_production.py','release_security.py'):
++        for name in ('backup_production.py','release_security.py','recovery_control_directory.py'):
+             actual=security.read_admin_file(root/'ops'/name)
+             expected=security.read_file(bundle/name)
+             if hashlib.sha256(actual).digest()!=hashlib.sha256(expected).digest():
+@@ -113,7 +115,7 @@
+ 
+ 
+ CONTROLLER_FILES=frozenset(('deploy_production.py','backup_local.py','release_manifest.py',
+-                            'public_beta_policy.py','release_security.py'))
++                            'public_beta_policy.py','release_security.py','recovery_control_directory.py'))
+ 
+ 
+ def verify_controller_bundle_compatibility(controller,bundle,release,*,rollback=False):
+@@ -217,10 +219,14 @@
+ 
+ 
+ def validate_recovery_control_config(stack,config):
++    try:
++        stack.recovery_control_spec=recovery_control.validate_compose(config)
++    except recovery_control.ContractError as error:
++        raise DeploymentError(str(error)) from error
+     mounts=config['services']['api'].get('volumes',[])
+     documents=[mount for mount in mounts if mount.get('target')=='/app/var']
+     lifecycle=[mount for mount in mounts if mount.get('target')=='/app/lifecycle']
+-    controls=[mount for mount in mounts if mount.get('target')=='/run/documind/recovery-state.json']
++    controls=[mount for mount in mounts if mount.get('target')==recovery_control.TARGET]
+     if (len(mounts)!=3 or len(documents)!=1 or documents[0].get('type')!='volume'
+             or documents[0].get('source')!='production_documents'
+             or len(lifecycle)!=1 or lifecycle[0].get('type')!='volume'
+@@ -240,8 +246,8 @@
+     if not isinstance(source,str) or not Path(source).is_absolute():
+         raise DeploymentError('Recovery control file must use an absolute host path')
+     path=Path(source)
+-    if path.is_symlink() or not path.is_file() or any(parent.is_symlink() for parent in path.parents):
+-        raise DeploymentError('Recovery control file must be a regular operator-managed file')
++    if path.is_symlink() or not path.is_dir() or any(parent.is_symlink() for parent in path.parents):
++        raise DeploymentError('Recovery control must be a stable operator-managed directory')
+     try:
+         path.resolve().relative_to(Path(stack.root).resolve())
+     except ValueError:
+@@ -257,6 +263,13 @@
+     try:
+         path.resolve().relative_to(docker_root.resolve())
+     except ValueError:
++        try:
++            stack.recovery_control_identity=recovery_control.validate_host(
++                source,stack.recovery_control_spec.gid,
++                forbidden_roots=(str(stack.root),str(docker_root)),
++                expected=getattr(stack,'recovery_control_identity',None))
++        except recovery_control.ContractError as error:
++            raise DeploymentError(str(error)) from error
+         return path.resolve()
+     raise DeploymentError('Recovery control file must be outside restorable Docker volumes')
+ 
+@@ -557,6 +570,10 @@
+     identifiers=run(['docker','ps','-aq','--filter',f'label=com.docker.compose.project={PROJECT}']).splitlines()
+     if len(identifiers)!=3:raise DeploymentError('Recovery requires exactly the three original service containers')
+     containers=json.loads(run(['docker','inspect',*identifiers]))
++    try:
++        recovery_control.validate_containers(containers,stack.recovery_control_spec)
++    except recovery_control.ContractError as error:
++        raise DeploymentError(str(error)) from error
+     seen=set()
+     for container in containers:
+         labels=container['Config'].get('Labels',{})
+@@ -583,7 +600,7 @@
+             else:
+                 documents=[mount for mount in mounts if mount.get('Destination')=='/app/var']
+                 lifecycle=[mount for mount in mounts if mount.get('Destination')=='/app/lifecycle']
+-                controls=[mount for mount in mounts if mount.get('Destination')=='/run/documind/recovery-state.json']
++                controls=[mount for mount in mounts if mount.get('Destination')==recovery_control.TARGET]
+                 control_path=getattr(stack,'recovery_control_path',None)
+                 valid_mounts=(len(mounts)==3 and len(documents)==1 and documents[0].get('Type')=='volume'
+                     and documents[0].get('Name')==f'{PROJECT}_production_documents'
+@@ -607,6 +624,7 @@
+ 
+ 
+ def execute(args,report):
++    recovery_control.deny_operational_execution()
+     import fcntl
+     root=args.root.resolve();bundle=(getattr(args,'bundle',None) or Path(__file__).resolve().parent).resolve()
+     if bundle.parent!=root/'releases':raise DeploymentError('Release must be staged under the deployment releases directory')
+@@ -760,6 +778,7 @@
+ 
+ 
+ def main():
++    recovery_control.deny_operational_execution()
+     parser=argparse.ArgumentParser()
+     parser.add_argument('--root',required=True,type=Path)
+     parser.add_argument('--bundle',type=Path,help='Candidate data bundle; execute the trusted controller, never an old candidate script')
+--- a/tools/public_beta_backup.py
++++ b/tools/public_beta_backup.py
+@@ -15,6 +15,7 @@
+ from uuid import uuid4
+ 
+ from tools import backup_local, verify_snapshot
++from tools import recovery_control_directory as recovery_control
+ from tools.public_beta_restic_guard import (
+     load_public_beta_restic_env,
+     record_public_beta_repository_id, validate_public_beta_destination,
+@@ -22,7 +23,10 @@
+ )
+ 
+ RESTIC_ENV = Path('/home/debian/.config/restic/documind-public-beta.env')
+-CONTROL = Path('/opt/documind-public-beta/recovery-state.json')
++DEPLOYMENT_BASE = Path('/opt/documind-public-beta')
++CONTROL_DIR = DEPLOYMENT_BASE / 'recovery-control'
++CONTROL = CONTROL_DIR / recovery_control.LATCH
++OPERATOR_LOCK = DEPLOYMENT_BASE / '.public-beta-backup.lock'
+ PROJECT = 'documind-public-beta'
+ KEYS = {'keys/authentication.key', 'keys/admission.key'}
+ 
+@@ -70,14 +74,13 @@
+                 or matches[0].get('source') != volume
+                 or config['volumes'][volume].get('name') != f'{PROJECT}_{volume}'):
+             raise BackupError('wrong_public_beta_volume')
+-    api = config['services']['api']
+-    target = '/run/documind/recovery-state.json'
+-    mounts = [m for m in api.get('volumes', []) if m.get('target') == target]
+-    if (api.get('environment', {}).get('RECOVERY_STATE_PATH') != target
+-            or len(mounts) != 1 or mounts[0].get('type') != 'bind'
+-            or mounts[0].get('source') != str(control)
+-            or mounts[0].get('read_only') is not True):
++    try:
++        spec = recovery_control.validate_compose(config)
++    except recovery_control.ContractError as error:
++        raise BackupError(str(error)) from error
++    if spec.source != str(control.parent) or control.name != recovery_control.LATCH:
+         raise BackupError('wrong_operator_latch_mount')
++    return spec
+ 
+ 
+ def validate_v5(destination, compose, env, control_payload, database):
+@@ -127,7 +130,7 @@
+ def operator_lock():
+     # Stable path shared by all releases; file retained to avoid lock inode races.
+     import fcntl
+-    path = CONTROL.parent / '.public-beta-backup.lock'
++    path = OPERATOR_LOCK
+     fd = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+     try:
+         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+@@ -137,15 +140,15 @@
+ 
+ 
+ def execute(root, bucket, prefix):
++    recovery_control.deny_operational_execution()
+     root = root.absolute()
+-    if root.resolve() != root or root.parent != CONTROL.parent:
++    if root.resolve() != root or root.parent != DEPLOYMENT_BASE:
+         raise BackupError('public_beta_release_path_required')
+     restic_env, repo_id = load_public_beta_restic_env(RESTIC_ENV)
+     validate_public_beta_destination(restic_env, bucket, prefix)
+     verify_public_beta_repository(restic_env, repo_id)
+-    control_payload = latch_bytes(CONTROL)
+     env = {k: os.environ[k] for k in ('PATH', 'HOME', 'USER', 'LOGNAME') if k in os.environ}
+-    env['RECOVERY_CONTROL_FILE'] = str(CONTROL)
++    env['RECOVERY_CONTROL_DIR'] = str(CONTROL_DIR)
+     compose = ['docker', 'compose', '--project-directory', str(root), '-p', PROJECT]
+     extras = [CONTROL, root / '.env.public-beta', root / '.env.public-beta.images']
+     for path in extras[1:]:
+@@ -154,7 +157,22 @@
+         compose += ['--env-file', str(path)]
+     compose += ['-f', str(root / 'compose.public-beta.vps.yaml')]
+     config = strict_json(command(compose + ['config', '--format', 'json'], env))
+-    validate_config(config, CONTROL)
++    spec = validate_config(config, CONTROL)
++    docker_root = command(['docker', 'info', '--format', '{{.DockerRootDir}}'], env).strip()
++    if not docker_root or not Path(docker_root).is_absolute():
++        raise BackupError('unknown_docker_data_root')
++    try:
++        identity = recovery_control.validate_host(
++            str(CONTROL_DIR), spec.gid, forbidden_roots=(str(root), docker_root))
++        identifiers = command(['docker', 'ps', '-aq', '--filter',
++                               'label=com.docker.compose.project=' + PROJECT], env).splitlines()
++        if not identifiers:
++            raise BackupError('missing_public_beta_containers')
++        containers = strict_json(command(['docker', 'inspect', *identifiers], env))
++        recovery_control.validate_containers(containers, spec)
++    except recovery_control.ContractError as error:
++        raise BackupError(str(error)) from error
++    control_payload = latch_bytes(CONTROL)
+     database = config['services']['db'].get('environment', {}).get('POSTGRES_DB')
+     if not isinstance(database, str) or not re.fullmatch(r'[A-Za-z0-9_]+', database):
+         raise BackupError('invalid_public_beta_database')
+@@ -171,6 +189,8 @@
+     validate_v5(destination, compose, env, control_payload, database)
+     if latch_bytes(CONTROL) != control_payload:
+         raise BackupError('operator_latch_changed')
++    recovery_control.validate_host(str(CONTROL_DIR), spec.gid,
++                                   forbidden_roots=(str(root), docker_root), expected=identity)
+     verify_public_beta_repository(restic_env, repo_id)
+     snapshot_id = upload(destination, extras, run_id, restic_env)
+     return {'status': 'remote_verified', 'backup_dir': str(destination),
+@@ -178,6 +198,7 @@
+ 
+ 
+ def main():
++    recovery_control.deny_operational_execution()
+     parser = argparse.ArgumentParser(description=__doc__)
+     parser.add_argument('--root', required=True, type=Path)
+     parser.add_argument('--expected-bucket', required=True)
+--- /dev/null
++++ b/tools/recovery_control_directory.py
+@@ -0,0 +1,341 @@
++"""Recovery Control Directory v1. Candidate only; no automatic ready publication."""
++from contextlib import contextmanager
++from dataclasses import dataclass
++import json
++import os
++from pathlib import Path, PurePosixPath
++import re
++import stat
++import sys
++import uuid
++
++VERSION = '1'
++TARGET = '/run/documind-control'
++LATCH = 'recovery-state.json'
++STATE_PATH = TARGET + '/' + LATCH
++OLD_TARGETS = {
++    '/run/documind/recovery-state.json', '/app/recovery-state.json',
++    '/control/recovery.json',
++}
++
++
++class ContractError(ValueError):
++    pass
++
++
++def deny_operational_execution():
++    raise ContractError('CANDIDATE_ONLY: deployment, backup and restart execution disabled')
++
++
++def absolute_path(value):
++    if (not isinstance(value, str) or not value.startswith('/')
++            or value.startswith('//') or '\\' in value or any(ord(char) < 32 for char in value)
++            or any(part in ('.', '..') for part in value.split('/'))
++            or str(PurePosixPath(value)) != value or value == '/'):
++        raise ContractError('noncanonical absolute control path')
++    return PurePosixPath(value)
++
++
++def overlaps(first, second):
++    return first == second or first in second.parents or second in first.parents
++
++
++def reader_gid(value):
++    if not isinstance(value, str) or not re.fullmatch(r'[1-9][0-9]{0,9}', value):
++        raise ContractError('explicit nonzero numeric reader GID required')
++    number = int(value)
++    if number > 2147483647:
++        raise ContractError('reader GID out of range')
++    return number
++
++
++@dataclass(frozen=True)
++class Spec:
++    source: str
++    gid: int
++
++
++def environment(values):
++    if isinstance(values, dict):
++        return values
++    if not isinstance(values, list):
++        raise ContractError('ambiguous container environment')
++    result = {}
++    for item in values:
++        if not isinstance(item, str) or '=' not in item:
++            raise ContractError('invalid container environment')
++        key, value = item.split('=', 1)
++        if key in result:
++            raise ContractError('duplicate container environment')
++        result[key] = value
++    return result
++
++
++def _validate_environment(env, gid, source):
++    if (env.get('RECOVERY_CONTROL_VERSION') != VERSION
++            or env.get('RECOVERY_CONTROL_DIR') != TARGET
++            or env.get('RECOVERY_STATE_PATH') != STATE_PATH
++            or env.get('RECOVERY_CONTROL_SOURCE_DIR') != source
++            or env.get('RECOVERY_READER_GID') != str(gid)
++            or 'RECOVERY_CONTROL_FILE' in env):
++        raise ContractError('recovery directory v1 environment required')
++
++
++def _short_bind(mount):
++    if not isinstance(mount, str):
++        raise ContractError('invalid mount')
++    parts = re.split(r':(?![^{}]*\})', mount)
++    if len(parts) not in (2, 3):
++        raise ContractError('ambiguous short mount')
++    source, target = parts[:2]
++    return {'type': 'bind' if source.startswith(('/', '.')) else 'volume',
++            'source': source, 'target': target,
++            'read_only': len(parts) == 3 and parts[2] == 'ro'}
++
++
++def validate_compose(config):
++    try:
++        services = config['services']
++        if config.get('configs') or config.get('secrets'):
++            raise ContractError('additional config/secret mounts require separate review')
++        for definition in config.get('volumes', {}).values():
++            definition = definition or {}
++            if (definition.get('driver', 'local') != 'local'
++                    or definition.get('driver_opts') or definition.get('external')):
++                raise ContractError('external or host-backed named volumes forbidden')
++        api = services['api']
++        mounts = api.get('volumes', [])
++        if not isinstance(mounts, list) or not all(isinstance(m, dict) for m in mounts):
++            raise ContractError('normalized long API mounts required')
++        controls = [m for m in mounts if m.get('target') == TARGET]
++        if len(controls) != 1:
++            raise ContractError('exactly one control directory bind required')
++        control = controls[0]
++        if (control.get('type') != 'bind' or control.get('read_only') is not True
++                or control.get('bind', {}).get('create_host_path') is not False
++                or set(control) - {'type', 'source', 'target', 'read_only', 'bind'}
++                or set(control.get('bind', {})) != {'create_host_path'}):
++            raise ContractError('strict read-only directory bind required')
++        source = absolute_path(control.get('source'))
++        if source.name == LATCH:
++            raise ContractError('legacy file source forbidden')
++        env = environment(api['environment'])
++        gid = reader_gid(env.get('RECOVERY_READER_GID'))
++        _validate_environment(env, gid, str(source))
++        if api.get('group_add') != [str(gid)]:
++            raise ContractError('explicit reader group required')
++        if 'user' in api and str(api['user']).split(':')[0] in ('', '0', 'root'):
++            raise ContractError('root API forbidden')
++        for service, definition in services.items():
++            if definition.get('volumes_from') or definition.get('configs') or definition.get('secrets'):
++                raise ContractError('inherited/config/secret mounts require separate review')
++            targets = set()
++            for entry in definition.get('volumes', []):
++                mount = _short_bind(entry) if isinstance(entry, str) else entry
++                if not isinstance(mount, dict):
++                    raise ContractError('invalid mount')
++                target = str(absolute_path(mount.get('target')))
++                if target in targets or target in OLD_TARGETS:
++                    raise ContractError('duplicate target or legacy file bind')
++                targets.add(target)
++                expected = service == 'api' and entry is control
++                if service == 'api' and overlaps(PurePosixPath(target), PurePosixPath(TARGET)) and not expected:
++                    raise ContractError('control target masked or aliased')
++                if mount.get('type') == 'bind':
++                    bind_source = absolute_path(mount.get('source'))
++                    if overlaps(source, bind_source) and not expected:
++                        raise ContractError('control source alias forbidden, including read-only aliases')
++                elif mount.get('type') != 'volume' and not expected:
++                    raise ContractError('unknown mount type')
++            temporary = definition.get('tmpfs', [])
++            temporary = [temporary] if isinstance(temporary, str) else temporary
++            if not isinstance(temporary, list):
++                raise ContractError('ambiguous tmpfs configuration')
++            for entry in temporary:
++                if not isinstance(entry, str):
++                    raise ContractError('ambiguous tmpfs mount')
++                target = str(absolute_path(entry.split(':', 1)[0]))
++                if (target in targets or target in OLD_TARGETS
++                        or service == 'api' and overlaps(PurePosixPath(target), PurePosixPath(TARGET))):
++                    raise ContractError('tmpfs masks a declared or control mount')
++                targets.add(target)
++        return Spec(str(source), gid)
++    except (KeyError, TypeError, AttributeError) as error:
++        raise ContractError('incomplete or ambiguous Compose configuration') from error
++
++
++def diagnose_legacy(config):
++    """Diagnostic only. This never returns an authorization."""
++    findings = []
++    for service, definition in config.get('services', {}).items():
++        for entry in definition.get('volumes', []):
++            mount = _short_bind(entry) if isinstance(entry, str) else entry
++            if mount.get('target') in OLD_TARGETS:
++                findings.append(service + ':' + mount['target'])
++    return {'legacy_file_binds': findings, 'operationally_accepted': False}
++
++
++def validate_containers(containers, spec):
++    source = absolute_path(spec.source)
++    api_count = 0
++    for container in containers:
++        service = container['Config'].get('Labels', {}).get('com.docker.compose.service')
++        if service == 'api':
++            api_count += 1
++            _validate_environment(environment(container['Config']['Env']), spec.gid, spec.source)
++            user = container['Config'].get('User', '').split(':')[0]
++            if not user or user in ('0', 'root'):
++                raise ContractError('non-root image USER must be explicit')
++            if container['HostConfig'].get('GroupAdd') != [str(spec.gid)]:
++                raise ContractError('running reader group mismatch')
++        count = 0
++        targets = set()
++        for mount in container.get('Mounts', []):
++            target = str(absolute_path(mount.get('Destination')))
++            if target in targets or target in OLD_TARGETS:
++                raise ContractError('legacy or duplicate running mount')
++            targets.add(target)
++            expected = (service == 'api' and target == TARGET
++                        and mount.get('Type') == 'bind'
++                        and mount.get('Source') == spec.source and mount.get('RW') is False)
++            if expected:
++                count += 1
++            if service == 'api' and overlaps(PurePosixPath(target), PurePosixPath(TARGET)) and not expected:
++                raise ContractError('running control mount masked')
++            if mount.get('Type') != 'tmpfs':
++                actual_source = absolute_path(mount.get('Source'))
++                if overlaps(source, actual_source) and not expected:
++                    raise ContractError('running source alias forbidden')
++        if service == 'api' and count != 1:
++            raise ContractError('running control directory bind required')
++    if api_count != 1:
++        raise ContractError('exactly one running API required')
++
++
++def _require_linux():
++    if sys.platform != 'linux':
++        raise ContractError('host ownership validation requires Linux')
++
++
++def _lstat(path):
++    return path.lstat()
++
++
++def _trusted_parents(path):
++    for parent in path.parents:
++        info = _lstat(parent)
++        writable = info.st_mode & 0o022
++        sticky_root = info.st_uid == 0 and bool(info.st_mode & stat.S_ISVTX)
++        if (not stat.S_ISDIR(info.st_mode) or info.st_uid != 0
++                or writable and not sticky_root):
++            raise ContractError('untrusted or symlinked ancestor')
++
++
++def _check_file(info, gid):
++    if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0
++            or info.st_gid != gid or stat.S_IMODE(info.st_mode) != 0o440
++            or info.st_nlink != 1 or info.st_size > 1024):
++        raise ContractError('latch must be root:reader 0440, regular and single-link')
++
++
++@dataclass(frozen=True)
++class HostControl:
++    path: Path
++    gid: int
++    identity: tuple
++
++
++def validate_host(source, gid, *, forbidden_roots=(), expected=None, allow_missing=False):
++    _require_linux()
++    reader_gid(str(gid))
++    absolute_path(str(source))
++    path = Path(source)
++    _trusted_parents(path)
++    info = _lstat(path)
++    identity = (info.st_dev, info.st_ino)
++    if (not stat.S_ISDIR(info.st_mode) or info.st_uid != 0
++            or info.st_gid != gid or stat.S_IMODE(info.st_mode) != 0o750
++            or expected is not None and identity != expected.identity):
++        raise ContractError('control directory identity/ownership/mode invalid')
++    for root in (*forbidden_roots, '/proc', '/sys', '/dev'):
++        if overlaps(absolute_path(str(path)), PurePosixPath(str(root))):
++            raise ContractError('control overlaps deployment, data or special filesystem')
++    names = set(os.listdir(path))
++    if names - {LATCH} or (not allow_missing and LATCH not in names):
++        raise ContractError('dedicated directory must contain only the latch')
++    if LATCH in names:
++        _check_file(_lstat(path / LATCH), gid)
++    return HostControl(path, gid, identity)
++
++
++@contextmanager
++def operator_lock(path, control, owner_uid):
++    import fcntl
++    path = Path(path)
++    absolute_path(str(path))
++    _trusted_parents(path)
++    if overlaps(PurePosixPath(str(path)), PurePosixPath(str(control.path))):
++        raise ContractError('operator lock must remain outside control directory')
++    descriptor = os.open(path, os.O_RDWR | os.O_NOFOLLOW)
++    try:
++        info = os.fstat(descriptor)
++        if (not stat.S_ISREG(info.st_mode) or info.st_uid != owner_uid
++                or info.st_nlink != 1 or stat.S_IMODE(info.st_mode) != 0o600
++                or (info.st_dev, info.st_ino) != (_lstat(path).st_dev, _lstat(path).st_ino)):
++            raise ContractError('untrusted or replaced operator lock')
++        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
++        yield
++    finally:
++        os.close(descriptor)
++
++
++def _metadata(descriptor, gid):
++    os.fchown(descriptor, 0, gid)
++    os.fchmod(descriptor, 0o440)
++    _check_file(os.fstat(descriptor), gid)
++
++
++@contextmanager
++def _directory(control):
++    descriptor = os.open(control.path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
++    try:
++        info = os.fstat(descriptor)
++        if (info.st_dev, info.st_ino) != control.identity:
++            raise ContractError('control directory was replaced')
++        yield descriptor
++    finally:
++        os.close(descriptor)
++
++
++def publish_quarantine(control, *, lock_path, lock_owner_uid):
++    """Close only; caller must provision a new runtime directory, never a proof folder."""
++    _require_linux()
++    if os.geteuid() != 0:
++        raise ContractError('privileged operator required')
++    raw = b'{"format":1,"state":"quarantined"}\n'
++    temporary = '.recovery-' + uuid.uuid4().hex + '.tmp'
++    with operator_lock(lock_path, control, lock_owner_uid):
++        validate_host(str(control.path), control.gid, expected=control, allow_missing=True)
++        with _directory(control) as directory:
++            descriptor = os.open(temporary, os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW,
++                                 0o600, dir_fd=directory)
++            try:
++                with os.fdopen(descriptor, 'wb') as output:
++                    _metadata(output.fileno(), control.gid)
++                    output.write(raw)
++                    output.flush()
++                    os.fsync(output.fileno())
++                os.replace(temporary, LATCH, src_dir_fd=directory, dst_dir_fd=directory)
++                os.fsync(directory)
++                validate_host(str(control.path), control.gid, expected=control)
++                descriptor = os.open(LATCH, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
++                with os.fdopen(descriptor, 'rb') as published:
++                    _check_file(os.fstat(published.fileno()), control.gid)
++                    if published.read(1025) != raw:
++                        raise ContractError('quarantine publication readback mismatch')
++            finally:
++                try:
++                    os.unlink(temporary, dir_fd=directory)
++                except FileNotFoundError:
++                    pass
++    return {'state': json.loads(raw)['state'], 'directory_identity': control.identity}
+--- a/tools/release_security.py
++++ b/tools/release_security.py
+@@ -20,7 +20,7 @@
+     'documind-backup.service','documind-backup.timer','documind-backup-alert.service',
+     'documind-monitor.service','documind-monitor.timer',
+     'documind-retention.service','documind-retention.timer',
+-    'release_manifest.py','public_beta_policy.py','release_security.py'))
++    'release_manifest.py','public_beta_policy.py','release_security.py','recovery_control_directory.py'))
+ 
+ 
+ class SecurityError(ValueError):pass
+@@ -114,8 +114,8 @@
+     legacy=names==LEGACY_BUNDLE_FILES
+     if names!=BUNDLE_FILES and not legacy:
+         raise SecurityError('Unrecognized operational bundle inventory')
+-    if legacy and not rollback:
+-        raise SecurityError('Legacy release bundles are rollback-only')
++    if legacy:
++        raise SecurityError('Candidate: legacy bundles are diagnostic-only, including rollback')
+     actual={path.name for path in bundle.iterdir()}
+     if actual!=names|{STATEMENT}:
+         raise SecurityError('Operational bundle contains missing or unverified files')
+--- /dev/null
++++ b/tools/validate_recovery_candidate.py
+@@ -0,0 +1,112 @@
++"""Static synthetic rendering only: no Compose, environment, dotenv or Docker access."""
++import argparse
++import copy
++import json
++from pathlib import Path, PurePosixPath
++import re
++import sys
++
++import yaml
++
++try:
++    from . import recovery_control_directory as contract
++except ImportError:
++    import recovery_control_directory as contract
++
++COMPOSE_FILES = (
++    'compose.yaml', 'compose.production.yaml',
++    'compose.public-beta.vps.yaml', 'compose.public-beta-test.yaml',
++)
++SYNTHETIC = {
++    'RECOVERY_CONTROL_DIR': '/srv/qualification/recovery-control',
++    'RECOVERY_READER_GID': '42051',
++    'BETA_RECIPE_DIR': '/srv/qualification/recipe',
++}
++
++
++class UniqueLoader(yaml.SafeLoader):
++    pass
++
++
++def _mapping(loader, node):
++    values = {}
++    for key_node, value_node in node.value:
++        key = loader.construct_object(key_node)
++        if key in values or key == '<<':
++            raise contract.ContractError('duplicate YAML key or merge forbidden')
++        values[key] = loader.construct_object(value_node)
++    return values
++
++
++UniqueLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _mapping)
++
++
++def load_yaml(path):
++    result = yaml.load(Path(path).read_text(encoding='utf-8-sig'), Loader=UniqueLoader)
++    if not isinstance(result, dict):
++        raise contract.ContractError('complete Compose document required')
++    return result
++
++
++def _render(value):
++    if isinstance(value, dict):
++        return {key: _render(item) for key, item in value.items()}
++    if isinstance(value, list):
++        return [_render(item) for item in value]
++    if isinstance(value, str):
++        def substitute(match):
++            name, operation, default = match.groups()
++            return SYNTHETIC.get(name, default if operation == ':-' else 'synthetic-only')
++        return re.sub(r'\$\{([A-Z_0-9]+)(:[-?])?([^}]*)\}', substitute, value)
++    return value
++
++
++def render_synthetic(raw):
++    """Minimal model for contract tests, deliberately NOT a Compose implementation."""
++    config = _render(copy.deepcopy(raw))
++    config.setdefault('name', 'synthetic-only')
++    for logical, definition in list(config.get('volumes', {}).items()):
++        definition = definition or {}
++        definition.setdefault('name', config['name'] + '_' + logical)
++        config['volumes'][logical] = definition
++    for definition in config['services'].values():
++        normalized = []
++        for entry in definition.get('volumes', []):
++            entry = contract._short_bind(entry) if isinstance(entry, str) else entry
++            if entry.get('type') == 'bind' and entry.get('source', '').startswith('.'):
++                entry['source'] = str(PurePosixPath('/srv/qualification/source') / entry['source'])
++            normalized.append(entry)
++        if 'volumes' in definition:
++            definition['volumes'] = normalized
++    return config
++
++
++def security_projection(raw):
++    result = copy.deepcopy(raw)
++    api = result['services']['api']
++    for key in ('RECOVERY_STATE_PATH', 'RECOVERY_CONTROL_VERSION', 'RECOVERY_CONTROL_DIR',
++                'RECOVERY_CONTROL_SOURCE_DIR', 'RECOVERY_READER_GID'):
++        api.get('environment', {}).pop(key, None)
++    api.pop('group_add', None)
++    api['volumes'] = [
++        mount for mount in api.get('volumes', [])
++        if (contract._short_bind(mount) if isinstance(mount, str) else mount).get('target')
++        not in contract.OLD_TARGETS | {contract.TARGET}
++    ]
++    result['services'].get('lifecycle-init', {}).get('environment', {}).pop('RECOVERY_STATE_PATH', None)
++    return result
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('compose', type=Path, nargs='+')
++    args = parser.parse_args()
++    report = {}
++    for path in args.compose:
++        spec = contract.validate_compose(render_synthetic(load_yaml(path)))
++        report[path.name] = {'static_synthetic_only': True, 'source': spec.source, 'gid': spec.gid}
++    print(json.dumps(report, indent=2))
++
++
++if __name__ == '__main__':
++    main()

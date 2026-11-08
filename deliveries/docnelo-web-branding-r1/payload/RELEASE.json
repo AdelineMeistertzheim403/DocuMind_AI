@@ -1,0 +1,49 @@
+{
+  "source_commit": "22b6428f961e98c6482a9881579361f53c114934",
+  "reference_image_id": "sha256:f15855942fb4382375648841bbcdc486fd39d252e80e8fdf8eb42999d6590019",
+  "new_image_id": "sha256:b8dcd1edd1c0e366f0bc605914424585a96d261b49b82e952458dfab1a911a1a",
+  "new_image_tag": "documind-public-beta-web:docnelo-r1-22b6428-v2",
+  "architecture": "linux/amd64",
+  "archive_sha256": "72ec517904aa3eb74a520c9aacc49cfb9ba63b390c19c32843a15f27b70378ea",
+  "archive_bytes": 260080640,
+  "release": "Docnelo Public Beta Web Branding R1",
+  "baseline_source_commit": "f3c92eb8ba2bb69b83a9798ebc3df8a70f48fbb2",
+  "verdict": "NO-GO_PENDING_OPERATOR_ACTIVE_IMAGE_AND_REGISTRATION_PROOF",
+  "active_vps_image_id": null,
+  "runtime_config_identical": true,
+  "source_baseline_reproduced_byte_for_byte": true,
+  "allowed_regular_file_changes": "/app/dist only",
+  "parent_directory_metadata": [
+    {
+      "path": "app",
+      "mode_uid_gid_unchanged": true,
+      "mtime_before": 1792928661,
+      "mtime_after": 1793458622
+    },
+    {
+      "path": "etc",
+      "mode_uid_gid_unchanged": true,
+      "mtime_before": 1792661402,
+      "mtime_after": 1793458622
+    },
+    {
+      "path": "app",
+      "mode_uid_gid_unchanged": true,
+      "mtime_before": 1792928661,
+      "mtime_after": 1793458622
+    }
+  ],
+  "tests": {
+    "react_passed": 52,
+    "bff_passed": 50,
+    "browser_views_passed": 20,
+    "image_assertions_passed": 18,
+    "baseline_reproduction_files_identical": 5,
+    "frontend_export_manifest_files_verified": 75,
+    "deployment_gates_passed": 15,
+    "automated_test_failures": 0,
+    "new_image_dist_files_verified": 13
+  },
+  "operator_proof_required": true,
+  "production_or_vps_actions_performed": false
+}

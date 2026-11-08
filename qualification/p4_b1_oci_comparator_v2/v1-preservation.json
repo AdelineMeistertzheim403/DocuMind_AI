@@ -1,0 +1,34 @@
+{
+  "argv": [
+    "C:\\Users\\Adeline\\Documents\\DocuMind_AI\\.venv\\Scripts\\python.exe",
+    "-I",
+    "-B",
+    "-"
+  ],
+  "checked_ns": 1793874769785094300,
+  "decision": "REVIEW_ONLY_BLOCKED",
+  "formal_b1_contents_closed": false,
+  "go": {
+    "c5": false,
+    "production": false,
+    "runtime": false
+  },
+  "returncode": 0,
+  "v1_payload_files": 11,
+  "v1_payload_sha256": {
+    "DEBIAN_PROTOCOL.md": "e29136ae00bceb4c6fcd57f8bae9cc23597dc2e4903fefc6e3bd9544eeed1950",
+    "DECISION.json": "5e558d4d399d54963deefa51152a0db78bd93903f242b56d709a79f809e6eedb",
+    "DESIGN_SECURITY.md": "17099b3cc3b40ffebe288c0bf9fbf79c4cb0fbf52e1c6d05d9624cadd02f1d14",
+    "EXIT_CODES.md": "61fab349fb4eef99be1674046a48ec648bd8f41ca081ec929d609a5d75599ecf",
+    "LOCAL_QUALIFICATION.md": "892b30b7f379f6dfb5ccdd226ab53da8002589dfccc8d23548071d2e0767e4e0",
+    "README.md": "ec6b6387b055a9bee01d3288ee3c6fa397ca8552feb68bd8419ff8c196884531",
+    "TRANSFER.md": "70c3f5d7cac4e6eab321d17333c605ef76b167f7834643862990950edaf09965",
+    "comparator.py": "78cd4ac234ee751555641aee0f4a80f6117c0a2284037b2693415fd92ae6c687",
+    "record_tests.py": "1a2fed84de173a3e416ccf85e110999d00e7bd3261444e1cdcef4b266c3c9e92",
+    "seal.py": "91529b8280fc97ba0a511f721de85f296e475b33901918d626248232b5ba6421",
+    "test_comparator.py": "d84b75afe5f0f7ce8a43fcb5ffb05265998a21eaa07050c25f036d415d823afc"
+  },
+  "v1_preserved": true,
+  "v1_sha256sums_after_v2_sealing": "2165b14ed3159362283de1df877f295ef110c4db64458e702df7f3b0dd059e56",
+  "v1_sha256sums_before_copy_verified": "2165b14ed3159362283de1df877f295ef110c4db64458e702df7f3b0dd059e56"
+}

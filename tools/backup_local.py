@@ -1,4 +1,4 @@
-"""Consistent local Compose snapshot; run with API/web stopped. Never prints credentials."""
+﻿"""Consistent local Compose snapshot; run with API/web stopped. Never prints credentials."""
 import json
 import argparse
 import hashlib
@@ -12,11 +12,59 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
+if __package__:
+    from .lifecycle_key_policy import validate_key_member
+else:
+    from lifecycle_key_policy import validate_key_member
+
+
+BACKUP_FORMAT_VERSION = 4
+BACKUP_FORMAT_VERSION_WITH_KEYS = 5
+RECOVERY_STATE_MAX_BYTES = 1024
+RECOVERY_STATE_ALLOWED = {'ready', 'quarantined', 'serving_closed'}
+
+LIFECYCLE_KEYS_ARCHIVE = 'lifecycle-keys.tar.gz'
+LIFECYCLE_KEY_PATHS = ('keys/authentication.key', 'keys/admission.key')
+
 
 BACKUP_FILES = (
-    'database.dump', 'documents.tar.gz', 'lifecycle.sqlite.tar.gz', 'integrity.json',
+    'database.dump',
+    'documents.tar.gz',
+    'lifecycle.sqlite.tar.gz',
+    'recovery-state.json',
+    'integrity.json',
 )
 
+
+BACKUP_FILES_WITH_KEYS = BACKUP_FILES + (LIFECYCLE_KEYS_ARCHIVE,)
+
+
+def _unique_keys(pairs):
+    values = {}
+    for key, value in pairs:
+        if key in values:
+            raise ValueError('duplicate key')
+        values[key] = value
+    return values
+
+
+def _parse_recovery_state_payload(payload: bytes) -> dict[str, object]:
+    if not isinstance(payload, (bytes, bytearray)):
+        raise ValueError('Recovery state payload must be bytes')
+    if len(payload) > RECOVERY_STATE_MAX_BYTES:
+        raise ValueError('Recovery state payload is too large')
+    try:
+        data = json.loads(payload.decode('utf-8'), object_pairs_hook=_unique_keys)
+    except (UnicodeDecodeError, ValueError) as exc:
+        raise ValueError('Recovery state payload must be valid JSON') from exc
+    if (not isinstance(data, dict)
+            or set(data) != {'format', 'state'}
+            or type(data.get('format')) is not int
+            or data['format'] != 1
+            or not isinstance(data.get('state'), str)
+            or data['state'] not in RECOVERY_STATE_ALLOWED):
+        raise ValueError('Recovery state payload schema mismatch')
+    return data
 
 def _compose_command(compose, command):
     return compose + command[2:]
@@ -40,14 +88,27 @@ def _assert_quiescent(compose, env, config):
     expected_targets = {
         'db': {'/var/lib/postgresql/data'},
         'api': {'/app/var', '/app/lifecycle'},
+        # One-off privileged provisioning must be quiescent during capture, but it
+        # is allowed to mount the lifecycle volume.
+        'lifecycle-init': {'/app/lifecycle'},
     }
+    services = config.get('services', {})
     for service, targets in expected_targets.items():
-        volumes = config.get('services', {}).get(service, {}).get('volumes', [])
+        definition = services.get(service)
+        if definition is None:
+            if service == 'lifecycle-init':
+                continue
+            raise ValueError('Expected service is missing from the Compose configuration')
+        volumes = definition.get('volumes', [])
         for target in targets:
             matches = [item for item in volumes if item.get('target') == target]
             if len(matches) != 1 or matches[0].get('type') != 'volume':
                 raise ValueError('Persistent backup volume mapping is missing')
             expected_volumes[(service, target)] = config['volumes'][matches[0]['source']]['name']
+
+    allowed_services_by_volume = {}
+    for (service, _), volume_name in expected_volumes.items():
+        allowed_services_by_volume.setdefault(volume_name, set()).add(service)
 
     identifiers = subprocess.check_output(
         ['docker', 'ps', '-aq'], text=True, env=env, stderr=subprocess.PIPE).splitlines()
@@ -55,22 +116,22 @@ def _assert_quiescent(compose, env, config):
         raise ValueError('Compose containers are unavailable')
     containers = json.loads(subprocess.check_output(
         ['docker', 'inspect', *identifiers], text=True, env=env, stderr=subprocess.PIPE))
+
+    sensitive_volumes = set(expected_volumes.values())
     for container in containers:
         labels = container.get('Config', {}).get('Labels') or {}
         service = labels.get('com.docker.compose.service')
         attached = {mount.get('Name') for mount in container.get('Mounts', [])
                     if mount.get('Type') == 'volume'}
-        sensitive = attached & set(expected_volumes.values())
+        sensitive = attached & sensitive_volumes
         if not sensitive:
             continue
         if (labels.get('com.docker.compose.project') != project
-                or labels.get('com.docker.compose.oneoff', 'false').lower() != 'false'
-                or service not in {'api', 'db'}):
+                or labels.get('com.docker.compose.oneoff', 'false').lower() != 'false'):
             raise ValueError('Uncontrolled container references a backup volume')
-        for (expected_service, _), volume_name in expected_volumes.items():
-            if volume_name in sensitive and (
-                service != expected_service
-            ):
+        for volume_name in sensitive:
+            allowed = allowed_services_by_volume.get(volume_name, set())
+            if service not in allowed:
                 raise ValueError('Unexpected container references a backup volume')
 
     networks = config.get('networks', {})
@@ -101,7 +162,6 @@ def _assert_quiescent(compose, env, config):
         expected_ids = {running_ids[name] for name in expected_services if name in running_ids}
         if connected != expected_ids:
             raise ValueError('Uncontrolled container is connected to a private Compose network')
-
 
 def _assert_no_database_clients(compose, env):
     query = ("SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() "
@@ -155,13 +215,22 @@ def _offline_api_compose(compose, env):
         yield offline
 
 
-def create_backup(compose, destination, env=None):
+def create_backup(compose, destination, env=None, *, include_lifecycle_keys=False):
     """Reusable by the approved VPS deployment; compose contains no credential arguments."""
     config = _compose_config(compose, env)
     _assert_quiescent(compose, env, config)
     _assert_no_database_clients(compose, env)
     capture_id = str(uuid4())
     destination.mkdir(parents=True, mode=0o700)
+
+    recovery_path = (config.get('services', {}).get('api', {}).get('environment', {}) or {}).get('RECOVERY_STATE_PATH')
+    if not isinstance(recovery_path, str):
+        raise ValueError('RECOVERY_STATE_PATH is not configured')
+    recovery_posix = PurePosixPath(recovery_path)
+    if (not recovery_posix.is_absolute() or '..' in recovery_posix.parts
+            or '\\' in recovery_path or '\x00' in recovery_path):
+        raise ValueError('RECOVERY_STATE_PATH must be a canonical absolute path')
+
     commands = {
         'database.dump': ['docker', 'compose', 'exec', '-T', 'db', 'sh', '-c',
             'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc'],
@@ -170,12 +239,25 @@ def create_backup(compose, destination, env=None):
         'lifecycle.sqlite.tar.gz': ['docker', 'compose', 'run', '--rm', '--no-deps', '-T',
             '-e', 'LIFECYCLE_CAPTURE_ID=' + capture_id,
             '--entrypoint', 'python', 'api', '-m', 'backend.lifecycle_snapshot'],
+        'recovery-state.json': ['docker', 'compose', 'run', '--rm', '--no-deps', '-T',
+            '--entrypoint', 'cat', 'api', recovery_path],
     }
+    if include_lifecycle_keys:
+        commands[LIFECYCLE_KEYS_ARCHIVE] = ['docker', 'compose', 'run', '--rm', '--no-deps', '-T',
+            '--entrypoint', 'tar', 'api', '-C', '/app/lifecycle',
+            '-czf', '-', '--no-recursion', *LIFECYCLE_KEY_PATHS]
     with _offline_api_compose(compose, env) as offline:
         for name, command in commands.items():
             with (destination / name).open('wb') as output:
                 selected = compose if name == 'database.dump' else offline
-                subprocess.run(_compose_command(selected, command), stdout=output, stderr=subprocess.PIPE, check=True, env=env)
+                try:
+                    subprocess.run(_compose_command(selected, command), stdout=output, stderr=subprocess.PIPE,
+                                   check=True, env=env)
+                except subprocess.CalledProcessError as error:
+                    stderr = error.stderr
+                    if isinstance(stderr, (bytes, bytearray)):
+                        stderr = stderr.decode(errors='replace')
+                    raise RuntimeError(f"Offline capture failed: {name}\n{stderr or ''}") from None
     with (destination/'database.dump').open('rb') as dump:
         subprocess.run(compose+['exec','-T','db','pg_restore','--list'],stdin=dump,
                        stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,check=True,env=env)
@@ -196,6 +278,40 @@ def create_backup(compose, destination, env=None):
         'registry', 'witness', 'authenticated', 'holds', 'admission_anchor'
     }:
         raise ValueError('Lifecycle capture identity or store inventory mismatch')
+
+    lifecycle_keys = None
+    if include_lifecycle_keys:
+        lifecycle_keys = {}
+        with tarfile.open(destination / LIFECYCLE_KEYS_ARCHIVE, 'r:gz') as archive:
+            members = archive.getmembers()
+            names = {member.name for member in members}
+            if (names != set(LIFECYCLE_KEY_PATHS) or len(members) != len(LIFECYCLE_KEY_PATHS)
+                    or any(not member.isfile() or member.issym() or member.islnk() for member in members)):
+                raise ValueError('Lifecycle key archive must contain exactly the two key files')
+            for member in members:
+                path = PurePosixPath(member.name)
+                if path.is_absolute() or '..' in path.parts or not path.parts:
+                    raise ValueError('Unsafe lifecycle key archive member')
+                validate_key_member(member)
+                mode = member.mode
+                source = archive.extractfile(member)
+                if source is None:
+                    raise ValueError('Lifecycle key archive entry is unreadable')
+                payload = source.read()
+                if member.size < 1 or len(payload) != member.size:
+                    raise ValueError('Lifecycle key archive payload size mismatch')
+                lifecycle_keys[member.name] = {
+                    'size': int(member.size),
+                    'mode': int(mode),
+                    'uid': member.uid,
+                    'gid': member.gid,
+                    'sha256': hashlib.sha256(payload).hexdigest(),
+                }
+
+
+    recovery_payload = (destination / 'recovery-state.json').read_bytes()
+    recovery_state = _parse_recovery_state_payload(recovery_payload)
+
     tables = ['documents', 'document_pages', 'document_chunks', 'analyses', 'users', 'ai_budgets',
               'ai_reservations', 'ai_usage', 'ai_summaries', 'ai_interactions', 'ai_sources']
     existing=subprocess.check_output(compose+['exec','-T','db','sh','-c',
@@ -231,7 +347,7 @@ def create_backup(compose, destination, env=None):
         with (destination/name).open('rb') as source:
             checksums[name]=hashlib.file_digest(source,'sha256').hexdigest()
     (destination / 'manifest.json').write_text(json.dumps({
-        'backup_format_version': 3,
+        'backup_format_version': (BACKUP_FORMAT_VERSION_WITH_KEYS if include_lifecycle_keys else BACKUP_FORMAT_VERSION),
         'created_at': datetime.now(timezone.utc).isoformat(),
         'capture_id': capture_id,
         'database_major': 17,
@@ -240,7 +356,14 @@ def create_backup(compose, destination, env=None):
         'capture_complete': True,
         's2_recovery_authorized': False,
         'recovery_disposition': 'quarantine_pending_independent_freshness_and_operator_review',
-        'capture_scope': ['postgresql', 'documents', 'lifecycle_sqlite'],
+        'capture_scope': (['postgresql', 'documents', 'lifecycle_sqlite', 'lifecycle_keys', 'recovery_state']
+                         if include_lifecycle_keys
+                         else ['postgresql', 'documents', 'lifecycle_sqlite', 'recovery_state']),
+        'recovery_state': {
+            'path': recovery_path,
+            'state': recovery_state['state'],
+            'sha256': checksums['recovery-state.json'],
+        },
         'quiescence': {
             'api_web_stopped': True,
             'only_database_service_running': True,
@@ -251,27 +374,35 @@ def create_backup(compose, destination, env=None):
         },
         'lifecycle_stores': lifecycle_metadata['stores'],
         'lifecycle_store_sha256': sqlite_metadata_hashes,
-        'files': list(BACKUP_FILES),
+        **({'lifecycle_keys': lifecycle_keys} if include_lifecycle_keys else {}),
+        'files': list(BACKUP_FILES_WITH_KEYS if include_lifecycle_keys else BACKUP_FILES),
         'sha256': checksums,
     }, indent=2), encoding='utf-8')
     return destination
 
 
 def main():
-    parser=argparse.ArgumentParser()
-    parser.add_argument('--production',action='store_true')
-    parser.add_argument('--release-env',type=Path,help='Digest-pinned images.env for production')
-    parser.add_argument('--compose-file',type=Path,help='Production release Compose, e.g. current/compose.production.yaml')
-    args=parser.parse_args()
-    compose=['docker','compose'] + (['--project-directory',str(Path.cwd()),'-p','documind-prod','--env-file','.env.production'] if args.production else [])
-    if args.release_env:
-        compose+=['--env-file',str(args.release_env)]
-    if args.production:
-        compose+=['-f',str(args.compose_file or 'compose.production.yaml')]
-    elif args.compose_file:
-        compose+=['-f',str(args.compose_file)]
-    destination = Path('var/backups') / datetime.now(timezone.utc).strftime('sprint6-%Y%m%d-%H%M%S')
-    create_backup(compose,destination)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--project', required=True,
+                        help='Docker Compose project name to target (e.g. documind-public-beta).')
+    parser.add_argument('--env-file', action='append', default=[],
+                        help='Repeatable --env-file arguments passed to docker compose.')
+    parser.add_argument('--compose-file', action='append', default=[],
+                        help='Repeatable -f/--file arguments passed to docker compose.')
+    parser.add_argument('--destination', type=Path, default=None,
+                        help='Backup output directory (default var/backups/<timestamp>).')
+    parser.add_argument('--include-lifecycle-keys', action='store_true',
+                        help='Capture lifecycle keys into lifecycle-keys.tar.gz (format v5)')
+    args = parser.parse_args()
+
+    compose = ['docker', 'compose', '--project-directory', str(Path.cwd()), '-p', args.project]
+    for env_file in args.env_file:
+        compose += ['--env-file', str(env_file)]
+    for compose_file in args.compose_file:
+        compose += ['-f', str(compose_file)]
+
+    destination = args.destination or (Path('var/backups') / datetime.now(timezone.utc).strftime('sprint6-%Y%m%d-%H%M%S'))
+    create_backup(compose, destination, include_lifecycle_keys=args.include_lifecycle_keys)
     print(f'Backup created: {destination}')
 
 
